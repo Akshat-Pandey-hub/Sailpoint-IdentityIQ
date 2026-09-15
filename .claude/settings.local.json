@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(java -version)",
+      "Bash(mvn -version)",
+      "Bash(mvn -q clean package)",
+      "Bash(java -jar /d/iiq-migration-tool/target/iiq-migration-tool.jar)",
+      "Bash(echo \"\\(exit=$?\\)\")",
+      "Bash(java -jar /d/iiq-migration-tool/target/iiq-migration-tool.jar extract-users)",
+      "Bash(mvn clean *)",
+      "WebFetch(domain:developer.sailpoint.com)",
+      "WebSearch",
+      "Bash(unzip -l /d/iiq-migration-tool/target/iiq-migration-tool.jar)",
+      "Bash(sed 's/^/org.postgresql.Driver entries: /')",
+      "Bash(unzip -p /d/iiq-migration-tool/target/iiq-migration-tool.jar META-INF/services/java.sql.Driver)",
+      "Bash(mvn test *)",
+      "Bash(mvn -q compile)"
+    ]
+  }
+}
