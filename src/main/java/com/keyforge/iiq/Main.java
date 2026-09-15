@@ -79,12 +79,14 @@ import com.keyforge.iiq.taskresult.TaskResultPersistenceService;
 import com.keyforge.iiq.runledger.RunLedger;
 import com.keyforge.iiq.canonical.CanonicalViewReconciliationService;
 import com.keyforge.iiq.incremental.ExtractionMode;
+import com.keyforge.iiq.incremental.IncrementalConfig;
 import com.keyforge.iiq.incremental.IncrementalFilter;
 import com.keyforge.iiq.incremental.SourceChangeTime;
 import com.keyforge.iiq.incremental.WatermarkService;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -662,21 +664,28 @@ public final class Main {
     //
     // No verified IIQ read interface exposes a server-side "modified since" filter, so the same pages
     // are always read; incremental mode only narrows what we PERSIST. A record is kept when its
-    // authoritative SOURCE-side change time is at/after the stored per-entity watermark (inclusive, so
-    // boundary records are never skipped). The watermark advances to the max source change time only
-    // after a fully successful run (see WatermarkService.shouldAdvance). Wired only into extractors
-    // whose interface returns a real UTC change timestamp; other sources stay full-only by design.
+    // authoritative SOURCE-side change time is at/after the EFFECTIVE watermark = stored watermark
+    // minus the configured overlap window (Connector Design 4.1; INCREMENTAL_OVERLAP_MINUTES). The
+    // overlap re-admits records committed slightly before the watermark (clock skew / late commits);
+    // idempotent upserts absorb the harmless re-processing. The persisted watermark advances to the
+    // max source change time only after a fully successful run (WatermarkService.shouldAdvance) and
+    // never regresses below the stored value. Wired only into extractors whose interface returns a
+    // real UTC change timestamp; other sources stay full-only by design.
 
-    /** Reads the entity's watermark, applies the filter for the current mode, and logs the plan. */
+    /** Reads the entity's watermark, applies the filter (with overlap) for the current mode, logs the plan. */
     private static <T> IncrementalFilter.Result<T> planExtraction(
             Connection conn, String schema, String entity, String watermarkField,
             List<T> extracted, Function<T, Instant> changeTime) throws SQLException {
+        Duration overlap = IncrementalConfig.overlapWindow();
         Instant prior = new WatermarkService(schema).readWatermark(conn, entity);
         IncrementalFilter.Result<T> plan =
-                IncrementalFilter.apply(extracted, changeTime, prior, extractionMode);
+                IncrementalFilter.apply(extracted, changeTime, prior, extractionMode, overlap);
         if (extractionMode.isIncremental()) {
+            Instant boundary = IncrementalFilter.effectiveWatermark(prior, extractionMode, overlap);
             System.out.println("Incremental mode [" + entity + "]: watermark(" + watermarkField + ")="
                     + (prior == null ? "none (first run -> full load)" : prior)
+                    + "  overlap=" + overlap.toMinutes() + "m"
+                    + "  effective-boundary=" + (boundary == null ? "n/a" : boundary)
                     + "  extracted=" + plan.total() + "  changed=" + plan.kept()
                     + "  unchanged-skipped=" + plan.skipped());
         } else {
@@ -2494,6 +2503,12 @@ public final class Main {
         System.out.println("                   extract-task-results-db. Other extractors ignore the flag and");
         System.out.println("                   always run full (their interfaces expose no reliable change field).");
         System.out.println("                   Example: java -jar iiq-migration-tool.jar extract-accounts-db --incremental");
+        System.out.println();
+        System.out.println("Incremental tuning (environment variable, optional):");
+        System.out.println("  " + com.keyforge.iiq.incremental.IncrementalConfig.KEY_OVERLAP_MINUTES
+                + "   Overlap window in minutes; incremental keeps records with source change-time >=");
+        System.out.println("                              (watermark - overlap), absorbing clock skew / late commits "
+                + "(default " + com.keyforge.iiq.incremental.IncrementalConfig.DEFAULT_OVERLAP_MINUTES + ").");
         System.out.println();
         System.out.println("Required configuration (environment variables):");
         System.out.println("  IIQ_BASE_URL     e.g. https://preview.keyforge.ai/identityiq/");
