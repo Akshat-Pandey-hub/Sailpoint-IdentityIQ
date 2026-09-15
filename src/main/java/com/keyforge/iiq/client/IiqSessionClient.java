@@ -198,6 +198,52 @@ public class IiqSessionClient extends IiqApiClient {
     }
 
     /**
+     * Performs an authenticated {@code application/x-www-form-urlencoded} POST to a classic REST
+     * endpoint that returns JSON and requires the session CSRF token (e.g.
+     * {@code rest/certificationGroups}, whose ExtJS store sends {@code start}/{@code limit} as form
+     * fields and only accepts POST). Warms and echoes the CSRF token exactly like {@link #postJson},
+     * but with a form-encoded body; it does not follow JSF redirects. Additive: existing
+     * {@code get}/{@code postJson}/{@code postForm}/{@code authenticate} are unchanged.
+     */
+    public String postFormForJson(String path, Map<String, String> formFields) {
+        authenticate();
+        ensureCsrfToken();
+
+        URI uri = buildUri(path, null);
+        HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
+                .timeout(REQUEST_TIMEOUT)
+                .header("Accept", "application/json, text/javascript, */*; q=0.01")
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("X-Requested-With", "XMLHttpRequest")
+                .header("Referer", baseUrl + "/" + HOME_PATH)
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        encodeForm(formFields == null ? Map.of() : formFields), StandardCharsets.UTF_8));
+        String csrf = csrfToken();
+        if (csrf != null) {
+            builder.header("X-XSRF-TOKEN", csrf); // required by IIQ for POST
+        }
+
+        HttpResponse<String> response = send(builder.build(), uri);
+        int status = response.statusCode();
+        if (debug) {
+            System.err.println("[IIQ] POST(form->json) " + uri + " -> HTTP " + status);
+            if (status < 200 || status >= 300) {
+                System.err.println("[IIQ]   body: " + truncate(response.body()));
+            }
+        }
+        if (isRedirect(status)) {
+            throw new IiqApiException("IdentityIQ redirected POST " + uri + " to "
+                    + response.headers().firstValue("Location").orElse("<login>")
+                    + " — the authenticated session was not accepted (HTTP " + status + ").", status);
+        }
+        if (status < 200 || status >= 300) {
+            throw new IiqApiException("IdentityIQ POST to " + uri + " failed with HTTP "
+                    + status + ": " + truncate(response.body()), status);
+        }
+        return response.body();
+    }
+
+    /**
      * Performs an authenticated {@code application/x-www-form-urlencoded} POST — the classic
      * IdentityIQ JSF postback used by UI actions (e.g. opening the Edit Workgroup page, which
      * sets the session's "current workgroup" that {@code workgroupMembersDataSource.json} then

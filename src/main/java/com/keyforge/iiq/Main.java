@@ -45,6 +45,11 @@ import com.keyforge.iiq.accountentitlement.AccountEntitlementRow;
 import com.keyforge.iiq.accountentitlement.AccountEntitlementRowMapper;
 import com.keyforge.iiq.identityentitlement.IdentityEntitlementPersistenceService;
 import com.keyforge.iiq.identityentitlement.IdentityEntitlementRow;
+import com.keyforge.iiq.identityrole.IdentityRoleAssignment;
+import com.keyforge.iiq.identityrole.IdentityRoleService;
+import com.keyforge.iiq.identityrole.IdentityRolePersistenceService;
+import com.keyforge.iiq.parquet.ParquetConfig;
+import com.keyforge.iiq.parquet.ParquetExtractionService;
 import com.keyforge.iiq.workgroupmember.WorkgroupMemberService;
 import com.keyforge.iiq.workgroupmember.WorkgroupMembership;
 import com.keyforge.iiq.workgroupmember.WorkgroupMemberPersistenceService;
@@ -73,9 +78,15 @@ import com.keyforge.iiq.provisioningtransaction.ProvisioningTransaction;
 import com.keyforge.iiq.provisioningtransaction.ProvisioningTransactionService;
 import com.keyforge.iiq.provisioningtransaction.ProvisioningEventLinkPersistenceService;
 import com.keyforge.iiq.provisioningtransaction.ProvisioningTxnPersistenceService;
+import com.keyforge.iiq.provisioningtransaction.ProvisioningItem;
+import com.keyforge.iiq.provisioningtransaction.ProvisioningItemService;
+import com.keyforge.iiq.provisioningtransaction.ProvisioningItemPersistenceService;
 import com.keyforge.iiq.taskresult.TaskResult;
 import com.keyforge.iiq.taskresult.TaskResultService;
 import com.keyforge.iiq.taskresult.TaskResultPersistenceService;
+import com.keyforge.iiq.certification.CertificationCampaign;
+import com.keyforge.iiq.certification.CertificationCampaignService;
+import com.keyforge.iiq.certification.CertificationCampaignPersistenceService;
 import com.keyforge.iiq.runledger.RunLedger;
 import com.keyforge.iiq.canonical.CanonicalViewReconciliationService;
 import com.keyforge.iiq.incremental.ExtractionMode;
@@ -131,6 +142,19 @@ public final class Main {
 
         String command = args[0];
         extractionMode = ExtractionMode.fromArgs(args);
+
+        // Parquet workstream: one independent extractor per dataset, plus an orchestration command.
+        // Data-driven so the command<->dataset mapping has a single source of truth (ParquetCommands).
+        if (com.keyforge.iiq.parquet.ParquetCommands.ALL.equals(command)) {
+            System.exit(runAllParquet());
+            return;
+        }
+        String parquetDataset = com.keyforge.iiq.parquet.ParquetCommands.datasetFor(command);
+        if (parquetDataset != null) {
+            System.exit(runOneParquet(parquetDataset));
+            return;
+        }
+
         switch (command) {
             case "extract-users" -> System.exit(runExtractUsers());
             case "extract-users-db" -> System.exit(RunLedger.run("extract-users-db", Main::runExtractUsersDb));
@@ -161,10 +185,14 @@ public final class Main {
             case "derive-event-links-db" -> System.exit(RunLedger.run("derive-event-links-db", Main::runDeriveEventLinksDb));
             case "extract-provisioning-transactions" -> System.exit(runExtractProvisioningTransactions());
             case "extract-provisioning-transactions-db" -> System.exit(RunLedger.run("extract-provisioning-transactions-db", Main::runExtractProvisioningTransactionsDb));
+            case "extract-provisioning-items" -> System.exit(runExtractProvisioningItems());
+            case "extract-provisioning-items-db" -> System.exit(RunLedger.run("extract-provisioning-items-db", Main::runExtractProvisioningItemsDb));
             case "derive-provisioning-links-db" -> System.exit(RunLedger.run("derive-provisioning-links-db", Main::runDeriveProvisioningLinksDb));
             case "reconcile-canonical-views-db" -> System.exit(RunLedger.run("reconcile-canonical-views-db", Main::runReconcileCanonicalViewsDb));
             case "extract-task-results" -> System.exit(runExtractTaskResults());
             case "extract-task-results-db" -> System.exit(RunLedger.run("extract-task-results-db", Main::runExtractTaskResultsDb));
+            case "extract-certifications" -> System.exit(runExtractCertifications());
+            case "extract-certifications-db" -> System.exit(RunLedger.run("extract-certifications-db", Main::runExtractCertificationsDb));
             case "extract-workgroups" -> System.exit(runExtractWorkgroups());
             case "extract-workgroups-db" -> System.exit(RunLedger.run("extract-workgroups-db", Main::runExtractWorkgroupsDb));
             case "extract-workgroup-members" -> System.exit(runExtractWorkgroupMembers());
@@ -175,6 +203,8 @@ public final class Main {
             case "extract-account-entitlements-db" -> System.exit(RunLedger.run("extract-account-entitlements-db", Main::runExtractAccountEntitlementsDb));
             case "extract-identity-entitlements" -> System.exit(runExtractIdentityEntitlements());
             case "extract-identity-entitlements-db" -> System.exit(RunLedger.run("extract-identity-entitlements-db", Main::runExtractIdentityEntitlementsDb));
+            case "extract-identity-roles" -> System.exit(runExtractIdentityRoles());
+            case "extract-identity-roles-db" -> System.exit(RunLedger.run("extract-identity-roles-db", Main::runExtractIdentityRolesDb));
             case "extract-entitlements" -> System.exit(runExtractEntitlements());
             case "extract-accounts" -> System.exit(runExtractAccounts());
             case "extract-assignments" -> System.exit(runExtractAssignments());
@@ -1713,6 +1743,129 @@ public final class Main {
         }
     }
 
+    // ---- Identity -> Role: kf_identity_role (authoritative: rest/identities/{id} assignedRoles[]) ----
+
+    private static int runExtractIdentityRoles() {
+        try {
+            AppConfig config = AppConfig.load();
+            System.out.println("Connecting to IdentityIQ at " + config.getBaseUrl()
+                    + " as user '" + config.getUsername() + "'");
+            List<IdentityRoleAssignment> rels =
+                    new IdentityRoleService(new IiqApiClient(config)).getAllAssignments();
+            long withDate = rels.stream().filter(a -> a.assignedDate() != null).count();
+            long withAssigner = rels.stream().filter(a -> a.assigner() != null && !a.assigner().isBlank()).count();
+            System.out.println();
+            System.out.println("Extracted " + rels.size() + " identity-role assignments (rest/identities/{id} assignedRoles)"
+                    + (rels.isEmpty() ? " - valid empty (no assignments on this instance)" : ""));
+            System.out.println("  with assignment date: " + withDate + "  with assigner: " + withAssigner);
+            int shown = Math.min(rels.size(), SAMPLE_SIZE);
+            for (int i = 0; i < shown; i++) {
+                IdentityRoleAssignment a = rels.get(i);
+                System.out.println("  - identity=" + a.identityId() + " role=" + a.roleDisplayName()
+                        + " (" + a.roleId() + ")");
+            }
+            return 0;
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    private static int runExtractIdentityRolesDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
+            List<IdentityRoleAssignment> rels =
+                    new IdentityRoleService(new IiqApiClient(iiqConfig)).getAllAssignments();
+            System.out.println("Extracted " + rels.size() + " identity-role assignments from IdentityIQ");
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                IdentityRolePersistenceService svc = new IdentityRolePersistenceService(pgConfig.getSchema());
+                IdentityRolePersistenceService.Result r = svc.persist(conn, rels);
+                RunLedger.record("kf_identity_role", rels.size(), r.getInserted(), r.getUpdated(), r.getFailed());
+                System.out.println();
+                System.out.println("Persisted " + r.getPersisted() + " identity-role edges to " + svc.targetTable()
+                        + " (of " + rels.size() + " extracted)");
+                System.out.println("  inserted: " + r.getInserted() + "  updated: " + r.getUpdated()
+                        + "  failed: " + r.getFailed());
+                System.out.println("  (assigner/description are NULL: source exposes the fields but they are "
+                        + "empty across live data)");
+                printLines(r.getFailures());
+                return r.getFailed() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    // ---- Parquet workstream (Phase 1): direct IIQ -> Parquet (independent of PostgreSQL) ----
+    // One independent extractor per dataset; extract-all-parquet just orchestrates them.
+
+    /** Runs a single dataset's Parquet extractor (its own command). */
+    private static int runOneParquet(String dataset) {
+        return runParquet(List.of(dataset));
+    }
+
+    /** Orchestration only: invokes every individual Parquet extractor, each reporting independently. */
+    private static int runAllParquet() {
+        return runParquet(new ParquetExtractionService().allDatasetNames());
+    }
+
+    private static int runParquet(List<String> datasets) {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            ParquetConfig pq = ParquetConfig.load();
+            // DuckDB extracts its native library to java.io.tmpdir; steer it to a dir on the same
+            // (writable, ample) volume as the Parquet output so extraction never fails on a full temp drive.
+            try {
+                java.nio.file.Path duckTmp = pq.outputDir().toAbsolutePath().resolve(".duckdb-tmp");
+                java.nio.file.Files.createDirectories(duckTmp);
+                System.setProperty("java.io.tmpdir", duckTmp.toString());
+            } catch (Exception ignore) {
+                // fall back to the default temp dir
+            }
+            boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
+            ParquetExtractionService svc = new ParquetExtractionService();
+
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("Parquet output: " + pq.outputDir().toAbsolutePath());
+            System.out.println("Datasets: " + datasets);
+            System.out.println();
+
+            ParquetExtractionService.RunResult run = svc.extract(datasets, iiqConfig, pq, debugHttp);
+            System.out.println("extraction_run_id: " + run.runId());
+            int failedDatasets = 0;
+            long totalWritten = 0;
+            for (ParquetExtractionService.DatasetResult d : run.datasets()) {
+                String status = d.error() != null
+                        ? "ERROR: " + d.error()
+                        : "extracted=" + d.extracted() + " written=" + d.written() + " failed=" + d.failed()
+                          + (d.note() != null ? "  [source-limited: " + d.note() + "]" : "");
+                System.out.println("  " + padRight(d.dataset(), 24) + status
+                        + (d.file() != null ? "  -> " + d.file() : ""));
+                if (d.error() != null) {
+                    failedDatasets++;
+                }
+                totalWritten += d.written();
+            }
+            System.out.println();
+            System.out.println("Total rows written: " + totalWritten + "  (datasets with errors: " + failedDatasets + ")");
+            return failedDatasets > 0 ? 6 : 0;
+        } catch (ConfigException e) {
+            System.err.println("Configuration error: " + e.getMessage());
+            return 3;
+        } catch (RuntimeException e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            return 1;
+        }
+    }
+
+    private static String padRight(String s, int width) {
+        return s.length() >= width ? s + " " : s + " ".repeat(width - s.length());
+    }
+
     private static int runExtractWorkgroupMembers() {
         try {
             AppConfig config = AppConfig.load();
@@ -2180,6 +2333,64 @@ public final class Main {
         } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
+    // ---- Certification campaigns: kf_certification_campaign (POST rest/certificationGroups) ----
+
+    private static int runExtractCertifications() {
+        try {
+            AppConfig config = AppConfig.load();
+            System.out.println("Connecting to IdentityIQ at " + config.getBaseUrl()
+                    + " as user '" + config.getUsername() + "'");
+            boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
+            List<CertificationCampaign> campaigns =
+                    new CertificationCampaignService(new IiqSessionClient(config, debugHttp)).getAllCampaigns();
+            System.out.println();
+            System.out.println("Extracted " + campaigns.size() + " certification campaigns (rest/certificationGroups)"
+                    + (campaigns.isEmpty() ? " - valid empty (no campaigns on this instance)" : ""));
+            int shown = Math.min(campaigns.size(), SAMPLE_SIZE);
+            for (int i = 0; i < shown; i++) {
+                CertificationCampaign c = campaigns.get(i);
+                System.out.println("  - " + c.name() + " [status=" + c.status() + ", owner=" + c.ownerDisplayName()
+                        + ", " + c.percentComplete() + "] id=" + c.id());
+            }
+            System.out.println("(campaign type/phase/start-end/sign-off and the item-decision hierarchy are NOT "
+                    + "exposed by this endpoint -> stored NULL / out of scope; see report)");
+            return 0;
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    private static int runExtractCertificationsDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
+            boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
+            List<CertificationCampaign> campaigns =
+                    new CertificationCampaignService(new IiqSessionClient(iiqConfig, debugHttp)).getAllCampaigns();
+            System.out.println("Extracted " + campaigns.size() + " certification campaigns from IdentityIQ");
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                CertificationCampaignPersistenceService svc =
+                        new CertificationCampaignPersistenceService(pgConfig.getSchema());
+                CertificationCampaignPersistenceService.Result r = svc.persist(conn, campaigns);
+                RunLedger.record("kf_certification_campaign", campaigns.size(),
+                        r.getInserted(), r.getUpdated(), r.getFailed());
+                System.out.println();
+                System.out.println("Persisted " + r.getPersisted() + " certification campaigns to " + svc.targetTable()
+                        + " (of " + campaigns.size() + " extracted)");
+                System.out.println("  inserted: " + r.getInserted() + "  updated: " + r.getUpdated()
+                        + "  failed: " + r.getFailed());
+                printLines(r.getFailures());
+                return r.getFailed() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
     // ---- Phase 4d (provisioning side): kf_event_link (ProvisioningTransaction -> Request / Certification) ----
 
     private static int runExtractProvisioningTransactions() {
@@ -2232,6 +2443,63 @@ public final class Main {
                 printLines(r.getDuplicateIds());
                 System.out.println("  created timestamps unparsed (NULL created_at, raw kept): " + r.getTimestampUnparsed());
                 System.out.println("  failed: " + r.getFailed());
+                printLines(r.getFailures());
+                return r.getFailed() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    // ---- Provisioning items: kf_provisioning_item (GET rest/provisioningTransactions/{id} detail plan) ----
+
+    private static int runExtractProvisioningItems() {
+        try {
+            AppConfig config = AppConfig.load();
+            System.out.println("Connecting to IdentityIQ at " + config.getBaseUrl()
+                    + " as user '" + config.getUsername() + "'");
+            boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
+            List<ProvisioningItem> items =
+                    new ProvisioningItemService(new IiqSessionClient(config, debugHttp)).getAllItems();
+            long attr = items.stream().filter(i -> "attribute".equals(i.requestType())).count();
+            long perm = items.stream().filter(i -> "permission".equals(i.requestType())).count();
+            long filt = items.stream().filter(i -> "filtered".equals(i.requestType())).count();
+            System.out.println();
+            System.out.println("Extracted " + items.size() + " provisioning items from transaction detail plans"
+                    + " (attribute=" + attr + ", permission=" + perm + ", filtered=" + filt + ")");
+            int shown = Math.min(items.size(), SAMPLE_SIZE);
+            for (int i = 0; i < shown; i++) {
+                ProvisioningItem it = items.get(i);
+                System.out.println("  - [" + it.requestType() + "] " + it.operation() + " " + it.name()
+                        + "=" + it.value() + " result=" + it.result() + " txn=" + it.parentTransactionId());
+            }
+            return 0;
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    private static int runExtractProvisioningItemsDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
+            boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
+            List<ProvisioningItem> items =
+                    new ProvisioningItemService(new IiqSessionClient(iiqConfig, debugHttp)).getAllItems();
+            System.out.println("Extracted " + items.size() + " provisioning items from IdentityIQ");
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                ProvisioningItemPersistenceService svc = new ProvisioningItemPersistenceService(pgConfig.getSchema());
+                ProvisioningItemPersistenceService.Result r = svc.persist(conn, items);
+                RunLedger.record("kf_provisioning_item", items.size(), r.getInserted(), r.getUpdated(), r.getFailed());
+                System.out.println();
+                System.out.println("Persisted " + r.getPersisted() + " provisioning items to " + svc.targetTable()
+                        + " (of " + items.size() + " extracted)");
+                System.out.println("  inserted: " + r.getInserted() + "  updated: " + r.getUpdated()
+                        + "  failed: " + r.getFailed());
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
@@ -2474,8 +2742,12 @@ public final class Main {
         System.out.println("  derive-event-links-db       Derive kf_event_link (audit event -> identity/account/entitlement) from <schema>.kf_audit_event");
         System.out.println("  extract-provisioning-transactions  Retrieve Provisioning Transactions (rest/provisioningTransactions) and print a summary");
         System.out.println("  extract-provisioning-transactions-db  Retrieve Provisioning Transactions and upsert into <schema>.kf_provisioning_txn");
+        System.out.println("  extract-provisioning-items          Retrieve provisioning items (transaction detail plans) and print a summary");
+        System.out.println("  extract-provisioning-items-db       Retrieve provisioning items and upsert into <schema>.kf_provisioning_item");
         System.out.println("  extract-task-results       Retrieve Task Results (SCIM /TaskResults) and print a summary");
         System.out.println("  extract-task-results-db    Retrieve Task Results and upsert into <schema>.kf_task_result");
+        System.out.println("  extract-certifications      Retrieve certification campaigns (rest/certificationGroups) and print a summary");
+        System.out.println("  extract-certifications-db   Retrieve certification campaigns and upsert into <schema>.kf_certification_campaign");
         System.out.println("  derive-provisioning-links-db       Derive kf_event_link (provisioning txn -> request/certification) from rest/provisioningTransactions");
         System.out.println("  reconcile-canonical-views-db       Maintain the derived kf_identity_account view and report core canonical table state (kf_identity/kf_account/kf_application/kf_entitlement are physical tables)");
         System.out.println("  extract-workgroups    Retrieve Workgroups (Group Configuration DataSource, Workgroup subset) and print a summary");
@@ -2488,6 +2760,20 @@ public final class Main {
         System.out.println("  extract-account-entitlements-db  Project account->entitlement edges into <schema>.kf_account_entitlement");
         System.out.println("  extract-identity-entitlements    Summarise the identity->entitlement projection (reuses existing derivation)");
         System.out.println("  extract-identity-entitlements-db Project identity->entitlement edges into <schema>.kf_identity_entitlement (provenance NULL)");
+        System.out.println("  extract-identity-roles       Retrieve authoritative Identity->Role assignments (rest/identities/{id}) and print a summary");
+        System.out.println("  extract-identity-roles-db    Retrieve Identity->Role assignments and upsert into <schema>.kf_identity_role");
+        System.out.println("  --- Parquet workstream (direct IIQ->Parquet, independent of PostgreSQL; PARQUET_OUT_DIR default parquet-data) ---");
+        System.out.println("  extract-task-results-parquet            Write task_result Parquet dataset");
+        System.out.println("  extract-audit-events-parquet            Write kf_audit_event Parquet dataset");
+        System.out.println("  extract-access-requests-parquet         Write kf_access_request Parquet dataset");
+        System.out.println("  extract-request-items-parquet           Write kf_request_item Parquet dataset");
+        System.out.println("  extract-request-approvals-parquet       Write kf_request_approval Parquet dataset");
+        System.out.println("  extract-provisioning-transactions-parquet  Write kf_provisioning_txn Parquet dataset");
+        System.out.println("  extract-provisioning-items-parquet      Write kf_provisioning_item Parquet dataset");
+        System.out.println("  extract-violations-parquet              Write kf_violation Parquet dataset");
+        System.out.println("  extract-cert-item-decisions-parquet     Write kf_cert_item_decision Parquet dataset (source-limited)");
+        System.out.println("  extract-event-links-parquet             Write kf_event_link Parquet dataset (derived)");
+        System.out.println("  extract-all-parquet                     Orchestrate: run every individual Parquet extractor");
         System.out.println("  extract-accounts      Retrieve all Accounts from IdentityIQ and print a summary");
         System.out.println("  extract-accounts-db   Retrieve all Accounts and upsert them into <schema>.kf_account");
         System.out.println("  extract-assignments   Derive Account -> Entitlement assignments and print a summary");

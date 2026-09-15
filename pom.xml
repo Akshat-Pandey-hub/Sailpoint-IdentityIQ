@@ -21,6 +21,7 @@
 
         <jackson.version>2.17.2</jackson.version>
         <postgresql.version>42.7.4</postgresql.version>
+        <duckdb.version>1.1.3</duckdb.version>
         <junit.version>5.10.2</junit.version>
         <shade.plugin.version>3.6.0</shade.plugin.version>
         <surefire.plugin.version>3.2.5</surefire.plugin.version>
@@ -43,6 +44,14 @@
             <version>${postgresql.version}</version>
         </dependency>
 
+        <!-- DuckDB (embedded, no Hadoop): writes the IIQ->Parquet datasets and, in Phase 2, queries
+             them with column projection + predicate pushdown. Independent of the PostgreSQL path. -->
+        <dependency>
+            <groupId>org.duckdb</groupId>
+            <artifactId>duckdb_jdbc</artifactId>
+            <version>${duckdb.version}</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -60,6 +69,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire.plugin.version}</version>
+                <configuration>
+                    <!-- DuckDB extracts its native library to java.io.tmpdir; point it at the build
+                         directory (ample space) so the embedded engine initialises during tests. -->
+                    <argLine>-Djava.io.tmpdir=${project.build.directory}</argLine>
+                </configuration>
             </plugin>
 
             <!-- Build an executable fat JAR with all dependencies bundled -->

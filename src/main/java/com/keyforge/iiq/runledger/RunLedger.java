@@ -190,7 +190,9 @@ public final class RunLedger {
                  "extract-entitlements-db", "extract-roles-db", "extract-role-hierarchy-db",
                  "extract-workflows-db", "extract-policy-violations-db", "extract-task-results-db" -> "scim";
             case "extract-access-requests-db", "extract-workitems-db" -> "ui-rest";
-            case "extract-provisioning-transactions-db", "derive-provisioning-links-db" -> "classic-rest";
+            case "extract-provisioning-transactions-db", "derive-provisioning-links-db",
+                 "extract-certifications-db", "extract-provisioning-items-db",
+                 "extract-identity-roles-db" -> "classic-rest";
             case "extract-usergroups-db", "extract-workgroups-db", "extract-workgroup-members-db",
                  "extract-policies-db", "extract-audit-events-db", "extract-role-entitlements-db" -> "classic-ui";
             case "extract-applicationinstances-db", "extract-assignments-db", "extract-catalog-db",

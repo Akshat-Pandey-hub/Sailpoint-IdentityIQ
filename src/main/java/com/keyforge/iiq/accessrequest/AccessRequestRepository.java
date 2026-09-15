@@ -69,8 +69,10 @@ public class AccessRequestRepository {
                     + "name text, value text, displayable_value text, is_role boolean, is_entitlement boolean, "
                     + "has_managed_attribute boolean, approval_state text, provisioning_state text, "
                     + "provisioning_engine text, assignment_id text, retries integer, requester_comments text, "
-                    + "start_date timestamptz, end_date timestamptz, "
+                    + "start_date timestamptz, end_date timestamptz, provisioning_request_id text, "
                     + "extracted_at timestamptz NOT NULL DEFAULT now())");
+            // Idempotent migration for schemas created before provisioning_request_id was added.
+            st.execute("ALTER TABLE " + itemTable + " ADD COLUMN IF NOT EXISTS provisioning_request_id text");
             st.execute("CREATE TABLE IF NOT EXISTS " + approvalTable + " ("
                     + "id uuid PRIMARY KEY, requestid uuid, request_number text, owner_display_name text, "
                     + "status text, description text, comments text, approval_item_count integer, "
@@ -118,8 +120,8 @@ public class AccessRequestRepository {
         String sql = "INSERT INTO " + itemTable + " (itemid, requestid, request_number, operation, application_name, "
                 + "account_name, displayable_account_name, instance, name, value, displayable_value, is_role, "
                 + "is_entitlement, has_managed_attribute, approval_state, provisioning_state, provisioning_engine, "
-                + "assignment_id, retries, requester_comments, start_date, end_date) "
-                + "VALUES (?::uuid,?::uuid,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+                + "assignment_id, retries, requester_comments, start_date, end_date, provisioning_request_id) "
+                + "VALUES (?::uuid,?::uuid,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (itemid) DO UPDATE SET requestid=EXCLUDED.requestid, request_number=EXCLUDED.request_number, "
                 + "operation=EXCLUDED.operation, application_name=EXCLUDED.application_name, account_name=EXCLUDED.account_name, "
                 + "displayable_account_name=EXCLUDED.displayable_account_name, instance=EXCLUDED.instance, name=EXCLUDED.name, "
@@ -128,7 +130,8 @@ public class AccessRequestRepository {
                 + "approval_state=EXCLUDED.approval_state, provisioning_state=EXCLUDED.provisioning_state, "
                 + "provisioning_engine=EXCLUDED.provisioning_engine, assignment_id=EXCLUDED.assignment_id, "
                 + "retries=EXCLUDED.retries, requester_comments=EXCLUDED.requester_comments, start_date=EXCLUDED.start_date, "
-                + "end_date=EXCLUDED.end_date, extracted_at=now() RETURNING (xmax = 0) AS inserted";
+                + "end_date=EXCLUDED.end_date, provisioning_request_id=EXCLUDED.provisioning_request_id, "
+                + "extracted_at=now() RETURNING (xmax = 0) AS inserted";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, r.itemid());
             ps.setString(2, r.requestid());
@@ -152,6 +155,7 @@ public class AccessRequestRepository {
             ps.setString(20, r.requesterComments());
             setTs(ps, 21, r.startDate());
             setTs(ps, 22, r.endDate());
+            ps.setString(23, r.provisioningRequestId());
             return outcome(ps);
         }
     }

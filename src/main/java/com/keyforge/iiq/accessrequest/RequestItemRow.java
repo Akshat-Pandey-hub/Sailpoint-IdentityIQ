@@ -25,5 +25,6 @@ public record RequestItemRow(
         Integer retries,
         String requesterComments,
         LocalDateTime startDate,
-        LocalDateTime endDate) {
+        LocalDateTime endDate,
+        String provisioningRequestId) {
 }

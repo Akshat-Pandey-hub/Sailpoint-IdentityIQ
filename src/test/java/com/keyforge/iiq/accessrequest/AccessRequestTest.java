@@ -72,6 +72,19 @@ class AccessRequestTest {
         assertEquals(Boolean.TRUE, it.isRole());
         assertEquals("Finished", it.provisioningState());
         assertEquals("e058f168a27f4a34aeb644f7b7cd150c", it.assignmentId());
+        // Source returns provisioningRequestId=null across all live items -> preserved as NULL, not fabricated.
+        assertNull(it.provisioningRequestId());
+    }
+
+    @Test
+    void mapsProvisioningRequestIdWhenSourceExposesIt() {
+        // When the source populates provisioningRequestId (item -> provisioning link), it is persisted.
+        String json = "{\"objects\":[{\"requestId\":\"0000000099\",\"id\":\"7f0001019fbf1a17819fcd9791db1c96\","
+                + "\"items\":[{\"id\":\"7f0001019fbf1a17819fcd9791d91c93\",\"operation\":\"Add\","
+                + "\"provisioningRequestId\":\"7f0001019f061fdc819fa50301271752\"}]}],\"count\":1}";
+        AccessRequest r = svc().parseRequests(json).get(0);
+        RequestItemRow it = AccessRequestRowMapper.mapItem(r, r.items().get(0));
+        assertEquals("7f0001019f061fdc819fa50301271752", it.provisioningRequestId());
     }
 
     @Test

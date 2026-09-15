@@ -59,7 +59,8 @@ public final class AccessRequestRowMapper {
                 it.retries(),
                 blankToNull(it.requesterComments()),
                 epochToUtc(it.startDate()),
-                epochToUtc(it.endDate()));
+                epochToUtc(it.endDate()),
+                blankToNull(it.provisioningRequestId()));
     }
 
     public static RequestApprovalRow mapApproval(AccessRequest r, AccessRequest.Approval a, int index) {
