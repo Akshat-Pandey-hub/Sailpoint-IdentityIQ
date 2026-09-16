@@ -50,6 +50,8 @@ import com.keyforge.iiq.identityrole.IdentityRoleService;
 import com.keyforge.iiq.identityrole.IdentityRolePersistenceService;
 import com.keyforge.iiq.parquet.ParquetConfig;
 import com.keyforge.iiq.parquet.ParquetExtractionService;
+import com.keyforge.iiq.rest.RestConfig;
+import com.keyforge.iiq.rest.ParquetRestServer;
 import com.keyforge.iiq.workgroupmember.WorkgroupMemberService;
 import com.keyforge.iiq.workgroupmember.WorkgroupMembership;
 import com.keyforge.iiq.workgroupmember.WorkgroupMemberPersistenceService;
@@ -154,6 +156,10 @@ public final class Main {
             System.exit(runOneParquet(parquetDataset));
             return;
         }
+        if ("start-rest".equals(command)) {
+            runStartRest();   // blocks until the process is stopped
+            return;
+        }
 
         switch (command) {
             case "extract-users" -> System.exit(runExtractUsers());
@@ -189,6 +195,9 @@ public final class Main {
             case "extract-provisioning-items-db" -> System.exit(RunLedger.run("extract-provisioning-items-db", Main::runExtractProvisioningItemsDb));
             case "derive-provisioning-links-db" -> System.exit(RunLedger.run("derive-provisioning-links-db", Main::runDeriveProvisioningLinksDb));
             case "reconcile-canonical-views-db" -> System.exit(RunLedger.run("reconcile-canonical-views-db", Main::runReconcileCanonicalViewsDb));
+            case "reconcile-referential-integrity-db" -> System.exit(RunLedger.run("reconcile-referential-integrity-db", Main::runReconcileReferentialIntegrityDb));
+            case "derive-record-lineage-db" -> System.exit(RunLedger.run("derive-record-lineage-db", Main::runDeriveRecordLineageDb));
+            case "reconcile-counts-db" -> System.exit(RunLedger.run("reconcile-counts-db", Main::runReconcileCountsDb));
             case "extract-task-results" -> System.exit(runExtractTaskResults());
             case "extract-task-results-db" -> System.exit(RunLedger.run("extract-task-results-db", Main::runExtractTaskResultsDb));
             case "extract-certifications" -> System.exit(runExtractCertifications());
@@ -1866,6 +1875,32 @@ public final class Main {
         return s.length() >= width ? s + " " : s + " ".repeat(width - s.length());
     }
 
+    // ---- Phase 2: REST query service over the Parquet datasets (read-only; no IIQ, no PostgreSQL) ----
+
+    private static void runStartRest() {
+        try {
+            ParquetConfig pq = ParquetConfig.load();
+            RestConfig rest = RestConfig.load();
+            // DuckDB extracts its native library to java.io.tmpdir; steer it to a writable volume.
+            try {
+                java.nio.file.Path duckTmp = pq.outputDir().toAbsolutePath().resolve(".duckdb-tmp");
+                java.nio.file.Files.createDirectories(duckTmp);
+                System.setProperty("java.io.tmpdir", duckTmp.toString());
+            } catch (Exception ignore) {
+                // fall back to the default temp dir
+            }
+            ParquetRestServer server = new ParquetRestServer(rest, pq);
+            Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
+            server.start();
+            Thread.currentThread().join(); // keep the process running while serving requests
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            System.err.println("Failed to start REST service: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+
     private static int runExtractWorkgroupMembers() {
         try {
             AppConfig config = AppConfig.load();
@@ -2247,6 +2282,127 @@ public final class Main {
     }
 
     // ---- Canonical reconciliation: additive PDF-canonical VIEWS over existing base tables ----
+
+    private static int runReconcileCountsDb() {
+        try {
+            PgConfig pgConfig = PgConfig.load();
+            com.keyforge.iiq.parquet.ParquetConfig pqConfig = com.keyforge.iiq.parquet.ParquetConfig.load();
+            try {
+                java.nio.file.Path duckTmp = pqConfig.outputDir().toAbsolutePath().resolve(".duckdb-tmp");
+                java.nio.file.Files.createDirectories(duckTmp);
+                System.setProperty("java.io.tmpdir", duckTmp.toString());
+            } catch (Exception ignore) {
+                // fall back to default temp dir
+            }
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
+            System.out.println("Parquet dir: " + pqConfig.outputDir().toAbsolutePath());
+            System.out.println("Cross-pipeline count reconciliation (read-only over both stores; writes only kf_count_reconciliation)");
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                com.keyforge.iiq.countrecon.CountReconciliationRepository repo =
+                        new com.keyforge.iiq.countrecon.CountReconciliationRepository(pgConfig.getSchema(), pqConfig);
+                com.keyforge.iiq.countrecon.CountReconciliationService svc =
+                        new com.keyforge.iiq.countrecon.CountReconciliationService(repo);
+                String runId = RunLedger.currentRunId();
+                if (runId == null) {
+                    runId = java.util.UUID.randomUUID().toString();
+                }
+                com.keyforge.iiq.countrecon.CountReconciliationService.Result r = svc.reconcile(conn, runId);
+                RunLedger.record("kf_count_reconciliation", r.domains().size(),
+                        r.domains().size() - r.persistFailures(), 0, r.persistFailures());
+                System.out.println();
+                System.out.println("Domains: " + r.domains().size() + " (match " + r.matches()
+                        + ", mismatch " + r.mismatches() + ", other " + r.other() + ")");
+                for (com.keyforge.iiq.countrecon.CountReconciliationService.DomainResult d : r.domains()) {
+                    String pg = d.pgCount() < 0 ? "absent" : Long.toString(d.pgCount());
+                    String pq = d.parquetCount() < 0 ? "absent" : Long.toString(d.parquetCount());
+                    System.out.println("  " + d.status() + "  " + d.pair().domain()
+                            + " : pg=" + pg + " parquet=" + pq);
+                }
+                System.out.println();
+                System.out.println("Written to " + repo.targetTable() + " (persist failures: " + r.persistFailures() + ")");
+                return r.persistFailures() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    private static int runDeriveRecordLineageDb() {
+        try {
+            PgConfig pgConfig = PgConfig.load();
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
+            System.out.println("Deriving PDF lineage envelope into kf_record_lineage (read-only over domain tables; sidecar only)");
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                com.keyforge.iiq.lineage.RecordLineageService svc =
+                        new com.keyforge.iiq.lineage.RecordLineageService(pgConfig.getSchema());
+                com.keyforge.iiq.lineage.RecordLineageService.Result r = svc.deriveAll(conn);
+                RunLedger.record("kf_record_lineage", r.totalRows(), r.totalRows(), 0, r.failedTables());
+                System.out.println();
+                System.out.println("Domain tables: " + r.tables().size()
+                        + " (backfilled " + r.backfilledTables() + ", skipped " + r.skippedTables()
+                        + ", failed " + r.failedTables() + ")");
+                System.out.println("Lineage envelope rows written: " + r.totalRows());
+                for (com.keyforge.iiq.lineage.RecordLineageService.TableResult t : r.tables()) {
+                    if (com.keyforge.iiq.lineage.RecordLineageService.TableResult.BACKFILLED.equals(t.status())) {
+                        System.out.println("  " + t.table() + ": " + t.rows() + " rows");
+                    } else {
+                        System.out.println("  [" + t.status() + "] " + t.table()
+                                + (t.note() == null ? "" : " — " + t.note()));
+                    }
+                }
+                System.out.println();
+                System.out.println("Envelope written to " + svc.repository().targetTable()
+                        + " (failed tables: " + r.failedTables() + ")");
+                return r.failedTables() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    private static int runReconcileReferentialIntegrityDb() {
+        try {
+            PgConfig pgConfig = PgConfig.load();
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
+            System.out.println("Referential-integrity reconciliation (read-only over domain tables; writes only kf_reconciliation_finding)");
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                com.keyforge.iiq.reconciliation.ReferentialIntegrityService svc =
+                        new com.keyforge.iiq.reconciliation.ReferentialIntegrityService(pgConfig.getSchema());
+                String runId = RunLedger.currentRunId();
+                if (runId == null) {
+                    runId = java.util.UUID.randomUUID().toString();
+                }
+                com.keyforge.iiq.reconciliation.ReferentialIntegrityService.Result r = svc.reconcile(conn, runId);
+                RunLedger.record("kf_reconciliation_finding", r.total(),
+                        r.total() - r.persistFailures(), 0, r.persistFailures());
+                System.out.println();
+                System.out.println("Checks: " + r.total() + " (checked " + r.checked()
+                        + ", skipped " + r.skipped() + ")");
+                System.out.println("Dangling references: " + r.totalOrphans()
+                        + " across " + r.checksWithOrphans() + " check(s)");
+                for (com.keyforge.iiq.reconciliation.ReconciliationFinding f : r.findings()) {
+                    if (f.hasOrphans()) {
+                        System.out.println("  [" + f.check().severity() + "] " + f.check().name()
+                                + " : " + f.orphanCount() + " orphan(s); sample=" + f.sampleIds());
+                    }
+                }
+                for (com.keyforge.iiq.reconciliation.ReconciliationFinding f : r.findings()) {
+                    if (com.keyforge.iiq.reconciliation.ReconciliationFinding.SKIPPED.equals(f.status())) {
+                        System.out.println("  [SKIPPED] " + f.check().name() + " : " + f.skipReason());
+                    }
+                }
+                System.out.println();
+                System.out.println("Findings persisted to " + svc.repository().targetTable()
+                        + " (persist failures: " + r.persistFailures() + ")");
+                return r.persistFailures() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
 
     private static int runReconcileCanonicalViewsDb() {
         try {
@@ -2750,6 +2906,9 @@ public final class Main {
         System.out.println("  extract-certifications-db   Retrieve certification campaigns and upsert into <schema>.kf_certification_campaign");
         System.out.println("  derive-provisioning-links-db       Derive kf_event_link (provisioning txn -> request/certification) from rest/provisioningTransactions");
         System.out.println("  reconcile-canonical-views-db       Maintain the derived kf_identity_account view and report core canonical table state (kf_identity/kf_account/kf_application/kf_entitlement are physical tables)");
+        System.out.println("  reconcile-referential-integrity-db Data-quality: detect dangling references across the normalized tables (read-only), writing findings to kf_reconciliation_finding");
+        System.out.println("  derive-record-lineage-db           Derive the PDF lineage envelope for every domain record into the shared kf_record_lineage sidecar (read-only over domain tables)");
+        System.out.println("  reconcile-counts-db                Cross-pipeline count reconciliation: compare PostgreSQL vs Parquet row counts per domain (read-only), writing kf_count_reconciliation");
         System.out.println("  extract-workgroups    Retrieve Workgroups (Group Configuration DataSource, Workgroup subset) and print a summary");
         System.out.println("  extract-workgroups-db Retrieve Workgroups and upsert them into <schema>.kf_workgroup (usergroup extraction unchanged)");
         System.out.println("  extract-workgroup-members    Summarise Workgroup->Identity membership (Edit-Workgroup members grid)");
@@ -2774,6 +2933,10 @@ public final class Main {
         System.out.println("  extract-cert-item-decisions-parquet     Write kf_cert_item_decision Parquet dataset (source-limited)");
         System.out.println("  extract-event-links-parquet             Write kf_event_link Parquet dataset (derived)");
         System.out.println("  extract-all-parquet                     Orchestrate: run every individual Parquet extractor");
+        System.out.println("  start-rest                              Start the read-only REST query service over the Parquet datasets");
+        System.out.println("                                          (DuckDB; no IIQ/PostgreSQL). Config: REST_HOST (default 127.0.0.1),");
+        System.out.println("                                          REST_PORT (default 8100), PARQUET_OUT_DIR. GET /health, " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + "/datasets,");
+        System.out.println("                                          " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + "/{dataset}[?fields=&sort=&order=&limit=&offset=&filter.<f>.<op>=]");
         System.out.println("  extract-accounts      Retrieve all Accounts from IdentityIQ and print a summary");
         System.out.println("  extract-accounts-db   Retrieve all Accounts and upsert them into <schema>.kf_account");
         System.out.println("  extract-assignments   Derive Account -> Entitlement assignments and print a summary");

@@ -197,7 +197,9 @@ public final class RunLedger {
                  "extract-policies-db", "extract-audit-events-db", "extract-role-entitlements-db" -> "classic-ui";
             case "extract-applicationinstances-db", "extract-assignments-db", "extract-catalog-db",
                  "extract-account-entitlements-db", "extract-identity-entitlements-db",
-                 "extract-object-owners-db", "derive-event-links-db", "reconcile-canonical-views-db" -> "derived";
+                 "extract-object-owners-db", "derive-event-links-db", "reconcile-canonical-views-db",
+                 "reconcile-referential-integrity-db", "derive-record-lineage-db",
+                 "reconcile-counts-db" -> "derived";
             default -> "unknown";
         };
     }
