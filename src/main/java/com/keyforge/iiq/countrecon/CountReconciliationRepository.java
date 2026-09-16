@@ -71,15 +71,34 @@ public final class CountReconciliationRepository {
         }
     }
 
-    /** PostgreSQL row count, or {@code -1} when the table is absent in this schema. */
+    /**
+     * PostgreSQL row count, or {@code -1} when the table is absent. Tables carrying the soft-delete
+     * flag are counted as ACTIVE rows only (soft-deleted rows excluded), so the count reflects current
+     * state; tables without the flag are counted in full.
+     */
     public long pgCount(Connection conn, String table) throws SQLException {
         if (!tableExists(conn, table)) {
             return -1;
         }
-        try (Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(CountReconciliation.pgCountSql(schema, table))) {
+        String sql = columnExists(conn, table, "is_deleted")
+                ? CountReconciliation.pgActiveCountSql(schema, table)
+                : CountReconciliation.pgCountSql(schema, table);
+        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(sql)) {
             rs.next();
             return rs.getLong(1);
+        }
+    }
+
+    private boolean columnExists(Connection conn, String table, String column) throws SQLException {
+        String sql = "SELECT 1 FROM information_schema.columns "
+                + "WHERE table_schema = ? AND table_name = ? AND column_name = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, schema);
+            ps.setString(2, table);
+            ps.setString(3, column);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
         }
     }
 

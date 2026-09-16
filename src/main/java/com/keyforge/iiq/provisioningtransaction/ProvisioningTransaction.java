@@ -40,4 +40,16 @@ public record ProvisioningTransaction(
         String result,
         String accessRequestId,
         String certificationName) {
+
+    /**
+     * Returns a copy with the two authoritative references replaced. The list endpoint leaves
+     * {@code accessRequestId}/{@code certificationName} null; the per-transaction detail route
+     * populates them, so the event-link derivation enriches them from detail before resolving.
+     */
+    public ProvisioningTransaction withReferences(String accessRequestId, String certificationName) {
+        return new ProvisioningTransaction(id, name, operation, source, status, statusMessage, type,
+                typeMessage, integration, identityName, identityDisplayName, applicationName, nativeIdentity,
+                accountDisplayName, created, modified, lastRetry, ticketId, retry, retryCount, timedOut,
+                forced, forceable, result, accessRequestId, certificationName);
+    }
 }

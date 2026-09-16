@@ -56,4 +56,13 @@ public final class CountReconciliation {
     public static String pgCountSql(String schema, String table) {
         return "SELECT count(*) FROM " + schema + "." + table;
     }
+
+    /**
+     * Active-row count for a table that carries the soft-delete flag: soft-deleted rows are excluded so
+     * the count reflects current state (and matches the latest Parquet snapshot). Used only when the
+     * {@code is_deleted} column exists; other tables keep {@link #pgCountSql}.
+     */
+    public static String pgActiveCountSql(String schema, String table) {
+        return "SELECT count(*) FROM " + schema + "." + table + " WHERE is_deleted IS NOT TRUE";
+    }
 }

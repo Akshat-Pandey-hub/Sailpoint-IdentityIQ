@@ -541,6 +541,7 @@ public final class Main {
                 EntitlementPersistenceService.Result result = svc.persist(conn, plan.toPersist());
                 RunLedger.record("kf_entitlement", plan.kept(), result.getInserted(), result.getUpdated(), result.getFailed());
                 advanceWatermark(conn, schema, "kf_entitlement", "meta.lastModified", plan, result.getFailed());
+                sweepEntityDeletions(conn, schema, "kf_entitlement", "entitlementid", entitlements, Entitlement::getId);
                 printEntitlementDbSummary(plan.kept(), result, svc.targetTable());
                 return result.getFailed() > 0 ? 6 : 0;
             }
@@ -596,6 +597,7 @@ public final class Main {
                 AccountPersistenceService.Result result = svc.persist(conn, plan.toPersist());
                 RunLedger.record("kf_account", plan.kept(), result.getInserted(), result.getUpdated(), result.getFailed());
                 advanceWatermark(conn, schema, "kf_account", "meta.lastModified", plan, result.getFailed());
+                sweepEntityDeletions(conn, schema, "kf_account", "accountid", accounts, Account::getId);
                 printAccountDbSummary(plan.kept(), result, svc.targetTable());
                 return result.getFailed() > 0 ? 6 : 0;
             }
@@ -747,6 +749,72 @@ public final class Main {
         }
     }
 
+    /**
+     * CSS deletion detection / soft-delete for a current-state entity table. Builds the authoritative
+     * keep-set from the FULL source pull (always fetched, even in incremental mode) using the same
+     * canonicalization the repositories store ({@link com.keyforge.iiq.parquet.ParquetIds#canonicalUuid}
+     * == each RowMapper's {@code toCanonicalUuid}), then marks rows no longer in the source deleted and
+     * revives reappeared ones. An object with an unparseable id is skipped (it was never persisted), so
+     * the keep-set never wrongly omits a stored row. Reuses the proven {@link SoftDeleteSweeper}.
+     */
+    private static <T> void sweepEntityDeletions(Connection conn, String schema, String table,
+            String pkColumn, List<T> fullSource, java.util.function.Function<T, String> rawIdFn) {
+        List<String> ids = new java.util.ArrayList<>(fullSource.size());
+        for (T t : fullSource) {
+            String canon = com.keyforge.iiq.parquet.ParquetIds.canonicalUuid(rawIdFn.apply(t));
+            if (canon != null) {
+                ids.add(canon);
+            }
+        }
+        try {
+            com.keyforge.iiq.deletion.SoftDeleteSweeper.SweepResult sw =
+                    new com.keyforge.iiq.deletion.SoftDeleteSweeper(schema).sweep(conn, table, pkColumn, ids);
+            if (sw.skipped()) {
+                System.out.println("  soft-delete sweep [" + table + "]: SKIPPED — " + sw.note());
+            } else {
+                System.out.println("  soft-delete sweep [" + table + "]: current-source=" + sw.currentIdCount()
+                        + " marked deleted=" + sw.marked() + " revived=" + sw.revived());
+            }
+        } catch (SQLException e) {
+            System.out.println("  soft-delete sweep [" + table + "]: ERROR — " + e.getMessage());
+        }
+    }
+
+    /**
+     * Variant of {@link #sweepEntityDeletions} for tables whose PK is a <b>precomputed deterministic
+     * id</b> (not a canonicalized source id) — e.g. {@code kf_workgroup_member.id =
+     * deterministicId(workgroup_id, identity_id)}. The caller supplies a {@code pkFn} that reproduces
+     * the exact stored PK (using the same RowMapper), so the keep-set matches what was persisted. A
+     * source record that cannot form a valid PK was never persisted, so excluding it is safe. Reuses
+     * the same {@link SoftDeleteSweeper} (empty-source guard, revive, idempotency, no hard delete).
+     */
+    private static <T> void sweepDeletionsByPk(Connection conn, String schema, String table,
+            String pkColumn, List<T> fullSource, java.util.function.Function<T, String> pkFn) {
+        List<String> ids = new java.util.ArrayList<>(fullSource.size());
+        for (T t : fullSource) {
+            try {
+                String pk = pkFn.apply(t);
+                if (pk != null && !pk.isBlank()) {
+                    ids.add(pk);
+                }
+            } catch (RuntimeException unmappable) {
+                // record that cannot form a valid PK was never persisted -> safe to exclude from keep-set
+            }
+        }
+        try {
+            com.keyforge.iiq.deletion.SoftDeleteSweeper.SweepResult sw =
+                    new com.keyforge.iiq.deletion.SoftDeleteSweeper(schema).sweep(conn, table, pkColumn, ids);
+            if (sw.skipped()) {
+                System.out.println("  soft-delete sweep [" + table + "]: SKIPPED — " + sw.note());
+            } else {
+                System.out.println("  soft-delete sweep [" + table + "]: current-source=" + sw.currentIdCount()
+                        + " marked deleted=" + sw.marked() + " revived=" + sw.revived());
+            }
+        } catch (SQLException e) {
+            System.out.println("  soft-delete sweep [" + table + "]: ERROR — " + e.getMessage());
+        }
+    }
+
     // Per-entity source-change-time extractors (authoritative SOURCE fields only; never processing time).
 
     private static Instant taskResultChangeTime(TaskResult t) {
@@ -822,6 +890,7 @@ public final class Main {
                 ApplicationPersistenceService.Result result = svc.persist(conn, plan.toPersist());
                 RunLedger.record("kf_application", plan.kept(), result.getInserted(), result.getUpdated(), result.getFailed());
                 advanceWatermark(conn, schema, "kf_application", "meta.lastModified", plan, result.getFailed());
+                sweepEntityDeletions(conn, schema, "kf_application", "applicationid", applications, Application::getId);
                 printApplicationDbSummary(plan.kept(), result, svc.targetTable());
                 return result.getFailed() > 0 ? 6 : 0;
             }
@@ -883,6 +952,7 @@ public final class Main {
                 UserPersistenceService.Result result = svc.persist(conn, plan.toPersist());
                 RunLedger.record("kf_identity", plan.kept(), result.getInserted(), result.getUpdated(), result.getFailed());
                 advanceWatermark(conn, schema, "kf_identity", "meta.lastModified", plan, result.getFailed());
+                sweepEntityDeletions(conn, schema, "kf_identity", "userid", identities, Identity::getId);
                 printUserDbSummary(plan.kept(), result, svc.targetTable());
                 return result.getFailed() > 0 ? 6 : 0;
             }
@@ -1297,6 +1367,7 @@ public final class Main {
                 RolePersistenceService.Result result = svc.persist(conn, plan.toPersist());
                 RunLedger.record("kf_role", plan.kept(), result.getInserted(), result.getUpdated(), result.getFailed());
                 advanceWatermark(conn, schema, "kf_role", "meta.lastModified", plan, result.getFailed());
+                sweepEntityDeletions(conn, schema, "kf_role", "roleid", roles, Role::getId);
                 System.out.println();
                 System.out.println("Successfully persisted " + result.getPersisted()
                         + " roles to " + svc.targetTable() + " (of " + plan.kept() + " selected, "
@@ -1445,6 +1516,9 @@ public final class Main {
                 System.out.println("  updated:  " + result.getUpdated());
                 System.out.println("  failed:   " + result.getFailed());
                 printLines(result.getFailures());
+                // CSS deletion detection: mark Workgroups no longer in the full source subset as deleted.
+                sweepEntityDeletions(conn, pgConfig.getSchema(), "kf_workgroup", "workgroupid",
+                        WorkgroupPersistenceService.workgroupsOnly(all), UserGroup::getId);
                 if (result.getFailed() > 0) {
                     return 6;
                 }
@@ -1987,6 +2061,15 @@ public final class Main {
                 System.out.println("  updated:              " + result.getUpdated());
                 System.out.println("  failed:               " + result.getFailed());
                 printLines(result.getFailures());
+                // CSS deletion detection — ONLY when every workgroup's membership fetch succeeded, so the
+                // keep-set is authoritative (a partial fetch would wrongly delete un-fetched members).
+                if (res.anyFailed()) {
+                    System.out.println("  soft-delete sweep [kf_workgroup_member]: SKIPPED — membership fetch "
+                            + "incomplete (a workgroup failed); avoiding unsafe deletions");
+                } else {
+                    sweepDeletionsByPk(conn, pgConfig.getSchema(), "kf_workgroup_member", "id", memberships,
+                            m -> com.keyforge.iiq.workgroupmember.WorkgroupMemberRowMapper.map(m).id());
+                }
                 if (result.getFailed() > 0) {
                     return 6;
                 }
@@ -2481,6 +2564,23 @@ public final class Main {
                 System.out.println("  inserted: " + r.getInserted() + "  updated: " + r.getUpdated()
                         + "  failed: " + r.getFailed());
                 printLines(r.getFailures());
+
+                // CSS deletion detection / soft-delete: mark rows no longer in the FULL source set as
+                // deleted (never hard-deleted). `results` is always the full IIQ pull (even in
+                // incremental mode), so the current source id set is authoritative here.
+                java.util.List<String> currentIds = new java.util.ArrayList<>();
+                for (TaskResult t : results) {
+                    currentIds.add(com.keyforge.iiq.taskresult.TaskResultRowMapper.map(t).taskresultid());
+                }
+                com.keyforge.iiq.deletion.SoftDeleteSweeper.SweepResult sw =
+                        new com.keyforge.iiq.deletion.SoftDeleteSweeper(schema)
+                                .sweep(conn, "kf_task_result", "taskresultid", currentIds);
+                if (sw.skipped()) {
+                    System.out.println("  soft-delete sweep: SKIPPED — " + sw.note());
+                } else {
+                    System.out.println("  soft-delete sweep: current-source=" + sw.currentIdCount()
+                            + "  marked deleted=" + sw.marked() + "  revived=" + sw.revived());
+                }
                 return r.getFailed() > 0 ? 6 : 0;
             }
         } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
@@ -2674,8 +2774,10 @@ public final class Main {
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
             List<ProvisioningTransaction> txns =
-                    new ProvisioningTransactionService(new IiqSessionClient(iiqConfig, debugHttp)).getAllTransactions();
-            System.out.println("Extracted " + txns.size() + " provisioning transactions from IdentityIQ");
+                    new ProvisioningTransactionService(new IiqSessionClient(iiqConfig, debugHttp))
+                            .getAllTransactionsWithReferences();
+            System.out.println("Extracted " + txns.size()
+                    + " provisioning transactions (with detail references) from IdentityIQ");
             try (Connection conn = PostgresConnection.open(pgConfig)) {
                 ProvisioningEventLinkPersistenceService svc =
                         new ProvisioningEventLinkPersistenceService(pgConfig.getSchema());

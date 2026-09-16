@@ -45,6 +45,12 @@ class CountReconciliationTest {
                 CountReconciliation.pgCountSql("iiq_migration_final", "kf_audit_event"));
     }
 
+    @Test
+    void activeCountSqlExcludesSoftDeletedRows() {
+        assertEquals("SELECT count(*) FROM iiq_migration_final.kf_task_result WHERE is_deleted IS NOT TRUE",
+                CountReconciliation.pgActiveCountSql("iiq_migration_final", "kf_task_result"));
+    }
+
     private static boolean notBlank(String s) {
         return s != null && !s.isBlank();
     }

@@ -70,6 +70,42 @@ public class ProvisioningTransactionService {
         return out;
     }
 
+    /**
+     * Like {@link #getAllTransactions()} but enriches each transaction's {@code accessRequestId} /
+     * {@code certificationName} from the per-transaction <b>detail</b> route
+     * {@code GET /rest/provisioningTransactions/{id}} — the list endpoint leaves those references null,
+     * while detail populates them (verified live; same source the Parquet event-link dataset uses). One
+     * detail GET per transaction. A detail call that fails leaves that transaction at its list-level
+     * (null) references rather than aborting the run.
+     */
+    public List<ProvisioningTransaction> getAllTransactionsWithReferences() {
+        return enrichReferences(getAllTransactions(), id -> client.get(PATH + "/" + id, null));
+    }
+
+    /**
+     * Pure enrichment (unit-testable with a lambda, no client): for each transaction, fetch its detail
+     * JSON via {@code detailFetcher} and set {@code accessRequestId}/{@code certificationName} from it.
+     * A transaction whose detail is missing or unparseable keeps its list-level (null) references.
+     */
+    static List<ProvisioningTransaction> enrichReferences(List<ProvisioningTransaction> list,
+            java.util.function.Function<String, String> detailFetcher) {
+        ObjectMapper mapper = new ObjectMapper();
+        List<ProvisioningTransaction> out = new ArrayList<>(list.size());
+        for (ProvisioningTransaction t : list) {
+            if (t.id() == null || t.id().isBlank()) {
+                out.add(t);
+                continue;
+            }
+            try {
+                JsonNode d = mapper.readTree(detailFetcher.apply(t.id()));
+                out.add(t.withReferences(text(d, "accessRequestId"), text(d, "certificationName")));
+            } catch (Exception detailUnavailable) {
+                out.add(t); // keep list-level references (null) rather than failing the whole derivation
+            }
+        }
+        return out;
+    }
+
     // --- pure parsing (unit-testable; use with a null client) ---------------
 
     public List<ProvisioningTransaction> parseTransactions(String json) {
