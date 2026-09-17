@@ -25,6 +25,11 @@ public final class LineageCatalog {
                 new LineageSource("account", "accountid", "sailpoint.object.Link", "scim", null, null, null),
                 new LineageSource("entitlement", "entitlementid", "sailpoint.object.ManagedAttribute", "scim", "value", "created_at", "modified_at"),
                 new LineageSource("entitlementassignment", "assignmentid", "derived:AccountEntitlement", "derived", null, null, null),
+                // Active account->entitlement projection (kf_account_entitlement). The legacy
+                // 'entitlementassignment' above is absent in the live schema; this is the table that is
+                // actually persisted/soft-deleted, so §6 lineage must cover it. Same derived semantics,
+                // PK 'id', no source_id/natural/created/modified columns (all run-time guarded).
+                new LineageSource("kf_account_entitlement", "id", "derived:AccountEntitlement", "derived", null, null, null),
                 new LineageSource("catalog", "catalogid", "derived:EntitlementCatalog", "derived", "name", "created_at", "modified_at"),
                 new LineageSource("usergroup", "id", "sailpoint.object.GroupDefinition", "classic-ui", "name", "created_at", "modified_at"),
                 new LineageSource("workitem", "id", "sailpoint.object.WorkItem", "ui-rest", "name", "created_at", null),

@@ -286,6 +286,18 @@ public final class Main {
                 CatalogPersistenceService.Result result = svc.persist(conn, entitlements);
                 RunLedger.record("catalog", entitlements.size(), result.getInserted(), result.getUpdated(), result.getFailed());
                 printCatalogDbSummary(result, svc.targetTable());
+                // CSS deletion detection: rebuild the keep-set from the SAME requestable derivation that
+                // persistence uses. catalogid = deterministicCatalogId(name, appinstanceid) is independent
+                // of the existing-id sets, so empty sets reproduce exactly the persisted catalogids. The
+                // requestable filter makes this correctly delete rows whose entitlement was removed OR is
+                // no longer requestable. A full (single) getAllEntitlements pull -> no partial-fetch risk.
+                List<Entitlement> requestableForSweep = entitlements.stream()
+                        .filter(e -> Boolean.TRUE.equals(e.getRequestable())).toList();
+                List<com.keyforge.iiq.catalog.CatalogRow> catalogKeepRows =
+                        com.keyforge.iiq.catalog.CatalogRowMapper.deriveCatalogRows(
+                                requestableForSweep, java.util.Set.of(), java.util.Set.of());
+                sweepDeletionsByPk(conn, pgConfig.getSchema(), "catalog", "catalogid", catalogKeepRows,
+                        com.keyforge.iiq.catalog.CatalogRow::catalogid);
                 return result.getFailed() > 0 ? 6 : 0;
             }
 
@@ -654,6 +666,12 @@ public final class Main {
                 RunLedger.record("applicationinstance", applications.size(), result.getInserted(), result.getUpdated(), result.getFailed());
                 printApplicationInstanceDbSummary(applications.size(), result, svc.targetTable(),
                         pgConfig.getSchema());
+                // CSS deletion detection: applicationinstance is 1:1 with the FULL applications pull;
+                // instanceid = canonicalUuid(application.getId()) (identical to the mapper), so the keep-set
+                // reproduces the persisted PKs exactly. Built from the live pull (not kf_application), so a
+                // soft-deleted application row cannot cause a false instance deletion; empty-source guarded.
+                sweepEntityDeletions(conn, pgConfig.getSchema(), "applicationinstance", "instanceid",
+                        applications, Application::getId);
                 return result.getFailed() > 0 ? 6 : 0;
             }
 
@@ -1423,6 +1441,18 @@ public final class Main {
                             + "inheritance/requirements/permits)");
                 }
                 printLines(result.getFailures());
+                // CSS deletion detection: rebuild the keep-set from the SAME derivation persistence uses
+                // (RoleHierarchyRowMapper.mapAll flattened over the full getAllRoles() pull) and sweep by the
+                // deterministic hierarchyid, so the keep-set equals the persisted PKs exactly. Single full pull
+                // (throws on failure -> sweep never runs on a partial source); empty-source guarded, so 0 edges
+                // NEVER causes mass soft-deletion. A removed inherits/requires/permits edge -> its hierarchyid
+                // is absent -> marked deleted; a reappearing edge is revived.
+                List<com.keyforge.iiq.role.RoleHierarchyRow> hierarchyKeepRows = new ArrayList<>();
+                for (Role r : roles) {
+                    hierarchyKeepRows.addAll(RoleHierarchyRowMapper.mapAll(r));
+                }
+                sweepDeletionsByPk(conn, pgConfig.getSchema(), "kf_role_hierarchy", "hierarchyid",
+                        hierarchyKeepRows, com.keyforge.iiq.role.RoleHierarchyRow::hierarchyid);
                 return result.getFailed() > 0 ? 6 : 0;
             }
 
@@ -1613,6 +1643,15 @@ public final class Main {
                 System.out.println("  updated:  " + result.getUpdated());
                 System.out.println("  failed:   " + result.getFailed());
                 printLines(result.getFailures());
+                // CSS deletion detection: rebuild the keep-set from the SAME pure derivation persistence
+                // uses (buildRows over the full apps/roles/entitlements pulls). ownerid is deterministic,
+                // so the keep-set equals the persisted ownerids exactly. Three single full pulls (each
+                // throws on failure -> sweep never runs on a partial source); empty-source guarded. This
+                // also handles an owner CHANGE (old edge id absent -> deleted; new edge id -> upserted).
+                List<com.keyforge.iiq.objectowner.ObjectOwnerRow> ownerKeepRows =
+                        com.keyforge.iiq.objectowner.ObjectOwnerPersistenceService.buildRows(apps, roles, entitlements);
+                sweepDeletionsByPk(conn, pgConfig.getSchema(), "kf_object_owner", "ownerid", ownerKeepRows,
+                        com.keyforge.iiq.objectowner.ObjectOwnerRow::ownerid);
                 return result.getFailed() > 0 ? 6 : 0;
             }
 
@@ -1707,6 +1746,12 @@ public final class Main {
                 System.out.println("  updated:    " + result.getUpdated());
                 System.out.println("  failed:     " + result.getFailed());
                 printLines(result.getFailures());
+                // CSS deletion detection: keep-set = the SAME mapper persistence uses, over the SAME
+                // assignments (pure build over the full accounts/entitlements/identities pulls). map() is
+                // unconditional, so every persisted id is reproduced exactly. Three single full pulls ->
+                // no partial-fetch (each throws on failure -> sweep never runs on a partial); empty-guarded.
+                sweepDeletionsByPk(conn, pgConfig.getSchema(), "kf_account_entitlement", "id", assignments,
+                        a -> com.keyforge.iiq.accountentitlement.AccountEntitlementRowMapper.map(a).id());
                 return result.getFailed() > 0 ? 6 : 0;
             }
 
@@ -1808,6 +1853,14 @@ public final class Main {
                 System.out.println("  (source/assigner/dates/aggregation_state/granted_by_role are NULL: "
                         + "not provided by the current source)");
                 printLines(result.getFailures());
+                // CSS deletion detection: keep-set replicates BOTH of persistence's steps exactly —
+                // the Optional identity filter (map(a) empty -> orElse(null) -> excluded, matching persist's
+                // `if (mapped.isEmpty()) continue`) AND the id dedup (SoftDeleteSweeper.normalizeIds dedups,
+                // matching persist's byId map). Same pure build over the full accounts/entitlements/identities
+                // pulls; no partial-fetch (each pull throws on failure); empty-source guarded.
+                sweepDeletionsByPk(conn, pgConfig.getSchema(), "kf_identity_entitlement", "id", assignments,
+                        a -> com.keyforge.iiq.identityentitlement.IdentityEntitlementRowMapper.map(a)
+                                .map(com.keyforge.iiq.identityentitlement.IdentityEntitlementRow::id).orElse(null));
                 return result.getFailed() > 0 ? 6 : 0;
             }
 
@@ -1875,6 +1928,16 @@ public final class Main {
                 System.out.println("  (assigner/description are NULL: source exposes the fields but they are "
                         + "empty across live data)");
                 printLines(r.getFailures());
+                // CSS deletion detection: keep-set uses the SAME persisted rels list and the SAME PK
+                // derivation persistence uses (IdentityRoleRowMapper.map(a).id()). getAllAssignments() is
+                // fail-fast — a SCIM enumeration or any per-identity detail failure throws IiqApiException
+                // and aborts BEFORE this point, so the sweep only ever runs on a COMPLETE source set.
+                // An unmappable assignment throws IdentityRoleMappingException (a RuntimeException) which
+                // sweepDeletionsByPk catches and excludes — exactly as persistOne skips it (never persisted
+                // -> correctly absent from the keep-set). An empty valid list is protected by the
+                // SoftDeleteSweeper empty-source guard (SKIP).
+                sweepDeletionsByPk(conn, pgConfig.getSchema(), "kf_identity_role", "id",
+                        rels, a -> com.keyforge.iiq.identityrole.IdentityRoleRowMapper.map(a).id());
                 return r.getFailed() > 0 ? 6 : 0;
             }
         } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
@@ -2181,6 +2244,15 @@ public final class Main {
                 System.out.println("  updated:              " + result.getUpdated());
                 System.out.println("  failed:               " + result.getFailed());
                 printLines(result.getFailures());
+                // CSS deletion detection: keep-set is the SAME already-built rows list passed to persist,
+                // keyed by RoleEntitlementRow::id (a pure record accessor — no re-fetch, no re-map, no
+                // throw). buildRoleEntitlementRows is fail-fast: a RoleService/EntitlementService full-pull
+                // failure, any per-role modeler failure, or a malformed role id (mapper throw) all abort
+                // BEFORE this point, so the sweep only ever runs on a COMPLETE source set. Persistence
+                // dedups by row.id() and SoftDeleteSweeper.normalizeIds dedups the keep-set identically, so
+                // the keep-set equals the persisted distinct id-set exactly. Empty rows -> empty-source SKIP.
+                sweepDeletionsByPk(conn, pgConfig.getSchema(), "kf_role_entitlement", "id",
+                        rows, com.keyforge.iiq.roleentitlement.RoleEntitlementRow::id);
                 return result.getFailed() > 0 ? 6 : 0;
             }
 
