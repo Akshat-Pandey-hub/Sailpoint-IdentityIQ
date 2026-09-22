@@ -40,6 +40,24 @@ class LineageCatalogTest {
     }
 
     @Test
+    void coreCurrentStateTablesAreCatalogued() {
+        Set<String> tables = new HashSet<>();
+        for (LineageSource s : LineageCatalog.all()) {
+            tables.add(s.table());
+        }
+        // The five core current-state tables must carry the §6 lineage envelope, keyed by the ACTUAL
+        // live table names the extractors write (not the legacy usr/account/entitlement/application).
+        for (String core : List.of("kf_identity", "kf_account", "kf_entitlement", "kf_application", "kf_role")) {
+            assertTrue(tables.contains(core), "lineage catalog missing core current-state table: " + core);
+        }
+        // guard against regressing to the stale legacy names
+        assertFalse(tables.contains("usr"), "stale 'usr' entry must not be in the catalog");
+        assertFalse(tables.contains("account"), "stale 'account' entry must not be in the catalog");
+        assertFalse(tables.contains("entitlement"), "stale 'entitlement' entry must not be in the catalog");
+        assertFalse(tables.contains("application"), "stale 'application' entry must not be in the catalog");
+    }
+
+    @Test
     void catalogCoversAllActiveNormalizedDomainTables() {
         Set<String> tables = new HashSet<>();
         for (LineageSource s : LineageCatalog.all()) {
@@ -47,7 +65,7 @@ class LineageCatalogTest {
         }
         // every currently active normalized domain table must carry the §6 lineage envelope
         for (String required : List.of(
-                "usr", "application", "applicationinstance", "account", "entitlement",
+                "kf_identity", "kf_application", "applicationinstance", "kf_account", "kf_entitlement",
                 "kf_account_entitlement", "catalog", "usergroup", "workitem",
                 "kf_role", "kf_role_hierarchy", "kf_role_entitlement", "kf_identity_role",
                 "kf_identity_entitlement", "kf_object_owner", "kf_workgroup", "kf_workgroup_member",

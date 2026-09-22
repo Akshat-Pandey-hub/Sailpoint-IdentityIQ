@@ -64,6 +64,24 @@
     <build>
         <finalName>iiq-migration-tool</finalName>
         <plugins>
+            <!-- Default (Java 17) compile EXCLUDES the native SailPoint source layer. That code imports
+                 sailpoint.* and must be compiled inside IIQ's runtime (Java 8/11) against identityiq.jar,
+                 so it is built only under the 'native' profile below. Excluding it here keeps the existing
+                 REST/SCIM build green with no IIQ jar present. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <excludes>
+                        <exclude>com/keyforge/nativeiiq/**</exclude>
+                    </excludes>
+                    <testExcludes>
+                        <testExclude>com/keyforge/nativeiiq/**</testExclude>
+                    </testExcludes>
+                </configuration>
+            </plugin>
+
             <!-- Run JUnit 5 tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -114,4 +132,131 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+          Build the native SailPoint IdentityIQ source layer (com.keyforge.nativeiiq.*) from THIS
+          same project/codebase AND package it as an installable IIQ plugin ZIP. Activate with:
+          mvn -Pnative ...
+          Requires the IIQ compile-time jar at ./lib/identityiq.jar (copied from the IIQ server's
+          WEB-INF/lib; supplied by the IIQ runtime at execution, so it is 'system' scope and never
+          bundled). Compiles the native package at the IIQ server's Java level (set iiq.java.release to
+          match your IIQ, e.g. 8 or 11). The default build is unaffected and remains Java 17 + green.
+          postgresql and jackson-databind are already project dependencies and are reused here.
+        -->
+        <profile>
+            <id>native</id>
+            <properties>
+                <iiq.java.release>8</iiq.java.release>
+                <plugin.name>KeyForgeNativeIIQ</plugin.name>
+                <plugin.zip.version>1.0</plugin.zip.version>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>com.sailpoint</groupId>
+                    <artifactId>identityiq</artifactId>
+                    <version>provided-by-iiq</version>
+                    <scope>system</scope>
+                    <systemPath>${project.basedir}/lib/identityiq.jar</systemPath>
+                </dependency>
+                <!-- JAX-RS annotations for the plugin REST resource. NOT bundled in identityiq.jar
+                     and NOT shipped in the plugin jar (the IIQ/Jersey runtime supplies them), so it is
+                     compile-time only: provided scope. -->
+                <dependency>
+                    <groupId>javax.ws.rs</groupId>
+                    <artifactId>javax.ws.rs-api</artifactId>
+                    <version>2.1.1</version>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.13.0</version>
+                        <executions>
+                            <!-- Additional execution that compiles ONLY the native package, at IIQ's
+                                 Java level, against identityiq.jar. The default-compile (Java 17, native
+                                 excluded) still runs for the rest of the project. -->
+                            <!-- Compile the native main sources at IIQ's Java level against identityiq.jar. -->
+                            <execution>
+                                <id>compile-native</id>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>compile</goal>
+                                </goals>
+                                <configuration>
+                                    <release>${iiq.java.release}</release>
+                                    <includes>
+                                        <include>com/keyforge/nativeiiq/**</include>
+                                    </includes>
+                                    <excludes>
+                                        <exclude>none</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+                            <!-- Compile the native tests too, so `mvn -Pnative test` runs them. -->
+                            <execution>
+                                <id>testcompile-native</id>
+                                <phase>test-compile</phase>
+                                <goals>
+                                    <goal>testCompile</goal>
+                                </goals>
+                                <configuration>
+                                    <release>${iiq.java.release}</release>
+                                    <testIncludes>
+                                        <testInclude>com/keyforge/nativeiiq/**</testInclude>
+                                    </testIncludes>
+                                    <testExcludes>
+                                        <testExclude>none</testExclude>
+                                    </testExcludes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Package the compiled native classes into an installable IdentityIQ plugin ZIP:
+                         jar ONLY com/keyforge/nativeiiq/** into lib/, add the static plugin/ resources
+                         (manifest.xml + import/install TaskDefinition), and zip to target/dist/. The
+                         plugin JAR contains only our classes; sailpoint.* is supplied by the IIQ plugin
+                         runtime (never bundled). Runs only under -Pnative, after the native classes
+                         compile against lib/identityiq.jar. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>package-iiq-plugin</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <property name="stage" value="${project.build.directory}/plugin-staging"/>
+                                        <delete dir="${stage}"/>
+                                        <mkdir dir="${stage}/lib"/>
+                                        <!-- jar only the native plugin classes -->
+                                        <jar destfile="${stage}/lib/${plugin.name}.jar"
+                                             basedir="${project.build.outputDirectory}"
+                                             includes="com/keyforge/nativeiiq/**"/>
+                                        <!-- static plugin resources: manifest.xml + import/install/*.xml -->
+                                        <copy todir="${stage}">
+                                            <fileset dir="${project.basedir}/plugin"/>
+                                        </copy>
+                                        <mkdir dir="${project.build.directory}/dist"/>
+                                        <zip destfile="${project.build.directory}/dist/${plugin.name}-${plugin.zip.version}.zip"
+                                             basedir="${stage}"/>
+                                        <echo message="Plugin ZIP: ${project.build.directory}/dist/${plugin.name}-${plugin.zip.version}.zip"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

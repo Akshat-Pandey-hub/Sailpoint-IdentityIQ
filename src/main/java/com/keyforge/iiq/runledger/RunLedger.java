@@ -193,11 +193,16 @@ public final class RunLedger {
             case "extract-provisioning-transactions-db", "derive-provisioning-links-db",
                  "extract-certifications-db", "extract-provisioning-items-db",
                  "extract-identity-roles-db" -> "classic-rest";
+            case "extract-native-identity-db", "extract-native-entitlement-db",
+                 "extract-native-application-db", "extract-native-account-db",
+                 "extract-native-role-db", "extract-native-workgroup-db",
+                 "extract-native-group-definition-db" -> "native-plugin-rest";
             case "extract-usergroups-db", "extract-workgroups-db", "extract-workgroup-members-db",
                  "extract-policies-db", "extract-audit-events-db", "extract-role-entitlements-db" -> "classic-ui";
             case "extract-applicationinstances-db", "extract-assignments-db", "extract-catalog-db",
                  "extract-account-entitlements-db", "extract-identity-entitlements-db",
-                 "extract-object-owners-db", "derive-event-links-db", "reconcile-canonical-views-db",
+                 "extract-object-owners-db", "derive-event-links-db", "derive-events-db",
+                 "reconcile-canonical-views-db",
                  "reconcile-referential-integrity-db", "derive-record-lineage-db",
                  "reconcile-counts-db" -> "derived";
             default -> "unknown";

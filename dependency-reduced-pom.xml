@@ -11,6 +11,18 @@
     <finalName>iiq-migration-tool</finalName>
     <plugins>
       <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <excludes>
+            <exclude>com/keyforge/nativeiiq/**</exclude>
+          </excludes>
+          <testExcludes>
+            <testExclude>com/keyforge/nativeiiq/**</testExclude>
+          </testExcludes>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${surefire.plugin.version}</version>
         <configuration>
@@ -49,6 +61,100 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>native</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.13.0</version>
+            <executions>
+              <execution>
+                <id>compile-native</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>compile</goal>
+                </goals>
+                <configuration>
+                  <release>${iiq.java.release}</release>
+                  <includes>
+                    <include>com/keyforge/nativeiiq/**</include>
+                  </includes>
+                  <excludes>
+                    <exclude>none</exclude>
+                  </excludes>
+                </configuration>
+              </execution>
+              <execution>
+                <id>testcompile-native</id>
+                <phase>test-compile</phase>
+                <goals>
+                  <goal>testCompile</goal>
+                </goals>
+                <configuration>
+                  <release>${iiq.java.release}</release>
+                  <testIncludes>
+                    <testInclude>com/keyforge/nativeiiq/**</testInclude>
+                  </testIncludes>
+                  <testExcludes>
+                    <testExclude>none</testExclude>
+                  </testExcludes>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>package-iiq-plugin</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <property />
+                    <delete />
+                    <mkdir />
+                    <jar />
+                    <copy>
+                      <fileset />
+                    </copy>
+                    <mkdir />
+                    <zip />
+                    <echo />
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+      <dependencies>
+        <dependency>
+          <groupId>com.sailpoint</groupId>
+          <artifactId>identityiq</artifactId>
+          <version>provided-by-iiq</version>
+          <scope>system</scope>
+          <systemPath>${project.basedir}/lib/identityiq.jar</systemPath>
+        </dependency>
+        <dependency>
+          <groupId>javax.ws.rs</groupId>
+          <artifactId>javax.ws.rs-api</artifactId>
+          <version>2.1.1</version>
+          <scope>provided</scope>
+        </dependency>
+      </dependencies>
+      <properties>
+        <iiq.java.release>8</iiq.java.release>
+        <plugin.zip.version>1.0</plugin.zip.version>
+        <plugin.name>KeyForgeNativeIIQ</plugin.name>
+      </properties>
+    </profile>
+  </profiles>
   <dependencies>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -69,6 +175,19 @@
           <groupId>org.junit.jupiter</groupId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.sailpoint</groupId>
+      <artifactId>identityiq</artifactId>
+      <version>provided-by-iiq</version>
+      <scope>system</scope>
+      <systemPath>D:\iiq-migration-tool/lib/identityiq.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+      <version>2.1.1</version>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
   <properties>

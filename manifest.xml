@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Plugin PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<!--
+  IdentityIQ plugin descriptor for the KeyForge native (Java-API) extraction layer.
+  Installed via IdentityIQ: gear/Setup -> Plugins -> Install/Import (drag-and-drop the ZIP).
+  The plugin JAR (lib/KeyForgeNativeIIQ.jar) contains only com.keyforge.nativeiiq.* classes;
+  sailpoint.* is provided by the IIQ plugin runtime at execution time.
+
+  NOTE: set minSystemVersion to match the live IIQ (preview.keyforge.ai) version before install.
+-->
+<Plugin name="KeyForgeNativeIIQ"
+        displayName="KeyForge Native IIQ Extractor"
+        version="1.0"
+        minSystemVersion="8.4"
+        certificationLevel="None">
+    <Attributes>
+        <Map>
+            <entry key="minUpgradableVersion" value="1.0"/>
+        </Map>
+    </Attributes>
+    <!-- Register the read-only native Identity REST resource so IIQ routes it under
+         plugin/rest/keyForgeNativeIIQ/. The class ships in lib/KeyForgeNativeIIQ.jar. -->
+    <ResourceClassNames>
+        <String>com.keyforge.nativeiiq.resource.NativeIdentityResource</String>
+    </ResourceClassNames>
+</Plugin>

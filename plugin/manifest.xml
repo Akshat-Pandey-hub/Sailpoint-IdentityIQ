@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE Plugin PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<!--
+  IdentityIQ 8.4 plugin descriptor for the KeyForge native (Java-API) extraction layer.
+  Installed via IdentityIQ: gear/Setup -> Plugins -> Install/Import (drag-and-drop the ZIP).
+  The plugin JAR (lib/KeyForgeNativeIIQ.jar) contains only com.keyforge.nativeiiq.* classes;
+  sailpoint.* and javax.ws.rs.* are provided by the IIQ plugin runtime at execution time.
+
+  8.4 manifest format: the REST resource is declared as a String List inside the Attributes map
+  (key "restResources"), not as a top-level element. This plugin is REST-resource-only — the native
+  Identity extraction TaskExecutor/TaskDefinition install path was intentionally removed because the
+  standalone KeyForge JAR drives extraction by calling plugin/rest/keyForgeNativeIIQ/identities.
+-->
+<Plugin name="KeyForgeNativeIIQ"
+        displayName="KeyForge Native IIQ Extractor"
+        version="1.0"
+        minSystemVersion="8.4"
+        certificationLevel="None">
+    <Attributes>
+        <Map>
+            <entry key="minUpgradableVersion" value="1.0"/>
+            <!-- Read-only native Identity REST resource, routed under plugin/rest/keyForgeNativeIIQ/. -->
+            <entry key="restResources">
+                <value>
+                    <List>
+                        <String>com.keyforge.nativeiiq.resource.NativeIdentityResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeManagedAttributeResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeApplicationResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeLinkResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeRoleResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeWorkgroupResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeGroupDefinitionResource</String>
+                    </List>
+                </value>
+            </entry>
+        </Map>
+    </Attributes>
+</Plugin>

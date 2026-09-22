@@ -19,11 +19,11 @@ public final class LineageCatalog {
     public static List<LineageSource> all() {
         return List.of(
                 // ---- core identity/access entities (SCIM) ----
-                new LineageSource("usr", "userid", "sailpoint.object.Identity", "scim", "username", "created_at", "modified_at"),
-                new LineageSource("application", "applicationid", "sailpoint.object.Application", "scim", "name", null, null),
+                new LineageSource("kf_identity", "userid", "sailpoint.object.Identity", "scim", "username", "created_at", "modified_at"),
+                new LineageSource("kf_application", "applicationid", "sailpoint.object.Application", "scim", "name", null, null),
                 new LineageSource("applicationinstance", "instanceid", "sailpoint.object.Application", "derived", "instancename", null, null),
-                new LineageSource("account", "accountid", "sailpoint.object.Link", "scim", null, null, null),
-                new LineageSource("entitlement", "entitlementid", "sailpoint.object.ManagedAttribute", "scim", "value", "created_at", "modified_at"),
+                new LineageSource("kf_account", "accountid", "sailpoint.object.Link", "scim", null, null, null),
+                new LineageSource("kf_entitlement", "entitlementid", "sailpoint.object.ManagedAttribute", "scim", "value", "created_at", "modified_at"),
                 new LineageSource("entitlementassignment", "assignmentid", "derived:AccountEntitlement", "derived", null, null, null),
                 // Active account->entitlement projection (kf_account_entitlement). The legacy
                 // 'entitlementassignment' above is absent in the live schema; this is the table that is
