@@ -1,0 +1,6 @@
+package com.keyforge.nativeiiq.model;
+import java.time.Instant;
+public final class NativeWorkgroupMembershipRow {
+ private String workgroupId,workgroupName,identityId,identityName,firstName,lastName,srcSystem,runId; private Boolean memberIsWorkgroup; private Instant extractedAt;
+ public String getWorkgroupId(){return workgroupId;} public void setWorkgroupId(String v){workgroupId=v;} public String getWorkgroupName(){return workgroupName;} public void setWorkgroupName(String v){workgroupName=v;} public String getIdentityId(){return identityId;} public void setIdentityId(String v){identityId=v;} public String getIdentityName(){return identityName;} public void setIdentityName(String v){identityName=v;} public String getFirstName(){return firstName;} public void setFirstName(String v){firstName=v;} public String getLastName(){return lastName;} public void setLastName(String v){lastName=v;} public Boolean getMemberIsWorkgroup(){return memberIsWorkgroup;} public void setMemberIsWorkgroup(Boolean v){memberIsWorkgroup=v;} public String getSrcSystem(){return srcSystem;} public void setSrcSystem(String v){srcSystem=v;} public String getRunId(){return runId;} public void setRunId(String v){runId=v;} public Instant getExtractedAt(){return extractedAt;} public void setExtractedAt(Instant v){extractedAt=v;}
+}

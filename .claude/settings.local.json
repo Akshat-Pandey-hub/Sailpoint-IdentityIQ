@@ -80,7 +80,8 @@
       "Bash(javap -classpath \"lib/identityiq.jar\" sailpoint.object.WorkItemArchive)",
       "Bash(javap -classpath \"lib/identityiq.jar\" sailpoint.object.SignOffHistory)",
       "Bash(javap -classpath \"lib/identityiq.jar\" sailpoint.object.Comment)",
-      "Bash(javap -classpath lib/identityiq.jar 'sailpoint.object.WorkItem$OwnerHistory')"
+      "Bash(javap -classpath lib/identityiq.jar 'sailpoint.object.WorkItem$OwnerHistory')",
+      "Bash(mvn -Dmaven.repo.local=D:/m2/repository -q clean test-compile)"
     ]
   }
 }

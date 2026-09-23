@@ -51,6 +51,21 @@ final class NativeWorkItemArchiveParser {
         return out;
     }
 
+    int sourceCount(String json) {
+        JsonNode root;
+        try {
+            root = mapper.readTree(json == null ? "" : json);
+        } catch (Exception e) {
+            throw new NativeImportException("Native WorkItemArchive endpoint did not return JSON: " + e.getMessage(), e);
+        }
+        if (root == null || !root.isObject() || root.hasNonNull("error")
+                || !root.path(NativeWorkItemArchiveFields.ROWS).isArray()) {
+            throw new NativeImportException("Malformed native WorkItemArchive envelope -- body: " + snippet(json));
+        }
+        JsonNode count = root.get(NativeWorkItemArchiveFields.SOURCE_COUNT);
+        return count == null || !count.canConvertToInt() ? -1 : count.asInt();
+    }
+
     private NativeWorkItemArchiveRecord toRecord(JsonNode r) {
         NativeWorkItemArchiveRecord rec = new NativeWorkItemArchiveRecord();
         rec.sourceId = text(r, NativeWorkItemArchiveFields.SOURCE_ID);

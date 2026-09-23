@@ -24,12 +24,16 @@ class NativeApplicationWireTest {
             "logical", "composite", "supportsProvisioning", "ownerId", "ownerName", "secondaryOwners",
             "remediators", "dependencies", "schemas", "descriptions", "attributes", "created", "modified",
             "srcSystem", "srcInterface", "srcObjectType", "extractionRunId", "extractedAt"
+            , "accountSchemaCorrelationRuleId", "accountSchemaCustomizationRuleId", "accountSchemaCreationRuleId",
+            "accountSchemaRefreshRuleId", "applicationCreationRuleId"
     };
 
     private static NativeApplicationRow sampleRow() {
         NativeApplicationRow r = new NativeApplicationRow();
         r.setSourceId("0a1b2c");
         r.setName("Active Directory");
+        r.setApplicationCreationRule("CreateRule");
+        r.setApplicationCreationRuleId("rule-create-id");
         r.setDescription("AD connector");
         r.setType("ActiveDirectory - Direct");
         r.setConnector("sailpoint.connector.ADLDAPConnector");
@@ -73,6 +77,8 @@ class NativeApplicationWireTest {
         }
         assertEquals("Active Directory", row.get("name"));
         assertEquals("sailpoint.object.Application", row.get("srcObjectType"));
+        assertEquals("CreateRule", row.get("applicationCreationRule"));
+        assertEquals("rule-create-id", row.get("applicationCreationRuleId"));
         assertEquals("<redacted>", ((Map<String, Object>) row.get("attributes")).get("password"));
     }
 

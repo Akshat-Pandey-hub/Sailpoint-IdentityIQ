@@ -62,4 +62,12 @@ public final class NativeWorkItemArchiveRecord {
     public String getName() {
         return name;
     }
+
+    public Instant getArchived() { return archived; }
+    public Instant getSrcEventTs() { return srcEventTs; }
+    public String getSrcObjectId() { return sourceId; }
+    public String getSrcObjectType() { return srcObjectType; }
+    public String getExtractionRunId() { return extractionRunId; }
+    public String getSrcSystem() { return srcSystem; }
+    public String getSrcInterface() { return srcInterface; }
 }

@@ -1,0 +1,3 @@
+package com.keyforge.nativeiiq.service;
+import com.keyforge.nativeiiq.config.NativeExtractionConfig; import com.keyforge.nativeiiq.model.NativeWorkflowExtractionResult; import com.keyforge.nativeiiq.source.NativeWorkflowExtractor; import sailpoint.api.SailPointContext; import sailpoint.tools.GeneralException;
+public final class NativeWorkflowExtractionService { public NativeWorkflowExtractionResult extract(SailPointContext c,int start,int limit,String runId)throws GeneralException{return new NativeWorkflowExtractor(c,NativeExtractionConfig.of("IdentityIQ",null,0,"native",runId)).extract(Math.max(0,start),limit);} }

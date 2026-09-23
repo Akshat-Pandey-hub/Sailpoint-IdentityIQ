@@ -29,6 +29,11 @@ final class NativeApplicationFields {
     static final String ACCOUNT_SCHEMA_CREATION_RULE = "accountSchemaCreationRule";
     static final String ACCOUNT_SCHEMA_REFRESH_RULE = "accountSchemaRefreshRule";
     static final String APPLICATION_CREATION_RULE = "applicationCreationRule";
+    static final String ACCOUNT_SCHEMA_CORRELATION_RULE_ID = "accountSchemaCorrelationRuleId";
+    static final String ACCOUNT_SCHEMA_CUSTOMIZATION_RULE_ID = "accountSchemaCustomizationRuleId";
+    static final String ACCOUNT_SCHEMA_CREATION_RULE_ID = "accountSchemaCreationRuleId";
+    static final String ACCOUNT_SCHEMA_REFRESH_RULE_ID = "accountSchemaRefreshRuleId";
+    static final String APPLICATION_CREATION_RULE_ID = "applicationCreationRuleId";
     static final String SCORE = "score";
 
     static final String AUTHORITATIVE = "authoritative";

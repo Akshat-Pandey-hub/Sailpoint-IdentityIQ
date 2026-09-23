@@ -36,6 +36,11 @@ public final class NativeApplicationRow {
     private String accountSchemaCreationRule;
     private String accountSchemaRefreshRule;
     private String applicationCreationRule;
+    private String accountSchemaCorrelationRuleId;
+    private String accountSchemaCustomizationRuleId;
+    private String accountSchemaCreationRuleId;
+    private String accountSchemaRefreshRuleId;
+    private String applicationCreationRuleId;
 
     // --- flags ---
     private Boolean authoritative;
@@ -136,6 +141,16 @@ public final class NativeApplicationRow {
 
     public String getApplicationCreationRule() { return applicationCreationRule; }
     public void setApplicationCreationRule(String v) { this.applicationCreationRule = v; }
+    public String getAccountSchemaCorrelationRuleId() { return accountSchemaCorrelationRuleId; }
+    public void setAccountSchemaCorrelationRuleId(String v) { this.accountSchemaCorrelationRuleId = v; }
+    public String getAccountSchemaCustomizationRuleId() { return accountSchemaCustomizationRuleId; }
+    public void setAccountSchemaCustomizationRuleId(String v) { this.accountSchemaCustomizationRuleId = v; }
+    public String getAccountSchemaCreationRuleId() { return accountSchemaCreationRuleId; }
+    public void setAccountSchemaCreationRuleId(String v) { this.accountSchemaCreationRuleId = v; }
+    public String getAccountSchemaRefreshRuleId() { return accountSchemaRefreshRuleId; }
+    public void setAccountSchemaRefreshRuleId(String v) { this.accountSchemaRefreshRuleId = v; }
+    public String getApplicationCreationRuleId() { return applicationCreationRuleId; }
+    public void setApplicationCreationRuleId(String v) { this.applicationCreationRuleId = v; }
 
     public Boolean getAuthoritative() { return authoritative; }
     public void setAuthoritative(Boolean v) { this.authoritative = v; }

@@ -27,6 +27,11 @@ public final class NativeApplicationRecord {
     String accountSchemaCreationRule;
     String accountSchemaRefreshRule;
     String applicationCreationRule;
+    String accountSchemaCorrelationRuleId;
+    String accountSchemaCustomizationRuleId;
+    String accountSchemaCreationRuleId;
+    String accountSchemaRefreshRuleId;
+    String applicationCreationRuleId;
     Integer score;
 
     Boolean authoritative;

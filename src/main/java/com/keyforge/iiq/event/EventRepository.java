@@ -27,14 +27,21 @@ public class EventRepository {
 
     private final String schema;
     private final String table;
+    private final String workItemArchiveSchema;
 
     public EventRepository() {
         this(DEFAULT_SCHEMA);
     }
 
     public EventRepository(String schema) {
+        this(schema, schema);
+    }
+
+    /** Event target schema and native WorkItemArchive source schema may differ. */
+    public EventRepository(String schema, String workItemArchiveSchema) {
         this.schema = SchemaName.validate(schema);
         this.table = this.schema + ".kf_event";
+        this.workItemArchiveSchema = SchemaName.validate(workItemArchiveSchema);
     }
 
     public String schema() {
@@ -43,6 +50,10 @@ public class EventRepository {
 
     public String table() {
         return table;
+    }
+
+    String workItemArchiveTable() {
+        return workItemArchiveSchema + ".kf_workitem_archive";
     }
 
     /** Pure DDL builder (unit-testable). */
@@ -124,7 +135,28 @@ public class EventRepository {
                 tableExists(conn, "kf_audit_event") ? readAudits(conn) : List.of();
         List<EventDeriver.ProvSrc> provisioning =
                 tableExists(conn, "kf_provisioning_txn") ? readProvisioning(conn) : List.of();
-        return EventDeriver.deriveAll(approvals, tasks, audits, provisioning, runId);
+        List<EventDeriver.WorkItemArchiveSrc> archives =
+                tableExists(conn, workItemArchiveSchema, "kf_workitem_archive")
+                        ? readWorkItemArchives(conn) : List.of();
+        return EventDeriver.deriveAll(approvals, tasks, audits, provisioning, archives, runId);
+    }
+
+    private List<EventDeriver.WorkItemArchiveSrc> readWorkItemArchives(Connection conn) throws SQLException {
+        String sql = "SELECT source_id, name, type, state, completer, is_signed, target_name, "
+                + "identity_request_id, certification_id, archived_ts FROM "
+                + workItemArchiveTable();
+        List<EventDeriver.WorkItemArchiveSrc> out = new ArrayList<>();
+        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                out.add(new EventDeriver.WorkItemArchiveSrc(
+                        rs.getString("source_id"), rs.getString("name"), rs.getString("type"),
+                        rs.getString("state"), rs.getString("completer"),
+                        (Boolean) rs.getObject("is_signed"), rs.getString("target_name"),
+                        rs.getString("identity_request_id"), rs.getString("certification_id"), null,
+                        tsUtc(rs, "archived_ts")));
+            }
+        }
+        return out;
     }
 
     private List<EventDeriver.ApprovalSrc> readApprovals(Connection conn) throws SQLException {
@@ -185,10 +217,15 @@ public class EventRepository {
     }
 
     boolean tableExists(Connection conn, String unqualified) throws SQLException {
+        return tableExists(conn, schema, unqualified);
+    }
+
+    private static boolean tableExists(Connection conn, String sourceSchema, String unqualified)
+            throws SQLException {
         String sql = "SELECT EXISTS (SELECT 1 FROM information_schema.tables "
                 + "WHERE table_schema = ? AND table_name = ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, schema);
+            ps.setString(1, sourceSchema);
             ps.setString(2, unqualified);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() && rs.getBoolean(1);

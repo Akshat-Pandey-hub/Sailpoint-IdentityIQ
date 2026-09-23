@@ -10,6 +10,7 @@ final class NativeWorkItemArchiveFields {
     }
 
     static final String ROWS = "rows";
+    static final String SOURCE_COUNT = "sourceCount";
 
     static final String SOURCE_ID = "sourceId";
     static final String WORK_ITEM_ID = "workItemId";

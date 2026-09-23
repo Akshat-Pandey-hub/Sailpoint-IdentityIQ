@@ -71,6 +71,11 @@ final class NativeApplicationParser {
         rec.accountSchemaCreationRule = text(r, NativeApplicationFields.ACCOUNT_SCHEMA_CREATION_RULE);
         rec.accountSchemaRefreshRule = text(r, NativeApplicationFields.ACCOUNT_SCHEMA_REFRESH_RULE);
         rec.applicationCreationRule = text(r, NativeApplicationFields.APPLICATION_CREATION_RULE);
+        rec.accountSchemaCorrelationRuleId = text(r, NativeApplicationFields.ACCOUNT_SCHEMA_CORRELATION_RULE_ID);
+        rec.accountSchemaCustomizationRuleId = text(r, NativeApplicationFields.ACCOUNT_SCHEMA_CUSTOMIZATION_RULE_ID);
+        rec.accountSchemaCreationRuleId = text(r, NativeApplicationFields.ACCOUNT_SCHEMA_CREATION_RULE_ID);
+        rec.accountSchemaRefreshRuleId = text(r, NativeApplicationFields.ACCOUNT_SCHEMA_REFRESH_RULE_ID);
+        rec.applicationCreationRuleId = text(r, NativeApplicationFields.APPLICATION_CREATION_RULE_ID);
         rec.score = intOrNull(r, NativeApplicationFields.SCORE);
 
         rec.authoritative = bool(r, NativeApplicationFields.AUTHORITATIVE);

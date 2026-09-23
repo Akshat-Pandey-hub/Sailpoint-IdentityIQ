@@ -28,6 +28,10 @@ public class EventPersistenceService {
         this(new EventRepository(schema));
     }
 
+    public EventPersistenceService(String eventSchema, String workItemArchiveSchema) {
+        this(new EventRepository(eventSchema, workItemArchiveSchema));
+    }
+
     public EventPersistenceService(EventRepository repository) {
         this.repository = repository;
     }

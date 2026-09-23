@@ -37,4 +37,6 @@ public record EventRow(
     public static final String PRECISE = "precise";
     /** Precision marker for a source timestamp that is minute-granular with no seconds/zone. */
     public static final String MINUTE = "minute";
+    /** Source timestamp has second-level granularity. */
+    public static final String SECOND = "second";
 }

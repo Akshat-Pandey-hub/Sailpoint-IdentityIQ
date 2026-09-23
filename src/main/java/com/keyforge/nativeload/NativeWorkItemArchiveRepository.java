@@ -92,8 +92,12 @@ public final class NativeWorkItemArchiveRepository {
                         + "derived_at timestamptz, "
                         + "extracted_at timestamptz NOT NULL DEFAULT now()"
                         + ")";
-        this.appendSql =
-                "INSERT INTO " + targetTable + " ("
+        this.appendSql = appendSql(targetTable);
+    }
+
+    /** Pure append-only insert builder, exposed package-private for regression tests. */
+    static String appendSql(String table) {
+        return "INSERT INTO " + table + " ("
                         + "archiveid, source_id, work_item_id, name, type, state, level, requester, assignee, "
                         + "owner_name, completer, completion_comments, is_signed, target_class, target_id, "
                         + "target_name, identity_request_id, certification_id, certification_entity_id, "
@@ -117,15 +121,11 @@ public final class NativeWorkItemArchiveRepository {
         return targetTable;
     }
 
-    /**
-     * Deterministic PK: canonical UUID of the archive's own source id, with a stable fallback that prefers
-     * the work-item id then the name. Never random, so re-runs dedup exactly.
-     */
+    /** Deterministic PK from the archive object's own source id. */
     public static String canonicalArchiveId(NativeWorkItemArchiveRecord r) {
         String id = ParquetIds.canonicalUuid(r.sourceId);
         if (id == null) {
-            String seed = r.sourceId != null ? r.sourceId : (r.workItemId != null ? r.workItemId : r.name);
-            id = ParquetIds.deterministicUuid("native-workitemarchive|" + seed);
+            throw new IllegalArgumentException("WorkItemArchive source id is required; archiveid must derive from getId()");
         }
         return id;
     }

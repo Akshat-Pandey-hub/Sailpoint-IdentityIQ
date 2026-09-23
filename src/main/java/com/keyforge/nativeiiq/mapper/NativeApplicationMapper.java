@@ -59,11 +59,16 @@ public final class NativeApplicationMapper {
         Schema accountSchema = app.getAccountSchema();
         if (accountSchema != null) {
             row.setAccountSchemaCorrelationRule(ruleName(accountSchema.getCorrelationRule()));
+            row.setAccountSchemaCorrelationRuleId(ruleId(accountSchema.getCorrelationRule()));
             row.setAccountSchemaCustomizationRule(ruleName(accountSchema.getCustomizationRule()));
+            row.setAccountSchemaCustomizationRuleId(ruleId(accountSchema.getCustomizationRule()));
             row.setAccountSchemaCreationRule(ruleName(accountSchema.getCreationRule()));
+            row.setAccountSchemaCreationRuleId(ruleId(accountSchema.getCreationRule()));
             row.setAccountSchemaRefreshRule(ruleName(accountSchema.getRefreshRule()));
+            row.setAccountSchemaRefreshRuleId(ruleId(accountSchema.getRefreshRule()));
         }
         row.setApplicationCreationRule(ruleName(app.getCreationRule()));
+        row.setApplicationCreationRuleId(ruleId(app.getCreationRule()));
 
         row.setAuthoritative(Boolean.valueOf(app.isAuthoritative()));
         row.setCaseInsensitive(Boolean.valueOf(app.isCaseInsensitive()));
@@ -178,6 +183,10 @@ public final class NativeApplicationMapper {
     /** A rule's stable name (the human-usable identifier), or null. Never dereferences the rule body. */
     private static String ruleName(Rule rule) {
         return rule == null ? null : rule.getName();
+    }
+
+    private static String ruleId(Rule rule) {
+        return rule == null ? null : rule.getId();
     }
 
     private static Instant toInstant(Date d) {

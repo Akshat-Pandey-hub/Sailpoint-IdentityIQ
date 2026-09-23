@@ -1,0 +1,3 @@
+package com.keyforge.nativeiiq.service;
+import com.keyforge.nativeiiq.config.NativeExtractionConfig;import com.keyforge.nativeiiq.model.NativeWorkgroupMembershipExtractionResult;import com.keyforge.nativeiiq.source.NativeWorkgroupMembershipExtractor;import sailpoint.api.SailPointContext;import sailpoint.tools.GeneralException;
+public final class NativeWorkgroupMembershipExtractionService {public NativeWorkgroupMembershipExtractionResult extract(SailPointContext c,int start,int limit,String runId)throws GeneralException{return new NativeWorkgroupMembershipExtractor(c,NativeExtractionConfig.of("IdentityIQ",null,0,"native",runId)).extract(start,limit);}}

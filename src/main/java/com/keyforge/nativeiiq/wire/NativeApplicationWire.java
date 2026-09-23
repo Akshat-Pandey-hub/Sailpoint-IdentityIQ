@@ -71,6 +71,11 @@ public final class NativeApplicationWire {
         m.put("accountSchemaCreationRule", r.getAccountSchemaCreationRule());
         m.put("accountSchemaRefreshRule", r.getAccountSchemaRefreshRule());
         m.put("applicationCreationRule", r.getApplicationCreationRule());
+        m.put("accountSchemaCorrelationRuleId", r.getAccountSchemaCorrelationRuleId());
+        m.put("accountSchemaCustomizationRuleId", r.getAccountSchemaCustomizationRuleId());
+        m.put("accountSchemaCreationRuleId", r.getAccountSchemaCreationRuleId());
+        m.put("accountSchemaRefreshRuleId", r.getAccountSchemaRefreshRuleId());
+        m.put("applicationCreationRuleId", r.getApplicationCreationRuleId());
         m.put("score", r.getScore());
         m.put("authoritative", r.getAuthoritative());
         m.put("caseInsensitive", r.getCaseInsensitive());

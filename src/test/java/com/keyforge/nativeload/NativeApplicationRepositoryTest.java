@@ -50,4 +50,14 @@ class NativeApplicationRepositoryTest {
         assertEquals(NativeApplicationRepository.recordHash(r1), NativeApplicationRepository.recordHash(r2));
         assertNotEquals(NativeApplicationRepository.recordHash(r1), NativeApplicationRepository.recordHash(r3));
     }
+
+    @Test
+    void ruleReferenceIdParticipatesInBusinessHash() {
+        NativeApplicationRecord a = record("source-1", "AD");
+        NativeApplicationRecord b = record("source-1", "AD");
+        a.applicationCreationRule = b.applicationCreationRule = "CreateRule";
+        a.applicationCreationRuleId = "rule-id-1";
+        b.applicationCreationRuleId = "rule-id-2";
+        assertNotEquals(NativeApplicationRepository.recordHash(a), NativeApplicationRepository.recordHash(b));
+    }
 }

@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import sailpoint.object.Application;
+import sailpoint.object.Rule;
+import sailpoint.object.Schema;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -40,6 +42,34 @@ class NativeApplicationMapperTest {
         } catch (LinkageError e) {
             Assumptions.abort("Requires full IIQ runtime (identityiq.jar alone lacks AspectJ/Hibernate/etc.); "
                     + "signatures verified by compilation, mapping validated inside IIQ: " + e);
+        }
+    }
+
+    @Test
+    void mapsRuleReferencesAsSourceIdAndNameWithoutSerializingRuleBodies() {
+        try {
+            Application app = new Application();
+            app.setName("AD");
+            Rule appCreation = new Rule();
+            appCreation.setId("app-rule-id");
+            appCreation.setName("AppCreationRule");
+            app.setCreationRule(appCreation);
+
+            Schema account = new Schema();
+            account.setObjectType("account");
+            Rule correlation = new Rule();
+            correlation.setId("corr-id");
+            correlation.setName("AccountCorrelation");
+            account.setCorrelationRule(correlation);
+            app.addSchema(account);
+
+            NativeApplicationRow row = NativeApplicationMapper.map(app, "IdentityIQ", "run-rule");
+            assertEquals("AppCreationRule", row.getApplicationCreationRule());
+            assertEquals("app-rule-id", row.getApplicationCreationRuleId());
+            assertEquals("AccountCorrelation", row.getAccountSchemaCorrelationRule());
+            assertEquals("corr-id", row.getAccountSchemaCorrelationRuleId());
+        } catch (LinkageError e) {
+            Assumptions.abort("Requires full IIQ runtime (identityiq.jar alone lacks AspectJ/Hibernate/etc.): " + e);
         }
     }
 }

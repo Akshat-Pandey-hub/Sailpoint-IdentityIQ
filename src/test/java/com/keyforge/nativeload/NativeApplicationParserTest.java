@@ -23,6 +23,17 @@ class NativeApplicationParserTest {
     }
 
     @Test
+    void parsesRuleReferenceIdsAndNames() {
+        NativeApplicationRecord row = parser.parse("{\"rows\":[{\"accountSchemaCorrelationRule\":\"Corr\","
+                + "\"accountSchemaCorrelationRuleId\":\"rule-1\",\"applicationCreationRule\":\"Create\","
+                + "\"applicationCreationRuleId\":\"rule-2\"}]}").get(0);
+        assertEquals("Corr", row.accountSchemaCorrelationRule);
+        assertEquals("rule-1", row.accountSchemaCorrelationRuleId);
+        assertEquals("Create", row.applicationCreationRule);
+        assertEquals("rule-2", row.applicationCreationRuleId);
+    }
+
+    @Test
     void genuineEmptyPageReturnsEmptyWithoutError() {
         assertTrue(parser.parse("{\"entity\":\"Application\",\"returned\":0,\"rows\":[]}").isEmpty());
     }

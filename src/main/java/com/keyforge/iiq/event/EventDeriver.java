@@ -69,6 +69,12 @@ public final class EventDeriver {
     /** Derives all events from the four source snapshots (any list may be empty). */
     public static List<EventRow> deriveAll(List<ApprovalSrc> approvals, List<TaskSrc> tasks,
                                            List<AuditSrc> audits, List<ProvSrc> provisioning, String runId) {
+        return deriveAll(approvals, tasks, audits, provisioning, List.of(), runId);
+    }
+
+    public static List<EventRow> deriveAll(List<ApprovalSrc> approvals, List<TaskSrc> tasks,
+                                           List<AuditSrc> audits, List<ProvSrc> provisioning,
+                                           List<WorkItemArchiveSrc> archives, String runId) {
         List<EventRow> out = new ArrayList<>();
         if (approvals != null) {
             for (ApprovalSrc s : approvals) {
@@ -88,6 +94,11 @@ public final class EventDeriver {
         if (provisioning != null) {
             for (ProvSrc s : provisioning) {
                 out.add(provisioning(s, runId));
+            }
+        }
+        if (archives != null) {
+            for (WorkItemArchiveSrc s : archives) {
+                out.add(workItemArchive(s, runId));
             }
         }
         return out;
@@ -153,6 +164,28 @@ public final class EventDeriver {
         put(detail, "created", s.createdDisplay());
         return build(TYPE_PROVISIONING_TXN, s.txnid(), EventType.PROVISIONING_TXN, fp, ts, precision,
                 runId, "classic-rest", detail);
+    }
+
+    /** One immutable archive produces exactly one CEC event, independent of its sign-off count. */
+    public static EventRow workItemArchive(WorkItemArchiveSrc s, String runId) {
+        LocalDateTime ts = s.archivedTs();
+        String precision = ts == null ? null : EventRow.SECOND;
+        String fp = EventFingerprint.fingerprint(s.name(), s.type(), s.state(), s.completer(),
+                String.valueOf(s.signed()), s.targetName(), s.identityRequestId(), s.certificationId(),
+                str(ts));
+        ObjectNode detail = MAPPER.createObjectNode();
+        put(detail, "name", s.name());
+        put(detail, "type", s.type());
+        put(detail, "state", s.state());
+        put(detail, "completer", s.completer());
+        if (s.signed() != null) detail.put("signed", s.signed());
+        put(detail, "targetName", s.targetName());
+        put(detail, "identityRequestId", s.identityRequestId());
+        put(detail, "certificationId", s.certificationId());
+        if (s.signOffCount() != null) detail.put("signOffCount", s.signOffCount());
+        put(detail, "archived", str(ts));
+        return build(TYPE_WORKITEM_ARCHIVE, s.archiveId(), EventType.WORKITEM_ARCHIVED, fp, ts, precision,
+                runId, "native_iiq_java_api", detail);
     }
 
     // --- helpers ------------------------------------------------------------

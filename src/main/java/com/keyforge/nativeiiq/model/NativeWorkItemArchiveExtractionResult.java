@@ -14,6 +14,7 @@ public final class NativeWorkItemArchiveExtractionResult {
     private final String extractionRunId;
     private final String entityType;
     private final Instant startedAt;
+    private int sourceCount;
     private Instant finishedAt;
     private final List<NativeWorkItemArchiveRow> workItemArchives = new ArrayList<NativeWorkItemArchiveRow>();
 
@@ -29,6 +30,8 @@ public final class NativeWorkItemArchiveExtractionResult {
     public String getExtractionRunId() { return extractionRunId; }
     public String getEntityType() { return entityType; }
     public Instant getStartedAt() { return startedAt; }
+    public int getSourceCount() { return sourceCount; }
+    public void setSourceCount(int v) { this.sourceCount = v; }
     public Instant getFinishedAt() { return finishedAt; }
     public void setFinishedAt(Instant v) { this.finishedAt = v; }
 

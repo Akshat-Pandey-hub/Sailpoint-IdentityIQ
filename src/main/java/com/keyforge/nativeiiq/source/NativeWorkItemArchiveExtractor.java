@@ -45,6 +45,9 @@ public final class NativeWorkItemArchiveExtractor {
         NativeWorkItemArchiveExtractionResult result = new NativeWorkItemArchiveExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "WorkItemArchive", Instant.now());
 
+        // Count independently of the requested page for full-scan reconciliation by the client.
+        result.setSourceCount(context.countObjects(WorkItemArchive.class, new QueryOptions()));
+
         Iterator<Object[]> ids = context.search(WorkItemArchive.class, qo, "id");
         while (ids != null && ids.hasNext()) {
             String id = (String) ids.next()[0];

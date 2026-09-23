@@ -1,0 +1,3 @@
+package com.keyforge.nativeload;
+import com.keyforge.iiq.client.IiqSessionClient;import java.util.*;
+public final class NativeWorkgroupMembershipClient {public static final String PATH="plugin/rest/keyForgeNativeIIQ/workgroup-memberships";private final IiqSessionClient s;private final String runId;public NativeWorkgroupMembershipClient(IiqSessionClient x,String run){s=x;runId=run;}public String fetch(int start,int limit){s.warmCsrfToken();Map<String,String>q=new LinkedHashMap<>();q.put("start",String.valueOf(start));q.put("limit",String.valueOf(limit));q.put("runId",runId);return s.get(PATH,q);}}

@@ -1,0 +1,3 @@
+package com.keyforge.nativeiiq.mapper;
+import com.keyforge.nativeiiq.model.NativeWorkflowRow;import org.junit.jupiter.api.Assumptions;import org.junit.jupiter.api.Test;import sailpoint.object.Workflow;import static org.junit.jupiter.api.Assertions.*;
+class NativeWorkflowMapperTest {@Test void mapsAWorkflowWithoutRunningItsRules(){try{Workflow w=new Workflow();w.setName("LCM Test");w.setType("LCM");NativeWorkflowRow r=NativeWorkflowMapper.map(w,"IdentityIQ","run");assertEquals("LCM Test",r.getName());assertEquals("IdentityIQ",r.getSrcSystem());assertTrue(r.getDefinition().containsKey("steps"));}catch(LinkageError e){Assumptions.abort("Requires full IIQ runtime; native signatures are compile-verified: "+e);}}}

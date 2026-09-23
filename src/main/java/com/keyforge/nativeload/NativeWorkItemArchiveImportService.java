@@ -21,13 +21,15 @@ public final class NativeWorkItemArchiveImportService {
         private final int inserted;
         private final int skipped;
         private final int failed;
+        private final int sourceCount;
         private final List<String> failures;
 
-        Result(int extracted, int inserted, int skipped, int failed, List<String> failures) {
+        Result(int extracted, int inserted, int skipped, int failed, int sourceCount, List<String> failures) {
             this.extracted = extracted;
             this.inserted = inserted;
             this.skipped = skipped;
             this.failed = failed;
+            this.sourceCount = sourceCount;
             this.failures = failures;
         }
 
@@ -35,6 +37,7 @@ public final class NativeWorkItemArchiveImportService {
         public int getInserted() { return inserted; }
         public int getSkipped() { return skipped; }
         public int getFailed() { return failed; }
+        public int getSourceCount() { return sourceCount; }
         /** Rows successfully accounted for (newly appended + already-present deduped). */
         public int getPersisted() { return inserted + skipped; }
         public List<String> getFailures() { return failures; }
@@ -59,11 +62,20 @@ public final class NativeWorkItemArchiveImportService {
         int inserted = 0;
         int skipped = 0;
         int failed = 0;
+        int sourceCount = -1;
         List<String> failures = new ArrayList<>();
 
         int start = 0;
         while (true) {
             String json = source.fetchPage(start, pageSize);
+            int pageSourceCount = parser.sourceCount(json);
+            if (pageSourceCount >= 0) {
+                if (sourceCount >= 0 && sourceCount != pageSourceCount) {
+                    throw new NativeImportException("WorkItemArchive source count changed during paginated extraction: "
+                            + sourceCount + " -> " + pageSourceCount);
+                }
+                sourceCount = pageSourceCount;
+            }
             List<NativeWorkItemArchiveRecord> page = parser.parse(json);
             if (page.isEmpty()) {
                 break;
@@ -90,6 +102,10 @@ public final class NativeWorkItemArchiveImportService {
             start += pageSize;
         }
 
-        return new Result(extracted, inserted, skipped, failed, failures);
+        if (sourceCount >= 0 && extracted != sourceCount) {
+            throw new NativeImportException("Incomplete WorkItemArchive scan: sourceCount=" + sourceCount
+                    + ", extracted=" + extracted + ". No deletion action was taken.");
+        }
+        return new Result(extracted, inserted, skipped, failed, sourceCount, failures);
     }
 }

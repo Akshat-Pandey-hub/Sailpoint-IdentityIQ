@@ -30,6 +30,17 @@
                         <String>com.keyforge.nativeiiq.resource.NativeRoleResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeWorkgroupResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeGroupDefinitionResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeWorkItemArchiveResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeApprovalConfigResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeWorkflowResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeWorkgroupMembershipResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeIdentityEntitlementResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeAccountEntitlementResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeCertificationResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeCertificationEntityResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeCertificationItemResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeCertificationArchiveResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeProvisioningTxnResource</String>
                     </List>
                 </value>
             </entry>
