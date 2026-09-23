@@ -26,6 +26,7 @@ public final class EventDeriver {
     public static final String TYPE_TASK_RESULT = "sailpoint.object.TaskResult";
     public static final String TYPE_AUDIT_EVENT = "sailpoint.object.AuditEvent";
     public static final String TYPE_PROVISIONING_TXN = "sailpoint.object.ProvisioningTransaction";
+    public static final String TYPE_WORKITEM_ARCHIVE = "sailpoint.object.WorkItemArchive";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -52,6 +53,17 @@ public final class EventDeriver {
     /** A row of {@code kf_provisioning_txn}. */
     public record ProvSrc(String txnid, String operation, String source, String status, String result,
                           LocalDateTime createdAt, String createdDisplay) {
+    }
+
+    /**
+     * A row of the native {@code kf_workitem_archive} (CEC/history) table. One archive → one
+     * {@code WORKITEM_ARCHIVED} event; sign-offs are summarized in the detail, never exploded into
+     * per-sign-off events.
+     */
+    public record WorkItemArchiveSrc(String archiveId, String name, String type, String state,
+                                     String completer, Boolean signed, String targetName,
+                                     String identityRequestId, String certificationId,
+                                     Integer signOffCount, LocalDateTime archivedTs) {
     }
 
     /** Derives all events from the four source snapshots (any list may be empty). */

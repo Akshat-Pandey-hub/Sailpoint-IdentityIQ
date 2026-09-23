@@ -19,6 +19,8 @@ public final class EventType {
     public static final String AUDIT_EVENT = "AUDIT_EVENT";
     /** A provisioning transaction. */
     public static final String PROVISIONING_TXN = "PROVISIONING_TXN";
+    /** A work item that has been archived (one event per WorkItemArchive, never one per sign-off). */
+    public static final String WORKITEM_ARCHIVED = "WORKITEM_ARCHIVED";
 
     private EventType() {
     }

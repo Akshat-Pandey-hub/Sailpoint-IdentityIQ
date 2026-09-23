@@ -22,6 +22,11 @@ public final class NativeApplicationRecord {
     String aggregationTypes;
     String beforeProvisioningRule;
     String afterProvisioningRule;
+    String accountSchemaCorrelationRule;
+    String accountSchemaCustomizationRule;
+    String accountSchemaCreationRule;
+    String accountSchemaRefreshRule;
+    String applicationCreationRule;
     Integer score;
 
     Boolean authoritative;

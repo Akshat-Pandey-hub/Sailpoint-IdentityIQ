@@ -30,6 +30,13 @@ public final class NativeApplicationRow {
     private String afterProvisioningRule;
     private Integer score;
 
+    // --- account-schema + application rules (rule NAME references, source-exposed) ---
+    private String accountSchemaCorrelationRule;
+    private String accountSchemaCustomizationRule;
+    private String accountSchemaCreationRule;
+    private String accountSchemaRefreshRule;
+    private String applicationCreationRule;
+
     // --- flags ---
     private Boolean authoritative;
     private Boolean caseInsensitive;
@@ -114,6 +121,21 @@ public final class NativeApplicationRow {
 
     public Integer getScore() { return score; }
     public void setScore(Integer v) { this.score = v; }
+
+    public String getAccountSchemaCorrelationRule() { return accountSchemaCorrelationRule; }
+    public void setAccountSchemaCorrelationRule(String v) { this.accountSchemaCorrelationRule = v; }
+
+    public String getAccountSchemaCustomizationRule() { return accountSchemaCustomizationRule; }
+    public void setAccountSchemaCustomizationRule(String v) { this.accountSchemaCustomizationRule = v; }
+
+    public String getAccountSchemaCreationRule() { return accountSchemaCreationRule; }
+    public void setAccountSchemaCreationRule(String v) { this.accountSchemaCreationRule = v; }
+
+    public String getAccountSchemaRefreshRule() { return accountSchemaRefreshRule; }
+    public void setAccountSchemaRefreshRule(String v) { this.accountSchemaRefreshRule = v; }
+
+    public String getApplicationCreationRule() { return applicationCreationRule; }
+    public void setApplicationCreationRule(String v) { this.applicationCreationRule = v; }
 
     public Boolean getAuthoritative() { return authoritative; }
     public void setAuthoritative(Boolean v) { this.authoritative = v; }

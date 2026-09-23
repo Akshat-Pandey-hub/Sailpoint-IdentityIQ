@@ -9,6 +9,7 @@ import sailpoint.object.Application;
 import sailpoint.object.AttributeDefinition;
 import sailpoint.object.Attributes;
 import sailpoint.object.Identity;
+import sailpoint.object.Rule;
 import sailpoint.object.Schema;
 
 import java.time.Instant;
@@ -52,6 +53,17 @@ public final class NativeApplicationMapper {
         row.setBeforeProvisioningRule(app.getBeforeProvisioningRule());
         row.setAfterProvisioningRule(app.getAfterProvisioningRule());
         row.setScore(Integer.valueOf(app.getScore()));
+
+        // account-schema aggregation rules (correlation/customization/creation/refresh) + app creation rule,
+        // stored as rule NAMES (consistent with before/after provisioning rule columns). A null rule stays null.
+        Schema accountSchema = app.getAccountSchema();
+        if (accountSchema != null) {
+            row.setAccountSchemaCorrelationRule(ruleName(accountSchema.getCorrelationRule()));
+            row.setAccountSchemaCustomizationRule(ruleName(accountSchema.getCustomizationRule()));
+            row.setAccountSchemaCreationRule(ruleName(accountSchema.getCreationRule()));
+            row.setAccountSchemaRefreshRule(ruleName(accountSchema.getRefreshRule()));
+        }
+        row.setApplicationCreationRule(ruleName(app.getCreationRule()));
 
         row.setAuthoritative(Boolean.valueOf(app.isAuthoritative()));
         row.setCaseInsensitive(Boolean.valueOf(app.isCaseInsensitive()));
@@ -161,6 +173,11 @@ public final class NativeApplicationMapper {
                 }
             }
         }
+    }
+
+    /** A rule's stable name (the human-usable identifier), or null. Never dereferences the rule body. */
+    private static String ruleName(Rule rule) {
+        return rule == null ? null : rule.getName();
     }
 
     private static Instant toInstant(Date d) {

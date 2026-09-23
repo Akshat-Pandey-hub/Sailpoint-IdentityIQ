@@ -53,6 +53,11 @@ public final class NativeApplicationRepository {
                         + "aggregation_types text, "
                         + "before_provisioning_rule text, "
                         + "after_provisioning_rule text, "
+                        + "account_schema_correlation_rule text, "
+                        + "account_schema_customization_rule text, "
+                        + "account_schema_creation_rule text, "
+                        + "account_schema_refresh_rule text, "
+                        + "application_creation_rule text, "
                         + "score integer, "
                         + "authoritative boolean, "
                         + "case_insensitive boolean, "
@@ -91,7 +96,10 @@ public final class NativeApplicationRepository {
                 "INSERT INTO " + targetTable + " ("
                         + "applicationid, source_id, name, description, type, connector, features_string, "
                         + "profile_class, proxied_name, cluster, icon, aggregation_types, "
-                        + "before_provisioning_rule, after_provisioning_rule, score, authoritative, "
+                        + "before_provisioning_rule, after_provisioning_rule, "
+                        + "account_schema_correlation_rule, account_schema_customization_rule, "
+                        + "account_schema_creation_rule, account_schema_refresh_rule, application_creation_rule, "
+                        + "score, authoritative, "
                         + "case_insensitive, logical, composite, authentication_resource, activity_enabled, "
                         + "in_maintenance, manages_other_apps, native_change_detection_enabled, "
                         + "supports_provisioning, supports_account_only, supports_additional_accounts, "
@@ -100,7 +108,7 @@ public final class NativeApplicationRepository {
                         + "dependencies, schemas, descriptions, attributes, created_at, modified_at, "
                         + "record_hash, source_system, source_interface, source_object_type, extraction_run_id) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                        + "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, "
+                        + "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, "
                         + "?::jsonb, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (applicationid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, name = EXCLUDED.name, description = EXCLUDED.description, "
@@ -109,7 +117,12 @@ public final class NativeApplicationRepository {
                         + "proxied_name = EXCLUDED.proxied_name, cluster = EXCLUDED.cluster, icon = EXCLUDED.icon, "
                         + "aggregation_types = EXCLUDED.aggregation_types, "
                         + "before_provisioning_rule = EXCLUDED.before_provisioning_rule, "
-                        + "after_provisioning_rule = EXCLUDED.after_provisioning_rule, score = EXCLUDED.score, "
+                        + "after_provisioning_rule = EXCLUDED.after_provisioning_rule, "
+                        + "account_schema_correlation_rule = EXCLUDED.account_schema_correlation_rule, "
+                        + "account_schema_customization_rule = EXCLUDED.account_schema_customization_rule, "
+                        + "account_schema_creation_rule = EXCLUDED.account_schema_creation_rule, "
+                        + "account_schema_refresh_rule = EXCLUDED.account_schema_refresh_rule, "
+                        + "application_creation_rule = EXCLUDED.application_creation_rule, score = EXCLUDED.score, "
                         + "authoritative = EXCLUDED.authoritative, case_insensitive = EXCLUDED.case_insensitive, "
                         + "logical = EXCLUDED.logical, composite = EXCLUDED.composite, "
                         + "authentication_resource = EXCLUDED.authentication_resource, "
@@ -167,6 +180,11 @@ public final class NativeApplicationRepository {
         b.put("aggregation_types", r.aggregationTypes);
         b.put("before_provisioning_rule", r.beforeProvisioningRule);
         b.put("after_provisioning_rule", r.afterProvisioningRule);
+        b.put("account_schema_correlation_rule", r.accountSchemaCorrelationRule);
+        b.put("account_schema_customization_rule", r.accountSchemaCustomizationRule);
+        b.put("account_schema_creation_rule", r.accountSchemaCreationRule);
+        b.put("account_schema_refresh_rule", r.accountSchemaRefreshRule);
+        b.put("application_creation_rule", r.applicationCreationRule);
         b.put("score", r.score);
         b.put("authoritative", r.authoritative);
         b.put("case_insensitive", r.caseInsensitive);
@@ -201,6 +219,14 @@ public final class NativeApplicationRepository {
         try (Statement st = conn.createStatement()) {
             st.execute(createSchemaSql);
             st.execute(createTableSql);
+            // Additive migration for tables created before the rule-enrichment columns existed.
+            // ADD COLUMN IF NOT EXISTS preserves existing rows (new columns default to NULL).
+            st.execute("ALTER TABLE " + targetTable
+                    + " ADD COLUMN IF NOT EXISTS account_schema_correlation_rule text, "
+                    + " ADD COLUMN IF NOT EXISTS account_schema_customization_rule text, "
+                    + " ADD COLUMN IF NOT EXISTS account_schema_creation_rule text, "
+                    + " ADD COLUMN IF NOT EXISTS account_schema_refresh_rule text, "
+                    + " ADD COLUMN IF NOT EXISTS application_creation_rule text");
         }
     }
 
@@ -221,6 +247,11 @@ public final class NativeApplicationRepository {
             ps.setString(i++, r.aggregationTypes);
             ps.setString(i++, r.beforeProvisioningRule);
             ps.setString(i++, r.afterProvisioningRule);
+            ps.setString(i++, r.accountSchemaCorrelationRule);
+            ps.setString(i++, r.accountSchemaCustomizationRule);
+            ps.setString(i++, r.accountSchemaCreationRule);
+            ps.setString(i++, r.accountSchemaRefreshRule);
+            ps.setString(i++, r.applicationCreationRule);
             setInt(ps, i++, r.score);
             setBool(ps, i++, r.authoritative);
             setBool(ps, i++, r.caseInsensitive);

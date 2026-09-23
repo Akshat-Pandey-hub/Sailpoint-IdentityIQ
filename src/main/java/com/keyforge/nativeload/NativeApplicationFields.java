@@ -24,6 +24,11 @@ final class NativeApplicationFields {
     static final String AGGREGATION_TYPES = "aggregationTypes";
     static final String BEFORE_PROVISIONING_RULE = "beforeProvisioningRule";
     static final String AFTER_PROVISIONING_RULE = "afterProvisioningRule";
+    static final String ACCOUNT_SCHEMA_CORRELATION_RULE = "accountSchemaCorrelationRule";
+    static final String ACCOUNT_SCHEMA_CUSTOMIZATION_RULE = "accountSchemaCustomizationRule";
+    static final String ACCOUNT_SCHEMA_CREATION_RULE = "accountSchemaCreationRule";
+    static final String ACCOUNT_SCHEMA_REFRESH_RULE = "accountSchemaRefreshRule";
+    static final String APPLICATION_CREATION_RULE = "applicationCreationRule";
     static final String SCORE = "score";
 
     static final String AUTHORITATIVE = "authoritative";

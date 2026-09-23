@@ -66,6 +66,11 @@ final class NativeApplicationParser {
         rec.aggregationTypes = text(r, NativeApplicationFields.AGGREGATION_TYPES);
         rec.beforeProvisioningRule = text(r, NativeApplicationFields.BEFORE_PROVISIONING_RULE);
         rec.afterProvisioningRule = text(r, NativeApplicationFields.AFTER_PROVISIONING_RULE);
+        rec.accountSchemaCorrelationRule = text(r, NativeApplicationFields.ACCOUNT_SCHEMA_CORRELATION_RULE);
+        rec.accountSchemaCustomizationRule = text(r, NativeApplicationFields.ACCOUNT_SCHEMA_CUSTOMIZATION_RULE);
+        rec.accountSchemaCreationRule = text(r, NativeApplicationFields.ACCOUNT_SCHEMA_CREATION_RULE);
+        rec.accountSchemaRefreshRule = text(r, NativeApplicationFields.ACCOUNT_SCHEMA_REFRESH_RULE);
+        rec.applicationCreationRule = text(r, NativeApplicationFields.APPLICATION_CREATION_RULE);
         rec.score = intOrNull(r, NativeApplicationFields.SCORE);
 
         rec.authoritative = bool(r, NativeApplicationFields.AUTHORITATIVE);

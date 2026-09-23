@@ -73,7 +73,14 @@
       "Bash(grep -E \"NativeGroupDefinition.*Test|Tests run:.*Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+$|BUILD SUCCESS|BUILD FAILURE|COMPILATION|ERROR.*\\\\.java:\")",
       "Bash(grep -E \"NativeGroupDefinition\\(Wire|Mapper\\)Test|Tests run:.*Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+$|BUILD SUCCESS|BUILD FAILURE|COMPILATION|ERROR.*\\\\.java:\")",
       "Bash(unzip -l /tmp/pjg.jar)",
-      "Bash(awk '{print \"  NativeGroupDefinition classes:\", $1}')"
+      "Bash(awk '{print \"  NativeGroupDefinition classes:\", $1}')",
+      "Bash(javap -classpath \"lib/identityiq.jar\" sailpoint.object.Schema)",
+      "Bash(javap -classpath \"lib/identityiq.jar\" sailpoint.object.Application)",
+      "Bash(javap -classpath \"lib/identityiq.jar\" sailpoint.object.Rule)",
+      "Bash(javap -classpath \"lib/identityiq.jar\" sailpoint.object.WorkItemArchive)",
+      "Bash(javap -classpath \"lib/identityiq.jar\" sailpoint.object.SignOffHistory)",
+      "Bash(javap -classpath \"lib/identityiq.jar\" sailpoint.object.Comment)",
+      "Bash(javap -classpath lib/identityiq.jar 'sailpoint.object.WorkItem$OwnerHistory')"
     ]
   }
 }
