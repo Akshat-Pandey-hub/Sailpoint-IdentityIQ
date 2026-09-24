@@ -49,6 +49,7 @@
                         <String>com.keyforge.nativeiiq.resource.NativeTaskScheduleResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeViolationResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativePolicyResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeAuditEventResource</String>
                     </List>
                 </value>
             </entry>

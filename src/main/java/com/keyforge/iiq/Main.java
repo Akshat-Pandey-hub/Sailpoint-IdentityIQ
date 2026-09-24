@@ -119,6 +119,11 @@ import com.keyforge.nativeload.NativePolicyClient;
 import com.keyforge.nativeload.NativePolicyImportService;
 import com.keyforge.nativeload.NativePolicyRepository;
 import com.keyforge.nativeload.NativePolicySink;
+import com.keyforge.nativeload.JdbcNativeAuditEventSink;
+import com.keyforge.nativeload.NativeAuditEventClient;
+import com.keyforge.nativeload.NativeAuditEventImportService;
+import com.keyforge.nativeload.NativeAuditEventRepository;
+import com.keyforge.nativeload.NativeAuditEventSink;
 import com.keyforge.nativeload.NativeLinkClient;
 import com.keyforge.nativeload.NativeLinkImportService;
 import com.keyforge.nativeload.NativeLinkRepository;
@@ -285,6 +290,7 @@ public final class Main {
             case "extract-native-task-schedule-db" -> System.exit(RunLedger.run("extract-native-task-schedule-db", Main::runExtractNativeTaskScheduleDb));
             case "extract-native-violations-db" -> System.exit(RunLedger.run("extract-native-violations-db", Main::runExtractNativeViolationsDb));
             case "extract-native-policies-db" -> System.exit(RunLedger.run("extract-native-policies-db", Main::runExtractNativePoliciesDb));
+            case "extract-native-audit-events-db" -> System.exit(RunLedger.run("extract-native-audit-events-db", Main::runExtractNativeAuditEventsDb));
             case "extract-native-workgroup-db" -> System.exit(RunLedger.run("extract-native-workgroup-db", Main::runExtractNativeWorkgroupDb));
             case "extract-native-group-definition-db" -> System.exit(RunLedger.run("extract-native-group-definition-db", Main::runExtractNativeGroupDefinitionDb));
             case "extract-native-workitem-archive-db" -> System.exit(RunLedger.run("extract-native-workitem-archive-db", Main::runExtractNativeWorkItemArchiveDb));
@@ -1199,6 +1205,48 @@ public final class Main {
      * authenticated session and load native-rich rows into {@code iiq_native.kf_application}. IIQ-side
      * read-only; the only writes are to our PostgreSQL. Idempotent; full-scan deletion sweep.
      */
+    private static int runExtractNativeAuditEventsDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            int pageSize = nativePageSize();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: native SailPoint Java API via plugin REST "
+                    + "(" + NativeAuditEventClient.AUDIT_EVENTS_PATH + "), page size " + pageSize
+                    + " [APPEND-ONLY historical audit log]");
+
+            NativeAuditEventClient client = new NativeAuditEventClient(new IiqSessionClient(iiqConfig));
+            NativeAuditEventRepository repository = new NativeAuditEventRepository(nativeSchema);
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                NativeAuditEventSink sink = new JdbcNativeAuditEventSink(conn, repository);
+                NativeAuditEventImportService.Result result =
+                        new NativeAuditEventImportService(client, sink, pageSize).importAll();
+                RunLedger.record("kf_audit_event", result.getExtracted(),
+                        result.getInserted(), 0, result.getFailed());
+                System.out.println();
+                System.out.println("Source AuditEvent count (IIQ): " + result.getSourceCount());
+                System.out.println("Successfully appended " + result.getInserted() + " new native audit events to "
+                        + repository.targetTable() + " (of " + result.getExtracted() + " extracted)");
+                System.out.println("  inserted (new):        " + result.getInserted());
+                System.out.println("  skipped (already present): " + result.getSkipped());
+                System.out.println("  failed:                " + result.getFailed());
+                System.out.println("  append-only: no deletion sweep (immutable historical evidence)");
+                int shown = Math.min(result.getFailures().size(), 10);
+                for (int i = 0; i < shown; i++) {
+                    System.out.println("    - " + result.getFailures().get(i));
+                }
+                return result.getFailed() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4; }
+        catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
+        catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
     private static int runExtractNativeViolationsDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
@@ -4665,6 +4713,7 @@ public final class Main {
         System.out.println("  extract-native-task-schedule-db      Pull native TaskSchedule cron schedules into <iiq_native>.kf_task_schedule (current-state, read-only in IIQ)");
         System.out.println("  extract-native-violations-db         Pull native PolicyViolation (identity/policy/constraint links) into <iiq_native>.kf_violation (current-state, read-only in IIQ)");
         System.out.println("  extract-native-policies-db           Pull native Policy definitions into <iiq_native>.kf_policy (current-state, read-only in IIQ)");
+        System.out.println("  extract-native-audit-events-db       Append native AuditEvent historical log into <iiq_native>.kf_audit_event (append-only, read-only in IIQ)");
         System.out.println("  extract-native-workgroup-db  Pull native Workgroup data (Identity workgroup=true) from the plugin endpoint and upsert into <iiq_native>.kf_workgroup (read-only in IIQ)");
         System.out.println("  extract-native-group-definition-db  Pull native GroupDefinition data (Populations + Groups) from the plugin endpoint and upsert into <iiq_native>.kf_group_definition (read-only in IIQ)");
         System.out.println("  extract-native-workitem-archive-db  Append native WorkItemArchive evidence into <iiq_native>.kf_workitem_archive (read-only in IIQ; no deletion sweep)");
