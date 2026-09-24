@@ -269,6 +269,7 @@ public final class Main {
             case "extract-native-certification-item-db" -> System.exit(RunLedger.run("extract-native-certification-item-db", Main::runExtractNativeCertificationItemDb));
             case "extract-native-certification-archive-db" -> System.exit(RunLedger.run("extract-native-certification-archive-db", Main::runExtractNativeCertificationArchiveDb));
             case "extract-native-provisioning-txn-db" -> System.exit(RunLedger.run("extract-native-provisioning-txn-db", Main::runExtractNativeProvisioningTxnDb));
+            case "extract-native-identity-request-db" -> System.exit(RunLedger.run("extract-native-identity-request-db", Main::runExtractNativeIdentityRequestDb));
             case "extract-entitlements" -> System.exit(runExtractEntitlements());
             case "extract-accounts" -> System.exit(runExtractAccounts());
             case "extract-assignments" -> System.exit(runExtractAssignments());
@@ -1871,6 +1872,61 @@ public final class Main {
     }
 
     /** Native current-state ProvisioningTransaction (+ derived provisioning items) into iiq_native. */
+    /** Native current-state IdentityRequest (+ derived items + request-time approval summaries) into iiq_native. */
+    private static int runExtractNativeIdentityRequestDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            int pageSize = nativePageSize();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
+                    + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: native SailPoint Java API via plugin REST ("
+                    + com.keyforge.nativeload.NativeIdentityRequestClient.IDENTITY_REQUESTS_PATH
+                    + "), page size " + pageSize);
+            com.keyforge.nativeload.NativeIdentityRequestClient client =
+                    new com.keyforge.nativeload.NativeIdentityRequestClient(new IiqSessionClient(iiqConfig));
+            com.keyforge.nativeload.NativeIdentityRequestRepository reqRepo =
+                    new com.keyforge.nativeload.NativeIdentityRequestRepository(nativeSchema);
+            com.keyforge.nativeload.NativeIdentityRequestItemRepository itemRepo =
+                    new com.keyforge.nativeload.NativeIdentityRequestItemRepository(nativeSchema);
+            com.keyforge.nativeload.NativeIdentityRequestApprovalRepository apprRepo =
+                    new com.keyforge.nativeload.NativeIdentityRequestApprovalRepository(nativeSchema);
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                com.keyforge.nativeload.NativeIdentityRequestSink sink =
+                        new com.keyforge.nativeload.JdbcNativeIdentityRequestSink(conn, reqRepo, itemRepo, apprRepo, nativeSchema);
+                com.keyforge.nativeload.NativeIdentityRequestImportService.Result r =
+                        new com.keyforge.nativeload.NativeIdentityRequestImportService(client, sink, pageSize, true).importAll();
+                RunLedger.record("kf_identity_request", r.getRequests(), r.getRequestInserted(), r.getRequestUpdated(), r.getFailed());
+                RunLedger.record("kf_identity_request_item", r.getItems(), r.getItemInserted(), r.getItemUpdated(), 0);
+                RunLedger.record("kf_identity_request_approval", r.getApprovals(), r.getApprovalInserted(), r.getApprovalUpdated(), 0);
+                System.out.println();
+                System.out.println("Persisted " + r.getRequestPersisted() + " native identity requests to "
+                        + reqRepo.targetTable() + " (of " + r.getRequests() + " extracted"
+                        + (r.getSourceCount() < 0 ? "" : ", IIQ count " + r.getSourceCount()) + ")");
+                System.out.println("  request inserted: " + r.getRequestInserted() + "  updated: " + r.getRequestUpdated());
+                System.out.println("Persisted " + r.getItemPersisted() + " native request items to " + itemRepo.targetTable()
+                        + " (of " + r.getItems() + " derived); inserted " + r.getItemInserted() + ", updated " + r.getItemUpdated());
+                System.out.println("Persisted " + r.getApprovalPersisted() + " native request approvals to " + apprRepo.targetTable()
+                        + " (of " + r.getApprovals() + " derived); inserted " + r.getApprovalInserted() + ", updated " + r.getApprovalUpdated());
+                System.out.println("  failed: " + r.getFailed());
+                if (r.isSweepRan()) {
+                    System.out.println("  deletion sweep (soft): " + (r.isSweepSkipped()
+                            ? "skipped (empty source — safety guard)"
+                            : ("marked " + r.getRequestMarkedDeleted() + " requests / " + r.getItemMarkedDeleted()
+                                + " items / " + r.getApprovalMarkedDeleted() + " approvals deleted")));
+                }
+                printLines(r.getFailures());
+                return r.getFailed() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
     private static int runExtractNativeProvisioningTxnDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
@@ -1891,9 +1947,9 @@ public final class Main {
                     new com.keyforge.nativeload.NativeProvisioningItemRepository(nativeSchema);
             try (Connection conn = PostgresConnection.open(pgConfig)) {
                 com.keyforge.nativeload.NativeProvisioningTxnSink sink =
-                        new com.keyforge.nativeload.JdbcNativeProvisioningTxnSink(conn, txnRepo, itemRepo);
+                        new com.keyforge.nativeload.JdbcNativeProvisioningTxnSink(conn, txnRepo, itemRepo, nativeSchema);
                 com.keyforge.nativeload.NativeProvisioningTxnImportService.Result r =
-                        new com.keyforge.nativeload.NativeProvisioningTxnImportService(client, sink, pageSize).importAll();
+                        new com.keyforge.nativeload.NativeProvisioningTxnImportService(client, sink, pageSize, true).importAll();
                 RunLedger.record("kf_provisioning_txn", r.getTxns(), r.getTxnInserted(), r.getTxnUpdated(), r.getFailed());
                 RunLedger.record("kf_provisioning_item", r.getItems(), r.getItemInserted(), r.getItemUpdated(), 0);
                 System.out.println();
@@ -1905,7 +1961,12 @@ public final class Main {
                         + itemRepo.targetTable() + " (of " + r.getItems() + " derived)");
                 System.out.println("  item inserted: " + r.getItemInserted() + "  updated: " + r.getItemUpdated());
                 System.out.println("  failed: " + r.getFailed());
-                System.out.println("  deletion sweep: not run (IIQ retention/deletion semantics are not established)");
+                if (r.isSweepRan()) {
+                    System.out.println("  deletion sweep (soft): " + (r.isSweepSkipped()
+                            ? "skipped (empty source — safety guard)"
+                            : ("marked " + r.getTxnMarkedDeleted() + " txns / " + r.getItemMarkedDeleted()
+                                + " items deleted")));
+                }
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
@@ -4121,6 +4182,7 @@ public final class Main {
         System.out.println("  extract-native-certification-item-db     Pull native CertificationItem (reviewed item + decision/action) into <iiq_native>.kf_certification_item (read-only in IIQ)");
         System.out.println("  extract-native-certification-archive-db  Append native CertificationArchive (historical) into <iiq_native>.kf_certification_archive (read-only in IIQ; no deletion sweep)");
         System.out.println("  extract-native-provisioning-txn-db       Pull native ProvisioningTransaction (+ derived items) into <iiq_native>.kf_provisioning_txn + kf_provisioning_item (read-only in IIQ)");
+        System.out.println("  extract-native-identity-request-db       Pull native IdentityRequest (+ items + request-time approvals) into <iiq_native>.kf_identity_request(_item/_approval) (read-only in IIQ)");
         System.out.println("  --- Parquet workstream (direct IIQ->Parquet, independent of PostgreSQL; PARQUET_OUT_DIR default parquet-data) ---");
         System.out.println("  extract-task-results-parquet            Write task_result Parquet dataset");
         System.out.println("  extract-audit-events-parquet            Write kf_audit_event Parquet dataset");

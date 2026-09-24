@@ -1,14 +1,20 @@
 package com.keyforge.nativeload;
 
+import com.keyforge.iiq.deletion.SoftDeleteSweeper;
+
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
- * Orchestrates the native ProvisioningTransaction import: page, parse, and upsert each transaction and its
- * derived items. Because the 8.4 API does not establish that missing transactions mean deletion, this import
- * deliberately never sweeps either table. It verifies the advertised source count when available and keeps
- * historical rows if they disappear from a later response.
+ * Orchestrates the native ProvisioningTransaction import (current-state, per the locked design): page →
+ * parse → upsert each transaction and its derived items → confirmed-full-scan soft-delete sweep of both
+ * tables. The authoritative {@code countObjects} transaction total is verified against the extracted txn
+ * count; an incomplete scan throws <b>before</b> sweeping so a partial pull never marks live rows deleted.
+ * Items are re-derived every run, so the item keep-set is the full set of current items. Failure messages
+ * carry only the exception class name (never source detail) so nothing secret-like can leak into a report.
  */
 public final class NativeProvisioningTxnImportService {
 
@@ -66,12 +72,15 @@ public final class NativeProvisioningTxnImportService {
     private final NativeProvisioningTxnParser parser = new NativeProvisioningTxnParser();
     private final NativeProvisioningTxnSink sink;
     private final int pageSize;
+    private final boolean sweepDeletions;
 
     public NativeProvisioningTxnImportService(NativeProvisioningTxnPageSource source,
-                                              NativeProvisioningTxnSink sink, int pageSize) {
+                                              NativeProvisioningTxnSink sink,
+                                              int pageSize, boolean sweepDeletions) {
         this.source = source;
         this.sink = sink;
         this.pageSize = pageSize > 0 ? pageSize : 100;
+        this.sweepDeletions = sweepDeletions;
     }
 
     public Result importAll() throws SQLException {
@@ -86,6 +95,8 @@ public final class NativeProvisioningTxnImportService {
         int failed = 0;
         int sourceCount = -1;
         List<String> failures = new ArrayList<>();
+        Set<String> keepTxns = new LinkedHashSet<>();
+        Set<String> keepItems = new LinkedHashSet<>();
 
         int start = 0;
         while (true) {
@@ -100,6 +111,7 @@ public final class NativeProvisioningTxnImportService {
             }
             for (NativeProvisioningTxnRecord rec : page) {
                 txns++;
+                keepTxns.add(NativeProvisioningTxnRepository.canonicalTxnId(rec));
                 try {
                     NativeProvisioningTxnRepository.UpsertOutcome outcome = sink.upsertTxn(rec);
                     if (outcome == NativeProvisioningTxnRepository.UpsertOutcome.INSERTED) {
@@ -112,10 +124,11 @@ public final class NativeProvisioningTxnImportService {
                     if (failures.size() < 50) {
                         failures.add("txn " + rec.sourceId + ": " + e.getClass().getName());
                     }
-                    continue; // skip items of a txn that failed to persist
+                    continue; // a txn that failed to persist: skip its items and drop it from the keep-set
                 }
                 for (NativeProvisioningItemRecord item : rec.items) {
                     items++;
+                    keepItems.add(NativeProvisioningItemRepository.canonicalItemId(item));
                     try {
                         NativeProvisioningItemRepository.UpsertOutcome io = sink.upsertItem(item);
                         if (io == NativeProvisioningItemRepository.UpsertOutcome.INSERTED) {
@@ -138,12 +151,26 @@ public final class NativeProvisioningTxnImportService {
             start += pageSize;
         }
 
+        // Incomplete-scan guard: never sweep on a short/partial pull (would wrongly mark rows deleted).
         if (sourceCount >= 0 && txns != sourceCount) {
             throw new NativeImportException("Incomplete ProvisioningTransaction scan: sourceCount=" + sourceCount
                     + ", extracted=" + txns + ". No deletion action was taken.");
         }
 
+        int txnMarked = 0;
+        int itemMarked = 0;
+        boolean sweepRan = false;
+        boolean sweepSkipped = false;
+        if (sweepDeletions) {
+            SoftDeleteSweeper.SweepResult txnSweep = sink.sweepTxns(keepTxns);
+            SoftDeleteSweeper.SweepResult itemSweep = sink.sweepItems(keepItems);
+            sweepRan = true;
+            sweepSkipped = txnSweep.skipped();
+            txnMarked = txnSweep.marked();
+            itemMarked = itemSweep.marked();
+        }
+
         return new Result(txns, txnInserted, txnUpdated, items, itemInserted, itemUpdated, failed,
-                sourceCount, 0, 0, false, false, failures);
+                sourceCount, txnMarked, itemMarked, sweepRan, sweepSkipped, failures);
     }
 }
