@@ -212,7 +212,8 @@ public final class RunLedger {
                  "extract-object-owners-db", "derive-event-links-db", "derive-events-db",
                  "reconcile-canonical-views-db",
                  "reconcile-referential-integrity-db", "derive-record-lineage-db",
-                 "reconcile-counts-db", "reconcile-native-workitems-db" -> "derived";
+                 "reconcile-counts-db", "reconcile-native-workitems-db",
+                 "derive-native-events-db" -> "derived";
             default -> "unknown";
         };
     }

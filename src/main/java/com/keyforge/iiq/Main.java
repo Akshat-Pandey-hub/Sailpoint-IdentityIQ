@@ -247,6 +247,7 @@ public final class Main {
             case "derive-record-lineage-db" -> System.exit(RunLedger.run("derive-record-lineage-db", Main::runDeriveRecordLineageDb));
             case "reconcile-counts-db" -> System.exit(RunLedger.run("reconcile-counts-db", Main::runReconcileCountsDb));
             case "reconcile-native-workitems-db" -> System.exit(RunLedger.run("reconcile-native-workitems-db", Main::runReconcileNativeWorkItemsDb));
+            case "derive-native-events-db" -> System.exit(RunLedger.run("derive-native-events-db", Main::runDeriveNativeEventsDb));
             case "extract-task-results" -> System.exit(runExtractTaskResults());
             case "extract-task-results-db" -> System.exit(RunLedger.run("extract-task-results-db", Main::runExtractTaskResultsDb));
             case "extract-certifications" -> System.exit(runExtractCertifications());
@@ -3856,6 +3857,62 @@ public final class Main {
         } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
+    private static int runDeriveNativeEventsDb() {
+        try {
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Native EVENT-zone derivation (append-only) from iiq_native source tables only — "
+                    + "NO REST-derived data, NO AuditEvent. Sources: kf_identity_request_approval, kf_task_result, "
+                    + "kf_provisioning_txn, kf_workitem_archive, kf_certification_item");
+
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                com.keyforge.iiq.nativeevent.NativeEventDerivationService svc =
+                        new com.keyforge.iiq.nativeevent.NativeEventDerivationService(nativeSchema);
+                String runId = RunLedger.currentRunId();
+                if (runId == null) {
+                    runId = java.util.UUID.randomUUID().toString();
+                }
+                com.keyforge.iiq.nativeevent.NativeEventDerivationService.Result r = svc.derive(conn, runId);
+                RunLedger.record("kf_event", r.eventsDerived, r.eventsInserted,
+                        r.eventsDerived - r.eventsInserted, 0);
+
+                System.out.println();
+                System.out.println("Source rows read (native): approval=" + r.approvalRows + ", task=" + r.taskRows
+                        + ", provisioning=" + r.provRows + ", workitem_archive=" + r.archiveRows
+                        + ", certification_item=" + r.certItemRows);
+                if (!r.sourcesMissing.isEmpty()) {
+                    System.out.println("  source tables absent (skipped): " + r.sourcesMissing);
+                }
+                System.out.println();
+                System.out.println("Events derived: " + r.eventsDerived + " (inserted " + r.eventsInserted
+                        + ", already-present " + (r.eventsDerived - r.eventsInserted) + ") -> " + svc.eventTable());
+                for (Map.Entry<String, Integer> e : r.eventsByType.entrySet()) {
+                    System.out.println("    " + e.getKey() + ": " + e.getValue());
+                }
+                System.out.println("Explicit links derived: " + r.linksDerived + " (inserted " + r.linksInserted
+                        + ", already-present " + (r.linksDerived - r.linksInserted) + ") -> " + svc.linkTable());
+                for (Map.Entry<String, Integer> e : r.linksByType.entrySet()) {
+                    System.out.println("    " + e.getKey() + ": " + e.getValue());
+                }
+                System.out.println();
+                System.out.println("All events stamped src_interface='native_iiq_java_api'; all links are EXPLICIT "
+                        + "(from source id columns only, never inferred).");
+                return 0;
+            }
+        } catch (ConfigException e) {
+            System.err.println("Configuration error: " + e.getMessage());
+            return 3;
+        } catch (SQLException e) {
+            System.err.println("PostgreSQL error: " + e.getMessage());
+            return 5;
+        } catch (RuntimeException e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            return 1;
+        }
+    }
+
     private static int runReconcileNativeWorkItemsDb() {
         try {
             PgConfig pgConfig = PgConfig.load();
@@ -4480,6 +4537,7 @@ public final class Main {
         System.out.println("  reconcile-canonical-views-db       Maintain the derived kf_identity_account view and report core canonical table state (kf_identity/kf_account/kf_application/kf_entitlement are physical tables)");
         System.out.println("  reconcile-referential-integrity-db Data-quality: detect dangling references across the normalized tables (read-only), writing findings to kf_reconciliation_finding");
         System.out.println("  reconcile-native-workitems-db      Reconcile native approval work_item_id references vs live kf_workitem + kf_workitem_archive (read-only; writes kf_reconciliation_finding)");
+        System.out.println("  derive-native-events-db            Derive the native EVENT zone (append-only <iiq_native>.kf_event + kf_event_link) from native source tables only (no REST data, no AuditEvent)");
         System.out.println("  derive-record-lineage-db           Derive the PDF lineage envelope for every domain record into the shared kf_record_lineage sidecar (read-only over domain tables)");
         System.out.println("  reconcile-counts-db                Cross-pipeline count reconciliation: compare PostgreSQL vs Parquet row counts per domain (read-only), writing kf_count_reconciliation");
         System.out.println("  extract-workgroups    Retrieve Workgroups (Group Configuration DataSource, Workgroup subset) and print a summary");
