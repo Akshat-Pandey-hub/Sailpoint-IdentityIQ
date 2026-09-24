@@ -246,6 +246,7 @@ public final class Main {
             case "reconcile-referential-integrity-db" -> System.exit(RunLedger.run("reconcile-referential-integrity-db", Main::runReconcileReferentialIntegrityDb));
             case "derive-record-lineage-db" -> System.exit(RunLedger.run("derive-record-lineage-db", Main::runDeriveRecordLineageDb));
             case "reconcile-counts-db" -> System.exit(RunLedger.run("reconcile-counts-db", Main::runReconcileCountsDb));
+            case "reconcile-native-workitems-db" -> System.exit(RunLedger.run("reconcile-native-workitems-db", Main::runReconcileNativeWorkItemsDb));
             case "extract-task-results" -> System.exit(runExtractTaskResults());
             case "extract-task-results-db" -> System.exit(RunLedger.run("extract-task-results-db", Main::runExtractTaskResultsDb));
             case "extract-certifications" -> System.exit(runExtractCertifications());
@@ -3855,6 +3856,60 @@ public final class Main {
         } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
+    private static int runReconcileNativeWorkItemsDb() {
+        try {
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("WorkItem reconciliation (read-only over native tables; writes only kf_reconciliation_finding): "
+                    + "approval work_item_id references vs live kf_workitem + kf_workitem_archive");
+
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                com.keyforge.iiq.reconciliation.WorkItemReconciliation svc =
+                        new com.keyforge.iiq.reconciliation.WorkItemReconciliation(nativeSchema);
+                String runId = RunLedger.currentRunId();
+                if (runId == null) {
+                    runId = java.util.UUID.randomUUID().toString();
+                }
+                com.keyforge.iiq.reconciliation.WorkItemReconciliation.Result r = svc.reconcile(conn, runId);
+                RunLedger.record("kf_reconciliation_finding", 1, 1, 0, 0);
+
+                System.out.println();
+                if (r.skipped) {
+                    System.out.println("Reconciliation SKIPPED: " + r.skipReason);
+                    return 0;
+                }
+                System.out.println("Live WorkItems (kf_workitem):            " + r.liveWorkItems);
+                System.out.println("WorkItem archives (kf_workitem_archive): " + r.workItemArchives);
+                System.out.println("Approval work_item_id references (distinct): " + r.approvalRefs);
+                System.out.println("  matched to a live WorkItem:      " + r.matchedLive);
+                System.out.println("  matched to an archived WorkItem: " + r.matchedArchive);
+                System.out.println("  matched to either:               " + r.matchedEither);
+                System.out.println("  UNMATCHED:                       " + r.unmatched);
+                if (!r.unmatchedSamples.isEmpty()) {
+                    System.out.println("  unmatched sample ids: " + r.unmatchedSamples);
+                }
+                System.out.println();
+                System.out.println("Determination:");
+                System.out.println("  " + r.determination);
+                System.out.println();
+                System.out.println("Finding persisted to " + nativeSchema + ".kf_reconciliation_finding (check '"
+                        + com.keyforge.iiq.reconciliation.WorkItemReconciliation.CHECK_NAME + "')");
+                return 0;
+            }
+        } catch (ConfigException e) {
+            System.err.println("Configuration error: " + e.getMessage());
+            return 3;
+        } catch (SQLException e) {
+            System.err.println("PostgreSQL error: " + e.getMessage());
+            return 5;
+        } catch (RuntimeException e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            return 1;
+        }
+    }
+
     private static int runReconcileReferentialIntegrityDb() {
         try {
             PgConfig pgConfig = PgConfig.load();
@@ -4424,6 +4479,7 @@ public final class Main {
         System.out.println("  derive-provisioning-links-db       Derive kf_event_link (provisioning txn -> request/certification) from rest/provisioningTransactions");
         System.out.println("  reconcile-canonical-views-db       Maintain the derived kf_identity_account view and report core canonical table state (kf_identity/kf_account/kf_application/kf_entitlement are physical tables)");
         System.out.println("  reconcile-referential-integrity-db Data-quality: detect dangling references across the normalized tables (read-only), writing findings to kf_reconciliation_finding");
+        System.out.println("  reconcile-native-workitems-db      Reconcile native approval work_item_id references vs live kf_workitem + kf_workitem_archive (read-only; writes kf_reconciliation_finding)");
         System.out.println("  derive-record-lineage-db           Derive the PDF lineage envelope for every domain record into the shared kf_record_lineage sidecar (read-only over domain tables)");
         System.out.println("  reconcile-counts-db                Cross-pipeline count reconciliation: compare PostgreSQL vs Parquet row counts per domain (read-only), writing kf_count_reconciliation");
         System.out.println("  extract-workgroups    Retrieve Workgroups (Group Configuration DataSource, Workgroup subset) and print a summary");
