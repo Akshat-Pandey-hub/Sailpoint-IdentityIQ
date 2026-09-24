@@ -50,6 +50,8 @@
                         <String>com.keyforge.nativeiiq.resource.NativeViolationResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativePolicyResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeAuditEventResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativePolicyConstraintResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeSyslogEventResource</String>
                     </List>
                 </value>
             </entry>
