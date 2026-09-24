@@ -99,6 +99,16 @@ import com.keyforge.nativeload.NativeApplicationClient;
 import com.keyforge.nativeload.NativeApplicationImportService;
 import com.keyforge.nativeload.NativeApplicationRepository;
 import com.keyforge.nativeload.NativeApplicationSink;
+import com.keyforge.nativeload.JdbcNativeTaskResultSink;
+import com.keyforge.nativeload.NativeTaskResultClient;
+import com.keyforge.nativeload.NativeTaskResultImportService;
+import com.keyforge.nativeload.NativeTaskResultRepository;
+import com.keyforge.nativeload.NativeTaskResultSink;
+import com.keyforge.nativeload.JdbcNativeTaskScheduleSink;
+import com.keyforge.nativeload.NativeTaskScheduleClient;
+import com.keyforge.nativeload.NativeTaskScheduleImportService;
+import com.keyforge.nativeload.NativeTaskScheduleRepository;
+import com.keyforge.nativeload.NativeTaskScheduleSink;
 import com.keyforge.nativeload.NativeLinkClient;
 import com.keyforge.nativeload.NativeLinkImportService;
 import com.keyforge.nativeload.NativeLinkRepository;
@@ -259,6 +269,8 @@ public final class Main {
             case "extract-native-role-db" -> System.exit(RunLedger.run("extract-native-role-db", Main::runExtractNativeRoleDb));
             case "extract-native-role-relationships-db" -> System.exit(RunLedger.run("extract-native-role-relationships-db", Main::runExtractNativeRoleRelationshipsDb));
             case "extract-native-identity-role-db" -> System.exit(RunLedger.run("extract-native-identity-role-db", Main::runExtractNativeIdentityRoleDb));
+            case "extract-native-task-result-db" -> System.exit(RunLedger.run("extract-native-task-result-db", Main::runExtractNativeTaskResultDb));
+            case "extract-native-task-schedule-db" -> System.exit(RunLedger.run("extract-native-task-schedule-db", Main::runExtractNativeTaskScheduleDb));
             case "extract-native-workgroup-db" -> System.exit(RunLedger.run("extract-native-workgroup-db", Main::runExtractNativeWorkgroupDb));
             case "extract-native-group-definition-db" -> System.exit(RunLedger.run("extract-native-group-definition-db", Main::runExtractNativeGroupDefinitionDb));
             case "extract-native-workitem-archive-db" -> System.exit(RunLedger.run("extract-native-workitem-archive-db", Main::runExtractNativeWorkItemArchiveDb));
@@ -1173,6 +1185,140 @@ public final class Main {
      * authenticated session and load native-rich rows into {@code iiq_native.kf_application}. IIQ-side
      * read-only; the only writes are to our PostgreSQL. Idempotent; full-scan deletion sweep.
      */
+    private static int runExtractNativeTaskResultDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            int pageSize = nativePageSize();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
+                    + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: native SailPoint Java API via plugin REST "
+                    + "(" + NativeTaskResultClient.TASK_RESULTS_PATH + "), page size " + pageSize);
+
+            NativeTaskResultClient client = new NativeTaskResultClient(new IiqSessionClient(iiqConfig));
+            NativeTaskResultRepository repository = new NativeTaskResultRepository(nativeSchema);
+
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                NativeTaskResultSink sink = new JdbcNativeTaskResultSink(conn, repository, nativeSchema);
+                NativeTaskResultImportService svc =
+                        new NativeTaskResultImportService(client, sink, pageSize, true);
+                NativeTaskResultImportService.Result result = svc.importAll();
+                RunLedger.record("kf_task_result", result.getExtracted(),
+                        result.getInserted(), result.getUpdated(), result.getFailed());
+                printNativeTaskResultDbSummary(result, repository.targetTable());
+                return result.getFailed() > 0 ? 6 : 0;
+            }
+
+        } catch (ConfigException e) {
+            System.err.println("Configuration error: " + e.getMessage());
+            return 3;
+        } catch (NativeImportException e) {
+            System.err.println("Native payload error: " + e.getMessage());
+            return 4;
+        } catch (IiqApiException e) {
+            System.err.println("IdentityIQ plugin API error: " + e.getMessage());
+            return 4;
+        } catch (SQLException e) {
+            System.err.println("PostgreSQL error: " + e.getMessage());
+            return 5;
+        } catch (RuntimeException e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            return 1;
+        }
+    }
+
+    private static void printNativeTaskResultDbSummary(NativeTaskResultImportService.Result result,
+                                                       String targetTable) {
+        System.out.println();
+        System.out.println("Successfully persisted " + result.getPersisted()
+                + " native task results to " + targetTable + " (of " + result.getExtracted() + " extracted)");
+        System.out.println("  inserted: " + result.getInserted());
+        System.out.println("  updated:  " + result.getUpdated());
+        System.out.println("  failed:   " + result.getFailed());
+        if (result.isSweepRan()) {
+            System.out.println("  deletion sweep: " + (result.isSweepSkipped()
+                    ? "skipped (empty source — safety guard)"
+                    : ("marked " + result.getMarkedDeleted() + " deleted, revived " + result.getRevived())));
+        }
+        int shown = Math.min(result.getFailures().size(), 10);
+        for (int i = 0; i < shown; i++) {
+            System.out.println("    - " + result.getFailures().get(i));
+        }
+        if (result.getFailures().size() > shown) {
+            System.out.println("    ... and " + (result.getFailures().size() - shown) + " more");
+        }
+    }
+
+    private static int runExtractNativeTaskScheduleDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            int pageSize = nativePageSize();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
+                    + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: native SailPoint Java API via plugin REST "
+                    + "(" + NativeTaskScheduleClient.TASK_SCHEDULES_PATH + "), page size " + pageSize);
+
+            NativeTaskScheduleClient client = new NativeTaskScheduleClient(new IiqSessionClient(iiqConfig));
+            NativeTaskScheduleRepository repository = new NativeTaskScheduleRepository(nativeSchema);
+
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                NativeTaskScheduleSink sink = new JdbcNativeTaskScheduleSink(conn, repository, nativeSchema);
+                NativeTaskScheduleImportService svc =
+                        new NativeTaskScheduleImportService(client, sink, pageSize, true);
+                NativeTaskScheduleImportService.Result result = svc.importAll();
+                RunLedger.record("kf_task_schedule", result.getExtracted(),
+                        result.getInserted(), result.getUpdated(), result.getFailed());
+                printNativeTaskScheduleDbSummary(result, repository.targetTable());
+                return result.getFailed() > 0 ? 6 : 0;
+            }
+
+        } catch (ConfigException e) {
+            System.err.println("Configuration error: " + e.getMessage());
+            return 3;
+        } catch (NativeImportException e) {
+            System.err.println("Native payload error: " + e.getMessage());
+            return 4;
+        } catch (IiqApiException e) {
+            System.err.println("IdentityIQ plugin API error: " + e.getMessage());
+            return 4;
+        } catch (SQLException e) {
+            System.err.println("PostgreSQL error: " + e.getMessage());
+            return 5;
+        } catch (RuntimeException e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            return 1;
+        }
+    }
+
+    private static void printNativeTaskScheduleDbSummary(NativeTaskScheduleImportService.Result result,
+                                                         String targetTable) {
+        System.out.println();
+        System.out.println("Successfully persisted " + result.getPersisted()
+                + " native task schedules to " + targetTable + " (of " + result.getExtracted() + " extracted)");
+        System.out.println("  inserted: " + result.getInserted());
+        System.out.println("  updated:  " + result.getUpdated());
+        System.out.println("  failed:   " + result.getFailed());
+        if (result.isSweepRan()) {
+            System.out.println("  deletion sweep: " + (result.isSweepSkipped()
+                    ? "skipped (empty source — safety guard)"
+                    : ("marked " + result.getMarkedDeleted() + " deleted, revived " + result.getRevived())));
+        }
+        int shown = Math.min(result.getFailures().size(), 10);
+        for (int i = 0; i < shown; i++) {
+            System.out.println("    - " + result.getFailures().get(i));
+        }
+        if (result.getFailures().size() > shown) {
+            System.out.println("    ... and " + (result.getFailures().size() - shown) + " more");
+        }
+    }
+
     private static int runExtractNativeApplicationDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
@@ -4300,6 +4446,8 @@ public final class Main {
         System.out.println("  extract-native-role-db       Pull native Role/Bundle data from the plugin endpoint and upsert into <iiq_native>.kf_role (read-only in IIQ)");
         System.out.println("  extract-native-role-relationships-db Pull native Bundle Profile/Permission/constraint edges and typed role hierarchy into <iiq_native>.kf_role_entitlement and kf_role_hierarchy");
         System.out.println("  extract-native-identity-role-db      Pull native Identity role assignments/detections into <iiq_native>.kf_identity_role (ASSIGNED/DETECTED edges, read-only in IIQ)");
+        System.out.println("  extract-native-task-result-db        Pull native TaskResult run/aggregation history into <iiq_native>.kf_task_result (current-state, read-only in IIQ)");
+        System.out.println("  extract-native-task-schedule-db      Pull native TaskSchedule cron schedules into <iiq_native>.kf_task_schedule (current-state, read-only in IIQ)");
         System.out.println("  extract-native-workgroup-db  Pull native Workgroup data (Identity workgroup=true) from the plugin endpoint and upsert into <iiq_native>.kf_workgroup (read-only in IIQ)");
         System.out.println("  extract-native-group-definition-db  Pull native GroupDefinition data (Populations + Groups) from the plugin endpoint and upsert into <iiq_native>.kf_group_definition (read-only in IIQ)");
         System.out.println("  extract-native-workitem-archive-db  Append native WorkItemArchive evidence into <iiq_native>.kf_workitem_archive (read-only in IIQ; no deletion sweep)");

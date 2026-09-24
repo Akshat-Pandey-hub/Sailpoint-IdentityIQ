@@ -203,7 +203,8 @@ public final class RunLedger {
                  "extract-native-certification-item-db", "extract-native-certification-archive-db",
                  "extract-native-provisioning-txn-db", "extract-native-identity-request-db",
                  "extract-native-workitem-db", "extract-native-role-relationships-db",
-                 "extract-native-identity-role-db" -> "native-plugin-rest";
+                 "extract-native-identity-role-db", "extract-native-task-result-db",
+                 "extract-native-task-schedule-db" -> "native-plugin-rest";
             case "extract-usergroups-db", "extract-workgroups-db", "extract-workgroup-members-db",
                  "extract-policies-db", "extract-audit-events-db", "extract-role-entitlements-db" -> "classic-ui";
             case "extract-applicationinstances-db", "extract-assignments-db", "extract-catalog-db",

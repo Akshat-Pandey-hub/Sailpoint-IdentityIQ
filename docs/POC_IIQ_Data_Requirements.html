@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POC IIQ Data Requirements</title>
+<style>
+  :root { --navy:#1f3864; --grey:#555; --line:#d5dae4; --band:#eef2f8; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px 16px; font-family:Calibri,Segoe UI,Arial,sans-serif; color:#1a1a1a; background:#fff; line-height:1.45; }
+  .wrap { max-width:1100px; margin:0 auto; }
+  h1 { color:var(--navy); font-size:22px; margin:0 0 6px; }
+  .sub { color:var(--grey); font-style:italic; margin:0 0 12px; }
+  .note { font-size:12px; color:var(--grey); background:var(--band); border:1px solid var(--line); border-radius:6px; padding:10px 12px; margin:0 0 18px; }
+  .note b { color:var(--navy); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th,td { border:1px solid var(--line); padding:8px 10px; vertical-align:top; text-align:left; }
+  thead th { background:var(--navy); color:#fff; font-weight:700; }
+  tbody tr:nth-child(even) { background:var(--band); }
+  td.uc { color:var(--navy); font-weight:700; white-space:nowrap; }
+  code { background:#f2f4f8; padding:1px 4px; border-radius:3px; font-size:11.5px; }
+  h2 { color:var(--navy); font-size:16px; margin:22px 0 8px; }
+  ul { margin:0; padding-left:20px; font-size:12.5px; }
+  li { margin:5px 0; }
+  @media print { body { padding:0; } .note { break-inside:avoid; } tr { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SailPoint IdentityIQ — Data Requirements for the 16 POC Use Cases</h1>
+  <p class="sub">The authoritative list of what each POC use case needs from SailPoint IdentityIQ — source objects, tables, fields and records.</p>
+  <p class="note"><b>Naming note:</b> <code>kf_*</code> names are KeyForge extraction tables that represent IIQ source objects — not the underlying (undocumented) IIQ database table names. Each is populated read-only from the native IIQ Java API (<code>source_interface = native_iiq_java_api</code>), kept separate from the REST/SCIM baseline.</p>
+
+  <table>
+    <thead><tr><th>Use Case</th><th>IIQ source object → KeyForge table</th><th>Required fields / records</th></tr></thead>
+    <tbody>
+      <tr><td class="uc">REP002 — Approval Group Contains No Users</td><td>ManagedAttribute → <code>kf_entitlement</code>; Workflow → <code>kf_workflow_definition</code>; Workgroup → <code>kf_workgroup</code>; Member → <code>kf_workgroup_member</code>; LCM config</td><td>Entitlement id, application, attribute, value, requestable, owner; workflow steps → approval nodes → owner / ownerType / ownerScript / ownerSource / WorkItemConfig; approval workgroup id/name; workgroup member identities. Critical link: which approval flow/config actually applies to the entitlement.</td></tr>
+      <tr><td class="uc">REP004 — Approval Level &gt; 1 but Level 2 Has No Value</td><td><code>kf_entitlement</code>; <code>kf_workflow_definition</code>; <code>kf_workgroup</code>; request/approval history where available</td><td>Entitlement id/requestable; applicable workflow; approval stage/step structure; approver type; Level 1 / Level 2 owner or workgroup; static vs dynamic owner; workflow rule/script references. Level 2 must not be inferred from array position.</td></tr>
+      <tr><td class="uc">REP010 — Same Description Repeated Across Entitlements</td><td>ManagedAttribute → <code>kf_entitlement</code>; Application → <code>kf_application</code></td><td>Entitlement id, application, attribute, value, description, owner. Sufficient for downstream duplicate/similarity analysis.</td></tr>
+      <tr><td class="uc">REP011 — Descriptions Contain Names of People</td><td><code>kf_entitlement</code>; Identity → <code>kf_identity</code></td><td>Entitlement description + context; identity name population used for matching.</td></tr>
+      <tr><td class="uc">REP017 — Common People Across Multiple Approval Workgroups</td><td><code>kf_workgroup</code>; <code>kf_workgroup_member</code>; <code>kf_workflow_definition</code>; entitlement/application context</td><td>Workgroup id/name, member identity id/name, identification of a workgroup as an approval workgroup, associated applications/entitlements/flows, and the concentration threshold agreed with Experian.</td></tr>
+      <tr><td class="uc">REP020 — Privileged Entitlements Without Second-Level Approval</td><td><code>kf_entitlement</code>; <code>kf_workflow_definition</code>; <code>kf_workgroup</code></td><td>Privileged classification (native <code>iiqElevatedAccess</code>); entitlement id/application/attribute/value/requestable; applicable workflow; approval stages; Level 1 / Level 2 approver/workgroup; static/dynamic owner + fallback config.</td></tr>
+      <tr><td class="uc">A-IGA-004 — Orphan Accounts</td><td>Account (Link) → <code>kf_account</code>; Identity → <code>kf_identity</code>; Application → <code>kf_application</code></td><td>Account id, native identity, identity correlation/reference, manually-correlated flag, disabled/locked state, entitlement presence; application id/name/owner; service-account marker/classification so legitimate service accounts are not falsely flagged.</td></tr>
+      <tr><td class="uc">UC-AR-004 — Origin Path for Removed Items</td><td><code>kf_certification</code>, <code>kf_certification_entity</code>, <code>kf_certification_item</code>; <code>kf_identity_entitlement</code>; <code>kf_account_entitlement</code>; <code>kf_identity_request</code>, <code>kf_identity_request_item</code>, <code>kf_identity_request_approval</code>; <code>kf_identity_role</code>; <code>kf_role_entitlement</code>; <code>kf_provisioning_txn</code>, <code>kf_provisioning_item</code></td><td>Certification item, target identity/account/entitlement, decision/action, status, decision date, actor, revoke/remediation action; current assignment + provenance (source, assigner, assignmentId, assignmentNote, assigned, grantedByRole, source assignable/detected roles); request/item/approval refs; role path; direct/birthright/inherited context; provisioning txn/item + outcome.</td></tr>
+      <tr><td class="uc">UC-AR-008 — Future Leaver Correlation</td><td><code>kf_certification_item</code>; <code>kf_identity</code>; current-assignment tables; provisioning/removal evidence</td><td>Certification approve/revoke decision, target identity/access; an authoritative future-dated leaver/termination/lifecycle field; current assignment + removal status. If not held authoritatively in IIQ, HR/lifecycle source required (do not infer from <code>inactive</code>).</td></tr>
+      <tr><td class="uc">UC-ENT-007 — Never-Reviewed Entitlements</td><td><code>kf_entitlement</code>; <code>kf_certification</code>, <code>kf_certification_entity</code>, <code>kf_certification_item</code>; certification history/archive (<code>kf_certification_archive</code>)</td><td>Complete entitlement population; review/certification scope or review flag; certification campaigns/cycles; items/actions/history; birthright classification; distribution-list classification; inclusion/exclusion + review-eligibility rules.</td></tr>
+      <tr><td class="uc">UC-ENT-010 — Privileged Entitlement Access Path</td><td><code>kf_identity</code>; <code>kf_account</code>; <code>kf_entitlement</code>; <code>kf_identity_entitlement</code>; <code>kf_account_entitlement</code>; <code>kf_role</code>; <code>kf_identity_role</code>; <code>kf_role_entitlement</code>; <code>kf_role_hierarchy</code>; <code>kf_identity_request</code> (+item/approval); <code>kf_workitem</code>; <code>kf_provisioning_txn</code>, <code>kf_provisioning_item</code>; certification evidence</td><td>Full path identity → account → entitlement; assignment/provenance; privileged classification; direct vs role/birthright/inherited; request id/item/approval/decision; workitem evidence; role assignment/hierarchy/profile; provisioning txn/item + source/outcome.</td></tr>
+      <tr><td class="uc">TF-AM2 — Access Removal Control</td><td><code>kf_certification_item</code>; <code>kf_identity_entitlement</code>; <code>kf_account_entitlement</code>; <code>kf_provisioning_txn</code>, <code>kf_provisioning_item</code>; <code>kf_identity</code> / <code>kf_account</code></td><td>Removal decision/action, decision date/actor; current access assignment; identity/account/entitlement relationship; provisioning/removal txn + item status/result; correlation links to compare decision vs actual current state.</td></tr>
+      <tr><td class="uc">TF-AM4 — Entitlement Description Quality</td><td><code>kf_entitlement</code>; Application context; owner</td><td>Entitlement id/name/attribute/value, application, description, owner + metadata used to judge whether the description is missing/inadequate.</td></tr>
+      <tr><td class="uc">TF-DEL-001 — Delimited Application Risk-Based Prioritization</td><td>Application → <code>kf_application</code>; TaskSchedule → <code>kf_task_schedule</code>; TaskResult → <code>kf_task_result</code>; request/review records where app usage must be proven</td><td>Application type/classification, connector, aggregationTypes, owner, schema, correlation/provisioning config, full config; schedule cron, last/next execution, state; TaskResult definition, completion status, launched/completed timestamps, target, host/launcher, errors/statistics; app→task relationship; evidence the app is used in access requests/reviews.</td></tr>
+      <tr><td class="uc">TF-DEL-007 — STS File Submission Schedule</td><td><code>kf_task_schedule</code>; <code>kf_task_result</code>; Application metadata; external STS / file-transfer / monitoring source</td><td>Expected schedule; actual file arrival/submission timestamp; file/batch identifier; processing status/result; failure/error info. IIQ provides schedule/task evidence only where the file process is represented there; actual file arrival is external unless persisted into IIQ.</td></tr>
+      <tr><td class="uc">GIA-006 — Multiple Accounts with the Same Entitlement</td><td><code>kf_identity</code>; <code>kf_account</code>; <code>kf_application</code>; <code>kf_entitlement</code>; <code>kf_account_entitlement</code></td><td>Identity id, multiple account ids, application context, entitlement id/attribute/value, account-entitlement assignment. Group by identity → same entitlement across multiple accounts.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Cross-cutting source facts (used by many use cases — all extracted)</h2>
+  <ul>
+    <li><b>Entitlement metadata</b> (<code>kf_entitlement</code>): id, application, attribute, value, type, description + per-locale descriptions, owner, requestable, <code>iiqElevatedAccess</code> (privileged), classifications-as-attributes.</li>
+    <li><b>Approval configuration evidence</b> (<code>kf_workflow_definition</code>): full step → nested-approval → WorkItemConfig tree, preserving static owner vs dynamic ownerScript/ownerSource and the workgroup flag on each approver — captured as evidence only (rules never evaluated, Level 1/2 never inferred from position).</li>
+    <li><b>Account / orphan facts</b> (<code>kf_account</code>): identity correlation, manually-correlated flag, disabled/locked, entitlement presence.</li>
+    <li><b>Provenance chain</b>: <code>kf_identity_role</code> (ASSIGNED/DETECTED), <code>kf_role_entitlement</code>, <code>kf_role_hierarchy</code>, <code>kf_identity_request</code> (+item/approval), <code>kf_provisioning_txn</code> / <code>kf_provisioning_item</code>.</li>
+  </ul>
+</div>
+</body>
+</html>

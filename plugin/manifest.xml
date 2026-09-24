@@ -45,6 +45,8 @@
                         <String>com.keyforge.nativeiiq.resource.NativeWorkItemResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeRoleRelationshipResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeIdentityRoleResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeTaskResultResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeTaskScheduleResource</String>
                     </List>
                 </value>
             </entry>
