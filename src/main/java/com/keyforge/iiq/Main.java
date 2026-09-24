@@ -270,6 +270,7 @@ public final class Main {
             case "extract-native-certification-archive-db" -> System.exit(RunLedger.run("extract-native-certification-archive-db", Main::runExtractNativeCertificationArchiveDb));
             case "extract-native-provisioning-txn-db" -> System.exit(RunLedger.run("extract-native-provisioning-txn-db", Main::runExtractNativeProvisioningTxnDb));
             case "extract-native-identity-request-db" -> System.exit(RunLedger.run("extract-native-identity-request-db", Main::runExtractNativeIdentityRequestDb));
+            case "extract-native-workitem-db" -> System.exit(RunLedger.run("extract-native-workitem-db", Main::runExtractNativeWorkItemDb));
             case "extract-entitlements" -> System.exit(runExtractEntitlements());
             case "extract-accounts" -> System.exit(runExtractAccounts());
             case "extract-assignments" -> System.exit(runExtractAssignments());
@@ -1872,6 +1873,40 @@ public final class Main {
     }
 
     /** Native current-state ProvisioningTransaction (+ derived provisioning items) into iiq_native. */
+    /** Native current-state WorkItem (live/pending work items, incl. in-flight approvals) into iiq_native. */
+    private static int runExtractNativeWorkItemDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            int pageSize = nativePageSize();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
+                    + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: native SailPoint Java API via plugin REST ("
+                    + com.keyforge.nativeload.NativeWorkItemClient.WORKITEMS_PATH + "), page size " + pageSize);
+            com.keyforge.nativeload.NativeWorkItemClient client =
+                    new com.keyforge.nativeload.NativeWorkItemClient(new IiqSessionClient(iiqConfig));
+            com.keyforge.nativeload.NativeWorkItemRepository repository =
+                    new com.keyforge.nativeload.NativeWorkItemRepository(nativeSchema);
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                com.keyforge.nativeload.NativeWorkItemSink sink =
+                        new com.keyforge.nativeload.JdbcNativeWorkItemSink(conn, repository, nativeSchema);
+                com.keyforge.nativeload.NativeWorkItemImportService.Result r =
+                        new com.keyforge.nativeload.NativeWorkItemImportService(client, sink, pageSize, true).importAll();
+                RunLedger.record("kf_workitem", r.getExtracted(), r.getInserted(), r.getUpdated(), r.getFailed());
+                printNativeCurrentStateSummary("work items", r.getPersisted(), r.getExtracted(), r.getSourceCount(),
+                        r.getInserted(), r.getUpdated(), r.getFailed(), r.isSweepRan(), r.isSweepSkipped(),
+                        r.getMarkedDeleted(), r.getRevived(), repository.targetTable(), r.getFailures());
+                return r.getFailed() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
     /** Native current-state IdentityRequest (+ derived items + request-time approval summaries) into iiq_native. */
     private static int runExtractNativeIdentityRequestDb() {
         try {
@@ -4183,6 +4218,7 @@ public final class Main {
         System.out.println("  extract-native-certification-archive-db  Append native CertificationArchive (historical) into <iiq_native>.kf_certification_archive (read-only in IIQ; no deletion sweep)");
         System.out.println("  extract-native-provisioning-txn-db       Pull native ProvisioningTransaction (+ derived items) into <iiq_native>.kf_provisioning_txn + kf_provisioning_item (read-only in IIQ)");
         System.out.println("  extract-native-identity-request-db       Pull native IdentityRequest (+ items + request-time approvals) into <iiq_native>.kf_identity_request(_item/_approval) (read-only in IIQ)");
+        System.out.println("  extract-native-workitem-db               Pull native live WorkItem (identityRequestId link + approval-set evidence) into <iiq_native>.kf_workitem (read-only in IIQ)");
         System.out.println("  --- Parquet workstream (direct IIQ->Parquet, independent of PostgreSQL; PARQUET_OUT_DIR default parquet-data) ---");
         System.out.println("  extract-task-results-parquet            Write task_result Parquet dataset");
         System.out.println("  extract-audit-events-parquet            Write kf_audit_event Parquet dataset");

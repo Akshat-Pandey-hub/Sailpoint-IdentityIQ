@@ -42,6 +42,7 @@
                         <String>com.keyforge.nativeiiq.resource.NativeCertificationArchiveResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeProvisioningTxnResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeIdentityRequestResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeWorkItemResource</String>
                     </List>
                 </value>
             </entry>
