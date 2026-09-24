@@ -47,6 +47,8 @@
                         <String>com.keyforge.nativeiiq.resource.NativeIdentityRoleResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeTaskResultResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeTaskScheduleResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeViolationResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativePolicyResource</String>
                     </List>
                 </value>
             </entry>

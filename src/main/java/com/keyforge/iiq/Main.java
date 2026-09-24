@@ -109,6 +109,16 @@ import com.keyforge.nativeload.NativeTaskScheduleClient;
 import com.keyforge.nativeload.NativeTaskScheduleImportService;
 import com.keyforge.nativeload.NativeTaskScheduleRepository;
 import com.keyforge.nativeload.NativeTaskScheduleSink;
+import com.keyforge.nativeload.JdbcNativeViolationSink;
+import com.keyforge.nativeload.NativeViolationClient;
+import com.keyforge.nativeload.NativeViolationImportService;
+import com.keyforge.nativeload.NativeViolationRepository;
+import com.keyforge.nativeload.NativeViolationSink;
+import com.keyforge.nativeload.JdbcNativePolicySink;
+import com.keyforge.nativeload.NativePolicyClient;
+import com.keyforge.nativeload.NativePolicyImportService;
+import com.keyforge.nativeload.NativePolicyRepository;
+import com.keyforge.nativeload.NativePolicySink;
 import com.keyforge.nativeload.NativeLinkClient;
 import com.keyforge.nativeload.NativeLinkImportService;
 import com.keyforge.nativeload.NativeLinkRepository;
@@ -273,6 +283,8 @@ public final class Main {
             case "extract-native-identity-role-db" -> System.exit(RunLedger.run("extract-native-identity-role-db", Main::runExtractNativeIdentityRoleDb));
             case "extract-native-task-result-db" -> System.exit(RunLedger.run("extract-native-task-result-db", Main::runExtractNativeTaskResultDb));
             case "extract-native-task-schedule-db" -> System.exit(RunLedger.run("extract-native-task-schedule-db", Main::runExtractNativeTaskScheduleDb));
+            case "extract-native-violations-db" -> System.exit(RunLedger.run("extract-native-violations-db", Main::runExtractNativeViolationsDb));
+            case "extract-native-policies-db" -> System.exit(RunLedger.run("extract-native-policies-db", Main::runExtractNativePoliciesDb));
             case "extract-native-workgroup-db" -> System.exit(RunLedger.run("extract-native-workgroup-db", Main::runExtractNativeWorkgroupDb));
             case "extract-native-group-definition-db" -> System.exit(RunLedger.run("extract-native-group-definition-db", Main::runExtractNativeGroupDefinitionDb));
             case "extract-native-workitem-archive-db" -> System.exit(RunLedger.run("extract-native-workitem-archive-db", Main::runExtractNativeWorkItemArchiveDb));
@@ -1187,6 +1199,95 @@ public final class Main {
      * authenticated session and load native-rich rows into {@code iiq_native.kf_application}. IIQ-side
      * read-only; the only writes are to our PostgreSQL. Idempotent; full-scan deletion sweep.
      */
+    private static int runExtractNativeViolationsDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            int pageSize = nativePageSize();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: native SailPoint Java API via plugin REST "
+                    + "(" + NativeViolationClient.VIOLATIONS_PATH + "), page size " + pageSize);
+
+            NativeViolationClient client = new NativeViolationClient(new IiqSessionClient(iiqConfig));
+            NativeViolationRepository repository = new NativeViolationRepository(nativeSchema);
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                NativeViolationSink sink = new JdbcNativeViolationSink(conn, repository, nativeSchema);
+                NativeViolationImportService.Result result =
+                        new NativeViolationImportService(client, sink, pageSize, true).importAll();
+                RunLedger.record("kf_violation", result.getExtracted(),
+                        result.getInserted(), result.getUpdated(), result.getFailed());
+                printNativeCurrentStateSummary("policy violations", result.getPersisted(), result.getExtracted(),
+                        result.getInserted(), result.getUpdated(), result.getFailed(), result.isSweepRan(),
+                        result.isSweepSkipped(), result.getMarkedDeleted(), result.getRevived(),
+                        result.getFailures(), repository.targetTable());
+                return result.getFailed() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4; }
+        catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
+        catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    private static int runExtractNativePoliciesDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            int pageSize = nativePageSize();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: native SailPoint Java API via plugin REST "
+                    + "(" + NativePolicyClient.POLICIES_PATH + "), page size " + pageSize);
+
+            NativePolicyClient client = new NativePolicyClient(new IiqSessionClient(iiqConfig));
+            NativePolicyRepository repository = new NativePolicyRepository(nativeSchema);
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                NativePolicySink sink = new JdbcNativePolicySink(conn, repository, nativeSchema);
+                NativePolicyImportService.Result result =
+                        new NativePolicyImportService(client, sink, pageSize, true).importAll();
+                RunLedger.record("kf_policy", result.getExtracted(),
+                        result.getInserted(), result.getUpdated(), result.getFailed());
+                printNativeCurrentStateSummary("policies", result.getPersisted(), result.getExtracted(),
+                        result.getInserted(), result.getUpdated(), result.getFailed(), result.isSweepRan(),
+                        result.isSweepSkipped(), result.getMarkedDeleted(), result.getRevived(),
+                        result.getFailures(), repository.targetTable());
+                return result.getFailed() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4; }
+        catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
+        catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    private static void printNativeCurrentStateSummary(String label, int persisted, int extracted, int inserted,
+            int updated, int failed, boolean sweepRan, boolean sweepSkipped, int marked, int revived,
+            List<String> failures, String targetTable) {
+        System.out.println();
+        System.out.println("Successfully persisted " + persisted + " native " + label + " to " + targetTable
+                + " (of " + extracted + " extracted)");
+        System.out.println("  inserted: " + inserted);
+        System.out.println("  updated:  " + updated);
+        System.out.println("  failed:   " + failed);
+        if (sweepRan) {
+            System.out.println("  deletion sweep: " + (sweepSkipped
+                    ? "skipped (empty source — safety guard)"
+                    : ("marked " + marked + " deleted, revived " + revived)));
+        }
+        int shown = Math.min(failures.size(), 10);
+        for (int i = 0; i < shown; i++) {
+            System.out.println("    - " + failures.get(i));
+        }
+        if (failures.size() > shown) {
+            System.out.println("    ... and " + (failures.size() - shown) + " more");
+        }
+    }
+
     private static int runExtractNativeTaskResultDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
@@ -4562,6 +4663,8 @@ public final class Main {
         System.out.println("  extract-native-identity-role-db      Pull native Identity role assignments/detections into <iiq_native>.kf_identity_role (ASSIGNED/DETECTED edges, read-only in IIQ)");
         System.out.println("  extract-native-task-result-db        Pull native TaskResult run/aggregation history into <iiq_native>.kf_task_result (current-state, read-only in IIQ)");
         System.out.println("  extract-native-task-schedule-db      Pull native TaskSchedule cron schedules into <iiq_native>.kf_task_schedule (current-state, read-only in IIQ)");
+        System.out.println("  extract-native-violations-db         Pull native PolicyViolation (identity/policy/constraint links) into <iiq_native>.kf_violation (current-state, read-only in IIQ)");
+        System.out.println("  extract-native-policies-db           Pull native Policy definitions into <iiq_native>.kf_policy (current-state, read-only in IIQ)");
         System.out.println("  extract-native-workgroup-db  Pull native Workgroup data (Identity workgroup=true) from the plugin endpoint and upsert into <iiq_native>.kf_workgroup (read-only in IIQ)");
         System.out.println("  extract-native-group-definition-db  Pull native GroupDefinition data (Populations + Groups) from the plugin endpoint and upsert into <iiq_native>.kf_group_definition (read-only in IIQ)");
         System.out.println("  extract-native-workitem-archive-db  Append native WorkItemArchive evidence into <iiq_native>.kf_workitem_archive (read-only in IIQ; no deletion sweep)");
