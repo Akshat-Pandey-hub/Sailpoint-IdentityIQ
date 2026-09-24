@@ -1,0 +1,10 @@
+package com.keyforge.nativeiiq.resource;
+import com.keyforge.nativeiiq.model.NativeRoleRelationshipExtractionResult;import com.keyforge.nativeiiq.service.NativeRoleRelationshipExtractionService;import com.keyforge.nativeiiq.wire.NativeRoleRelationshipWire;import sailpoint.api.SailPointContext;import sailpoint.authorization.UnauthorizedAccessException;import sailpoint.rest.plugin.BasePluginResource;import sailpoint.rest.plugin.SystemAdmin;import javax.ws.rs.*;import javax.ws.rs.core.*;import java.util.*;import java.util.logging.*;
+/** Read-only Bundle profile and hierarchy relationship export. */
+@Path("keyForgeNativeIIQ") public class NativeRoleRelationshipResource extends BasePluginResource{
+ private static final Logger LOG=Logger.getLogger(NativeRoleRelationshipResource.class.getName());
+ @Override public String getPluginName(){return "KeyForgeNativeIIQ";}
+ @GET @Path("role-relationships") @SystemAdmin @Produces(MediaType.APPLICATION_JSON)
+ public Response get(@QueryParam("start") @DefaultValue("0") int start,@QueryParam("limit") @DefaultValue("100") int limit,@QueryParam("runId") String runId){String stage="context";try{int s=Math.max(0,start),l=limit<=0?100:Math.min(1000,limit);String rid=runId==null||runId.trim().isEmpty()?java.util.UUID.randomUUID().toString():runId.trim();SailPointContext c=getContext();stage="extract";NativeRoleRelationshipExtractionResult r=new NativeRoleRelationshipExtractionService().extract(c,s,l,rid);return Response.ok(NativeRoleRelationshipWire.envelope(r,s,l,rid)).build();}catch(UnauthorizedAccessException e){LOG.log(Level.WARNING,"role relationship authorization denied at "+stage,e);return error(403,e);}catch(Throwable t){LOG.log(Level.SEVERE,"role relationship extraction failed at "+stage,t);return error(500,t);}}
+ private static Response error(int status,Throwable t){Map<String,Object>e=new LinkedHashMap<>();e.put("type",t.getClass().getName());e.put("message",String.valueOf(t.getMessage()));Map<String,Object>m=new LinkedHashMap<>();m.put("entity","BundleRelationships");m.put("status",status);m.put("error",e);return Response.status(status).type(MediaType.APPLICATION_JSON).entity(m).build();}
+}

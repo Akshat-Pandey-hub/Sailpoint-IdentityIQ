@@ -43,6 +43,8 @@
                         <String>com.keyforge.nativeiiq.resource.NativeProvisioningTxnResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeIdentityRequestResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeWorkItemResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeRoleRelationshipResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeIdentityRoleResource</String>
                     </List>
                 </value>
             </entry>

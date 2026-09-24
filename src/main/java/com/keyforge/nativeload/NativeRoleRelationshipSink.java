@@ -1,0 +1,3 @@
+package com.keyforge.nativeload;
+import com.keyforge.iiq.deletion.SoftDeleteSweeper;import java.sql.SQLException;import java.util.Collection;
+interface NativeRoleRelationshipSink{void ensure()throws SQLException;NativeRoleEntitlementRepository.Outcome entitlement(NativeRoleRelationshipRecord r)throws SQLException;NativeRoleHierarchyRepository.Outcome hierarchy(NativeRoleHierarchyRecord r)throws SQLException;SoftDeleteSweeper.SweepResult sweepEntitlements(Collection<String>ids)throws SQLException;SoftDeleteSweeper.SweepResult sweepHierarchy(Collection<String>ids)throws SQLException;}

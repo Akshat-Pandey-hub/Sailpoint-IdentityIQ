@@ -257,6 +257,8 @@ public final class Main {
             case "extract-native-application-db" -> System.exit(RunLedger.run("extract-native-application-db", Main::runExtractNativeApplicationDb));
             case "extract-native-account-db" -> System.exit(RunLedger.run("extract-native-account-db", Main::runExtractNativeAccountDb));
             case "extract-native-role-db" -> System.exit(RunLedger.run("extract-native-role-db", Main::runExtractNativeRoleDb));
+            case "extract-native-role-relationships-db" -> System.exit(RunLedger.run("extract-native-role-relationships-db", Main::runExtractNativeRoleRelationshipsDb));
+            case "extract-native-identity-role-db" -> System.exit(RunLedger.run("extract-native-identity-role-db", Main::runExtractNativeIdentityRoleDb));
             case "extract-native-workgroup-db" -> System.exit(RunLedger.run("extract-native-workgroup-db", Main::runExtractNativeWorkgroupDb));
             case "extract-native-group-definition-db" -> System.exit(RunLedger.run("extract-native-group-definition-db", Main::runExtractNativeGroupDefinitionDb));
             case "extract-native-workitem-archive-db" -> System.exit(RunLedger.run("extract-native-workitem-archive-db", Main::runExtractNativeWorkItemArchiveDb));
@@ -1315,6 +1317,97 @@ public final class Main {
      * authenticated session and load native-rich rows into {@code iiq_native.kf_role}. IIQ-side
      * read-only; the only writes are to our PostgreSQL. Idempotent; full-scan deletion sweep.
      */
+    private static int runExtractNativeIdentityRoleDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            int pageSize = nativePageSize();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
+                    + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: native SailPoint Java API via plugin REST ("
+                    + com.keyforge.nativeload.NativeIdentityRoleClient.IDENTITY_ROLES_PATH
+                    + "), page size " + pageSize + " (pages over Identities)");
+            com.keyforge.nativeload.NativeIdentityRoleClient client =
+                    new com.keyforge.nativeload.NativeIdentityRoleClient(new IiqSessionClient(iiqConfig));
+            com.keyforge.nativeload.NativeIdentityRoleRepository repository =
+                    new com.keyforge.nativeload.NativeIdentityRoleRepository(nativeSchema);
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                com.keyforge.nativeload.NativeIdentityRoleSink sink =
+                        new com.keyforge.nativeload.JdbcNativeIdentityRoleSink(conn, repository, nativeSchema);
+                com.keyforge.nativeload.NativeIdentityRoleImportService.Result r =
+                        new com.keyforge.nativeload.NativeIdentityRoleImportService(client, sink, pageSize, true).importAll();
+                RunLedger.record("kf_identity_role", r.getExtracted(), r.getInserted(), r.getUpdated(), r.getFailed());
+                System.out.println();
+                System.out.println("Persisted " + r.getPersisted() + " native identity-role edges to "
+                        + repository.targetTable() + " (of " + r.getExtracted() + " extracted from "
+                        + r.getScannedIdentities() + " Identities"
+                        + (r.getSourceIdentityCount() < 0 ? "" : "/" + r.getSourceIdentityCount() + " total") + ")");
+                System.out.println("  inserted: " + r.getInserted() + "  updated: " + r.getUpdated()
+                        + "  failed: " + r.getFailed());
+                if (r.isSweepRan()) {
+                    System.out.println("  deletion sweep (soft): " + (r.isSweepSkipped()
+                            ? "skipped (empty source — safety guard)"
+                            : ("marked " + r.getMarkedDeleted() + " deleted, revived " + r.getRevived())));
+                }
+                printLines(r.getFailures());
+                return r.getFailed() > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    private static int runExtractNativeRoleRelationshipsDb() {
+        try {
+            AppConfig iiq = AppConfig.load();
+            PgConfig pg = PgConfig.load();
+            String schema = NativeSchemaConfig.resolve();
+            int pageSize = nativePageSize();
+            System.out.println("IdentityIQ: " + iiq.getBaseUrl() + " (user '" + iiq.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pg.getJdbcUrl() + " (user '" + pg.getUsername() + "', native schema '" + schema + "')");
+            System.out.println("Source: native Bundle Profile/relationship APIs via plugin REST ("
+                    + com.keyforge.nativeload.NativeRoleRelationshipClient.PATH + "), page size " + pageSize);
+            com.keyforge.nativeload.NativeRoleRelationshipClient client =
+                    new com.keyforge.nativeload.NativeRoleRelationshipClient(new IiqSessionClient(iiq));
+            com.keyforge.nativeload.NativeRoleEntitlementRepository er = new com.keyforge.nativeload.NativeRoleEntitlementRepository(schema);
+            com.keyforge.nativeload.NativeRoleHierarchyRepository hr = new com.keyforge.nativeload.NativeRoleHierarchyRepository(schema);
+            try (Connection conn = PostgresConnection.open(pg)) {
+                com.keyforge.nativeload.NativeRoleRelationshipImportService service =
+                        new com.keyforge.nativeload.NativeRoleRelationshipImportService(client,
+                                new com.keyforge.nativeload.JdbcNativeRoleRelationshipSink(conn, er, hr), pageSize);
+                com.keyforge.nativeload.NativeRoleRelationshipImportService.Result r = service.run();
+                int records = r.entitlements + r.hierarchy;
+                RunLedger.record("kf_role_entitlement+kf_role_hierarchy", records,
+                        r.entitlementInserted + r.hierarchyInserted, r.entitlementUpdated + r.hierarchyUpdated, r.failed);
+                System.out.println();
+                System.out.println("Scanned " + r.bundles + " native Bundles; persisted " + r.entitlements
+                        + " role-profile edges and " + r.hierarchy + " role-hierarchy edges.");
+                System.out.println("  role-entitlement inserted/updated: " + r.entitlementInserted + "/" + r.entitlementUpdated);
+                System.out.println("  role-hierarchy inserted/updated:   " + r.hierarchyInserted + "/" + r.hierarchyUpdated);
+                System.out.println("  failed: " + r.failed);
+                System.out.println("  run ID: " + r.extractionRunId);
+                System.out.println("  deletion sweep: " + (r.sweepsSkipped ? "skipped (empty source or row failure safety guard)"
+                        : "completed; marked deleted " + r.entitlementDeleted + " role-profile and " + r.hierarchyDeleted + " hierarchy edges"));
+                System.out.println("  targets: " + er.targetTable() + ", " + hr.targetTable());
+                return r.failed > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) {
+            System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) {
+            System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) {
+            System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) {
+            System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) {
+            System.err.println("Unexpected error: " + e.getMessage()); return 1;
+        }
+    }
+
     private static int runExtractNativeRoleDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
@@ -4205,6 +4298,8 @@ public final class Main {
         System.out.println("  extract-native-application-db Pull native Application data from the plugin endpoint and upsert into <iiq_native>.kf_application (read-only in IIQ)");
         System.out.println("  extract-native-account-db    Pull native Link/account data from the plugin endpoint and upsert into <iiq_native>.kf_account (read-only in IIQ)");
         System.out.println("  extract-native-role-db       Pull native Role/Bundle data from the plugin endpoint and upsert into <iiq_native>.kf_role (read-only in IIQ)");
+        System.out.println("  extract-native-role-relationships-db Pull native Bundle Profile/Permission/constraint edges and typed role hierarchy into <iiq_native>.kf_role_entitlement and kf_role_hierarchy");
+        System.out.println("  extract-native-identity-role-db      Pull native Identity role assignments/detections into <iiq_native>.kf_identity_role (ASSIGNED/DETECTED edges, read-only in IIQ)");
         System.out.println("  extract-native-workgroup-db  Pull native Workgroup data (Identity workgroup=true) from the plugin endpoint and upsert into <iiq_native>.kf_workgroup (read-only in IIQ)");
         System.out.println("  extract-native-group-definition-db  Pull native GroupDefinition data (Populations + Groups) from the plugin endpoint and upsert into <iiq_native>.kf_group_definition (read-only in IIQ)");
         System.out.println("  extract-native-workitem-archive-db  Append native WorkItemArchive evidence into <iiq_native>.kf_workitem_archive (read-only in IIQ; no deletion sweep)");
