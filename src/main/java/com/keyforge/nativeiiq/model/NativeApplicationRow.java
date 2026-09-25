@@ -59,6 +59,10 @@ public final class NativeApplicationRow {
     private Boolean supportsGroupProvisioning;
     private Boolean supportsDirectPermissions;
     private Boolean syncProvisioning;
+    private String provisioningConfig;
+    private String accountCorrelationConfig;
+    private String managerCorrelationRule;
+    private String managerCorrelationFilter;
 
     // --- owner + related identities (native references) ---
     private String ownerId;
@@ -199,6 +203,14 @@ public final class NativeApplicationRow {
 
     public Boolean getSyncProvisioning() { return syncProvisioning; }
     public void setSyncProvisioning(Boolean v) { this.syncProvisioning = v; }
+    public String getProvisioningConfig() { return provisioningConfig; }
+    public void setProvisioningConfig(String v) { this.provisioningConfig = v; }
+    public String getAccountCorrelationConfig() { return accountCorrelationConfig; }
+    public void setAccountCorrelationConfig(String v) { this.accountCorrelationConfig = v; }
+    public String getManagerCorrelationRule() { return managerCorrelationRule; }
+    public void setManagerCorrelationRule(String v) { this.managerCorrelationRule = v; }
+    public String getManagerCorrelationFilter() { return managerCorrelationFilter; }
+    public void setManagerCorrelationFilter(String v) { this.managerCorrelationFilter = v; }
 
     public String getOwnerId() { return ownerId; }
     public void setOwnerId(String v) { this.ownerId = v; }

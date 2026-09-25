@@ -88,6 +88,10 @@ public final class NativeApplicationRepository {
                         + "schemas jsonb, "
                         + "descriptions jsonb, "
                         + "attributes jsonb, "
+                        + "provisioning_config text, "
+                        + "account_correlation_config text, "
+                        + "manager_correlation_rule text, "
+                        + "manager_correlation_filter text, "
                         + "created_at timestamptz, "
                         + "modified_at timestamptz, "
                         + "record_hash text, "
@@ -113,10 +117,12 @@ public final class NativeApplicationRepository {
                         + "supports_authenticate, supports_group_provisioning, supports_direct_permissions, "
                         + "sync_provisioning, owner_id, owner_name, secondary_owners, remediators, "
                         + "dependencies, schemas, descriptions, attributes, created_at, modified_at, "
+                        + "provisioning_config, account_correlation_config, manager_correlation_rule, "
+                        + "manager_correlation_filter, "
                         + "record_hash, source_system, source_interface, source_object_type, extraction_run_id) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
                         + "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, "
-                        + "?::jsonb, ?, ?, ?, ?, ?, ?, ?) "
+                        + "?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (applicationid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, name = EXCLUDED.name, description = EXCLUDED.description, "
                         + "type = EXCLUDED.type, connector = EXCLUDED.connector, "
@@ -151,7 +157,12 @@ public final class NativeApplicationRepository {
                         + "owner_name = EXCLUDED.owner_name, secondary_owners = EXCLUDED.secondary_owners, "
                         + "remediators = EXCLUDED.remediators, dependencies = EXCLUDED.dependencies, "
                         + "schemas = EXCLUDED.schemas, descriptions = EXCLUDED.descriptions, "
-                        + "attributes = EXCLUDED.attributes, created_at = EXCLUDED.created_at, "
+                        + "attributes = EXCLUDED.attributes, "
+                        + "provisioning_config = EXCLUDED.provisioning_config, "
+                        + "account_correlation_config = EXCLUDED.account_correlation_config, "
+                        + "manager_correlation_rule = EXCLUDED.manager_correlation_rule, "
+                        + "manager_correlation_filter = EXCLUDED.manager_correlation_filter, "
+                        + "created_at = EXCLUDED.created_at, "
                         + "modified_at = EXCLUDED.modified_at, record_hash = EXCLUDED.record_hash, "
                         + "source_system = EXCLUDED.source_system, source_interface = EXCLUDED.source_interface, "
                         + "source_object_type = EXCLUDED.source_object_type, "
@@ -227,6 +238,10 @@ public final class NativeApplicationRepository {
         b.put("schemas", r.schemasJson);
         b.put("descriptions", r.descriptionsJson);
         b.put("attributes", r.attributesJson);
+        b.put("provisioning_config", r.provisioningConfig);
+        b.put("account_correlation_config", r.accountCorrelationConfig);
+        b.put("manager_correlation_rule", r.managerCorrelationRule);
+        b.put("manager_correlation_filter", r.managerCorrelationFilter);
         b.put("created_at", r.created);
         b.put("modified_at", r.modified);
         return NativeRecordHash.of(b);
@@ -248,7 +263,11 @@ public final class NativeApplicationRepository {
                     + " ADD COLUMN IF NOT EXISTS account_schema_customization_rule_id text, "
                     + " ADD COLUMN IF NOT EXISTS account_schema_creation_rule_id text, "
                     + " ADD COLUMN IF NOT EXISTS account_schema_refresh_rule_id text, "
-                    + " ADD COLUMN IF NOT EXISTS application_creation_rule_id text");
+                    + " ADD COLUMN IF NOT EXISTS application_creation_rule_id text, "
+                    + " ADD COLUMN IF NOT EXISTS provisioning_config text, "
+                    + " ADD COLUMN IF NOT EXISTS account_correlation_config text, "
+                    + " ADD COLUMN IF NOT EXISTS manager_correlation_rule text, "
+                    + " ADD COLUMN IF NOT EXISTS manager_correlation_filter text");
         }
     }
 
@@ -306,6 +325,10 @@ public final class NativeApplicationRepository {
             ps.setString(i++, r.attributesJson);
             setTs(ps, i++, r.created);
             setTs(ps, i++, r.modified);
+            ps.setString(i++, r.provisioningConfig);
+            ps.setString(i++, r.accountCorrelationConfig);
+            ps.setString(i++, r.managerCorrelationRule);
+            ps.setString(i++, r.managerCorrelationFilter);
             ps.setString(i++, recordHash(r));
             ps.setString(i++, r.srcSystem);
             ps.setString(i++, r.srcInterface);

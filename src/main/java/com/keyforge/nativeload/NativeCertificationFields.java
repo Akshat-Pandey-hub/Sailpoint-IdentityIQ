@@ -48,6 +48,10 @@ final class NativeCertificationFields {
     static final String SIGN_OFF_HISTORY = "signOffHistory";
     static final String OWNER_ID = "ownerId";
     static final String OWNER_NAME = "ownerName";
+    static final String APPROVER_RULE = "approverRule";
+    static final String AUTOMATIC_CLOSING_DATE = "automaticClosingDate";
+    static final String ALLOWED_STATUSES = "allowedStatuses";
+    static final String TAGS = "tags";
 
     static final String SRC_SYSTEM = "srcSystem";
     static final String SRC_INTERFACE = "srcInterface";

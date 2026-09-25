@@ -17,6 +17,11 @@ public final class NativePolicyRow {
     private String violationOwnerId;
     private String violationOwnerName;
     private Integer constraintCount;
+    private String state;
+    private String violationRule;
+    private String violationWorkflow;
+    private String signature;
+    private String certificationActions;
     private Instant created;
     private Instant modified;
 
@@ -45,6 +50,16 @@ public final class NativePolicyRow {
     public void setViolationOwnerName(String v) { this.violationOwnerName = v; }
     public Integer getConstraintCount() { return constraintCount; }
     public void setConstraintCount(Integer v) { this.constraintCount = v; }
+    public String getState() { return state; }
+    public void setState(String v) { this.state = v; }
+    public String getViolationRule() { return violationRule; }
+    public void setViolationRule(String v) { this.violationRule = v; }
+    public String getViolationWorkflow() { return violationWorkflow; }
+    public void setViolationWorkflow(String v) { this.violationWorkflow = v; }
+    public String getSignature() { return signature; }
+    public void setSignature(String v) { this.signature = v; }
+    public String getCertificationActions() { return certificationActions; }
+    public void setCertificationActions(String v) { this.certificationActions = v; }
     public Instant getCreated() { return created; }
     public void setCreated(Instant v) { this.created = v; }
     public Instant getModified() { return modified; }

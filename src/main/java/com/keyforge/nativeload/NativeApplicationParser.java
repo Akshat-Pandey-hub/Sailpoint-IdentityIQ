@@ -104,6 +104,10 @@ final class NativeApplicationParser {
         rec.schemasJson = json(r, NativeApplicationFields.SCHEMAS);
         rec.descriptionsJson = json(r, NativeApplicationFields.DESCRIPTIONS);
         rec.attributesJson = json(r, NativeApplicationFields.ATTRIBUTES);
+        rec.provisioningConfig = text(r, NativeApplicationFields.PROVISIONING_CONFIG);
+        rec.accountCorrelationConfig = text(r, NativeApplicationFields.ACCOUNT_CORRELATION_CONFIG);
+        rec.managerCorrelationRule = text(r, NativeApplicationFields.MANAGER_CORRELATION_RULE);
+        rec.managerCorrelationFilter = text(r, NativeApplicationFields.MANAGER_CORRELATION_FILTER);
 
         rec.created = instant(r, NativeApplicationFields.CREATED);
         rec.modified = instant(r, NativeApplicationFields.MODIFIED);

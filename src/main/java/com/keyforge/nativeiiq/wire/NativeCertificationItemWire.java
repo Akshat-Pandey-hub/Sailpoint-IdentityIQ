@@ -98,6 +98,8 @@ public final class NativeCertificationItemWire {
         m.put("actionIsBulkCertified", r.getActionIsBulkCertified());
         m.put("ownerId", r.getOwnerId());
         m.put("ownerName", r.getOwnerName());
+        m.put("policyViolationId", r.getPolicyViolationId());
+        m.put("roleAssignment", r.getRoleAssignment());
         m.put("created", iso(r.getCreated()));
         m.put("modified", iso(r.getModified()));
         m.put("srcSystem", r.getSrcSystem());

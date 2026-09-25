@@ -63,6 +63,10 @@ public final class NativeCertificationRow {
 
     private String ownerId;
     private String ownerName;
+    private String approverRule;
+    private String automaticClosingDate;
+    private String allowedStatuses;
+    private String tags;
 
     // lineage envelope
     private String srcSystem;
@@ -153,6 +157,14 @@ public final class NativeCertificationRow {
     public void setOwnerId(String v) { this.ownerId = v; }
     public String getOwnerName() { return ownerName; }
     public void setOwnerName(String v) { this.ownerName = v; }
+    public String getApproverRule() { return approverRule; }
+    public void setApproverRule(String v) { this.approverRule = v; }
+    public String getAutomaticClosingDate() { return automaticClosingDate; }
+    public void setAutomaticClosingDate(String v) { this.automaticClosingDate = v; }
+    public String getAllowedStatuses() { return allowedStatuses; }
+    public void setAllowedStatuses(String v) { this.allowedStatuses = v; }
+    public String getTags() { return tags; }
+    public void setTags(String v) { this.tags = v; }
 
     public String getSrcSystem() { return srcSystem; }
     public void setSrcSystem(String v) { this.srcSystem = v; }

@@ -2,6 +2,7 @@ package com.keyforge.nativeiiq.resource;
 
 import com.keyforge.nativeiiq.model.NativeManagedAttributeExtractionResult;
 import com.keyforge.nativeiiq.service.NativeManagedAttributeExtractionService;
+import com.keyforge.nativeiiq.source.NativeManagedAttributeInspector;
 import com.keyforge.nativeiiq.wire.NativeManagedAttributeWire;
 
 import sailpoint.api.SailPointContext;
@@ -74,6 +75,38 @@ public class NativeManagedAttributeResource extends BasePluginResource {
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
             LOG.log(Level.SEVERE, "KeyForgeNativeIIQ entitlements: failed at stage=" + stage, t);
+            return error(Response.Status.INTERNAL_SERVER_ERROR, t);
+        }
+    }
+
+    /**
+     * SOURCE-TRUTH inspection endpoint: returns the ACTUAL native ManagedAttribute object model — every
+     * native getter value, the raw {@code getAttributes()} map (original keys), and IIQ's own
+     * {@code XMLObjectFactory} serialization — with NO renaming into KeyForge terms and NO kf_entitlement
+     * mapping. Read-only. {@code limit<=0} (default) returns the full population.
+     *
+     * <p>Full URL: {@code plugin/rest/keyForgeNativeIIQ/entitlements-source?start=&limit=&includeXml=}.
+     */
+    @GET
+    @Path("entitlements-source")
+    @SystemAdmin
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getEntitlementsSource(@QueryParam("start") @DefaultValue("0") int start,
+                                          @QueryParam("limit") @DefaultValue("0") int limit,
+                                          @QueryParam("includeXml") @DefaultValue("true") boolean includeXml) {
+        String stage = "start";
+        try {
+            stage = "getContext";
+            SailPointContext context = getContext();
+            stage = "inspect";
+            Map<String, Object> envelope =
+                    new NativeManagedAttributeInspector(includeXml).inspect(context, Math.max(0, start), limit);
+            return Response.ok(envelope).build();
+        } catch (UnauthorizedAccessException e) {
+            LOG.log(Level.WARNING, "KeyForgeNativeIIQ entitlements-source: denied at stage=" + stage, e);
+            return error(Response.Status.FORBIDDEN, e);
+        } catch (Throwable t) {
+            LOG.log(Level.SEVERE, "KeyForgeNativeIIQ entitlements-source: failed at stage=" + stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }

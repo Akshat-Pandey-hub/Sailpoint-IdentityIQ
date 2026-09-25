@@ -30,6 +30,8 @@ final class NativeCertificationItemFields {
     static final String EXPIRATION_DATE = "expirationDate";
     static final String FINISHED_DATE = "finishedDate";
     static final String IIQ_ELEVATED_ACCESS = "iiqElevatedAccess";
+    static final String POLICY_VIOLATION_ID = "policyViolationId";
+    static final String ROLE_ASSIGNMENT = "roleAssignment";
     static final String REVIEWED = "reviewed";
     static final String DELEGATED = "delegated";
     static final String ACTED_UPON = "actedUpon";

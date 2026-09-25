@@ -25,6 +25,7 @@ public final class NativeCertificationRepository {
     private final String targetTable;
     private final String createSchemaSql;
     private final String createTableSql;
+    private final String alterTableSql;
     private final String upsertSql;
 
     public enum UpsertOutcome { INSERTED, UPDATED }
@@ -44,9 +45,16 @@ public final class NativeCertificationRepository {
                         + "activated timestamptz, expiration timestamptz, created_at timestamptz, modified_at timestamptz, "
                         + "total_items integer, completed_items integer, open_items integer, total_entities integer, "
                         + "completed_entities integer, open_entities integer, percent_complete integer, "
-                        + "certifiers jsonb, sign_off_history jsonb, owner_id text, owner_name text, record_hash text, "
+                        + "certifiers jsonb, sign_off_history jsonb, owner_id text, owner_name text, "
+                        + "approver_rule text, automatic_closing_date text, allowed_statuses text, tags text, record_hash text, "
                         + "source_system text, source_interface text, source_object_type text, extraction_run_id text, "
                         + "extracted_at timestamptz NOT NULL DEFAULT now())";
+        this.alterTableSql =
+                "ALTER TABLE " + targetTable
+                        + " ADD COLUMN IF NOT EXISTS approver_rule text,"
+                        + " ADD COLUMN IF NOT EXISTS automatic_closing_date text,"
+                        + " ADD COLUMN IF NOT EXISTS allowed_statuses text,"
+                        + " ADD COLUMN IF NOT EXISTS tags text";
         this.upsertSql =
                 "INSERT INTO " + targetTable + " ("
                         + "certificationid, source_id, name, certification_name, short_name, type, phase, comments, "
@@ -55,10 +63,11 @@ public final class NativeCertificationRepository {
                         + "task_schedule_id, trigger_id, parent_id, complete, expired, continuous, "
                         + "electronically_signed, signed, finished, activated, expiration, created_at, modified_at, "
                         + "total_items, completed_items, open_items, total_entities, completed_entities, open_entities, "
-                        + "percent_complete, certifiers, sign_off_history, owner_id, owner_name, record_hash, "
+                        + "percent_complete, certifiers, sign_off_history, owner_id, owner_name, "
+                        + "approver_rule, automatic_closing_date, allowed_statuses, tags, record_hash, "
                         + "source_system, source_interface, source_object_type, extraction_run_id) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                        + "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?) "
+                        + "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (certificationid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, name = EXCLUDED.name, "
                         + "certification_name = EXCLUDED.certification_name, short_name = EXCLUDED.short_name, "
@@ -80,6 +89,9 @@ public final class NativeCertificationRepository {
                         + "open_entities = EXCLUDED.open_entities, percent_complete = EXCLUDED.percent_complete, "
                         + "certifiers = EXCLUDED.certifiers, sign_off_history = EXCLUDED.sign_off_history, "
                         + "owner_id = EXCLUDED.owner_id, owner_name = EXCLUDED.owner_name, "
+                        + "approver_rule = EXCLUDED.approver_rule, "
+                        + "automatic_closing_date = EXCLUDED.automatic_closing_date, "
+                        + "allowed_statuses = EXCLUDED.allowed_statuses, tags = EXCLUDED.tags, "
                         + "record_hash = EXCLUDED.record_hash, source_system = EXCLUDED.source_system, "
                         + "source_interface = EXCLUDED.source_interface, source_object_type = EXCLUDED.source_object_type, "
                         + "extraction_run_id = EXCLUDED.extraction_run_id, extracted_at = now() "
@@ -125,6 +137,10 @@ public final class NativeCertificationRepository {
         b.put("percent_complete", r.percentComplete);
         b.put("certifiers", r.certifiersJson);
         b.put("sign_off_history", r.signOffHistoryJson);
+        b.put("approver_rule", r.approverRule);
+        b.put("automatic_closing_date", r.automaticClosingDate);
+        b.put("allowed_statuses", r.allowedStatusesJson);
+        b.put("tags", r.tagsJson);
         b.put("owner_id", r.ownerId);
         return NativeRecordHash.of(b);
     }
@@ -133,6 +149,7 @@ public final class NativeCertificationRepository {
         try (Statement st = conn.createStatement()) {
             st.execute(createSchemaSql);
             st.execute(createTableSql);
+            st.execute(alterTableSql);
         }
     }
 
@@ -179,6 +196,10 @@ public final class NativeCertificationRepository {
             ps.setString(i++, r.signOffHistoryJson);
             ps.setString(i++, r.ownerId);
             ps.setString(i++, r.ownerName);
+            ps.setString(i++, r.approverRule);
+            ps.setString(i++, r.automaticClosingDate);
+            ps.setString(i++, r.allowedStatusesJson);
+            ps.setString(i++, r.tagsJson);
             ps.setString(i++, recordHash(r));
             ps.setString(i++, r.srcSystem);
             ps.setString(i++, r.srcInterface);

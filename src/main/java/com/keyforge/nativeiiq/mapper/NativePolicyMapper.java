@@ -1,6 +1,7 @@
 package com.keyforge.nativeiiq.mapper;
 
 import com.keyforge.nativeiiq.model.NativePolicyRow;
+import com.keyforge.nativeiiq.wire.NativeSerialize;
 
 import sailpoint.object.Identity;
 import sailpoint.object.Policy;
@@ -46,6 +47,13 @@ public final class NativePolicyMapper {
 
         List<?> constraints = p.getConstraints();
         row.setConstraintCount(Integer.valueOf(constraints == null ? 0 : constraints.size()));
+
+        // Additional native governance fields (source-truth; complex objects serialized to IIQ XML).
+        row.setState(NativeSerialize.enumName(p.getState()));
+        row.setViolationRule(p.getViolationRule());
+        row.setViolationWorkflow(p.getViolationWorkflow());
+        row.setSignature(NativeSerialize.xml(p.getSignature()));
+        row.setCertificationActions(p.getCertificationActions());
 
         row.setCreated(toInstant(p.getCreated()));
         row.setModified(toInstant(p.getModified()));

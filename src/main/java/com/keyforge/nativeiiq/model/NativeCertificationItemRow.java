@@ -66,6 +66,8 @@ public final class NativeCertificationItemRow {
 
     private String ownerId;
     private String ownerName;
+    private String policyViolationId;
+    private String roleAssignment;
     private Instant created;
     private Instant modified;
 
@@ -177,6 +179,10 @@ public final class NativeCertificationItemRow {
     public void setOwnerId(String v) { this.ownerId = v; }
     public String getOwnerName() { return ownerName; }
     public void setOwnerName(String v) { this.ownerName = v; }
+    public String getPolicyViolationId() { return policyViolationId; }
+    public void setPolicyViolationId(String v) { this.policyViolationId = v; }
+    public String getRoleAssignment() { return roleAssignment; }
+    public void setRoleAssignment(String v) { this.roleAssignment = v; }
     public Instant getCreated() { return created; }
     public void setCreated(Instant v) { this.created = v; }
     public Instant getModified() { return modified; }

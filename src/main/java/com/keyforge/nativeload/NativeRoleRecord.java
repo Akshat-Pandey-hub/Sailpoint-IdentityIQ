@@ -38,6 +38,10 @@ public final class NativeRoleRecord {
     // nested (jsonb)
     String descriptionsJson;
     String attributesJson;
+    String roleTypeDefinition;
+    String applicationsJson;
+    String monitoredApplicationsJson;
+    String scorecard;
 
     // timestamps
     Instant created;

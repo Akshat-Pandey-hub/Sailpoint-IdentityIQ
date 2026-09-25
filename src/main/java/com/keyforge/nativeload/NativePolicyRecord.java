@@ -15,6 +15,11 @@ public final class NativePolicyRecord {
     String violationOwnerId;
     String violationOwnerName;
     Integer constraintCount;
+    String state;
+    String violationRule;
+    String violationWorkflow;
+    String signature;
+    String certificationActions;
     Instant created;
     Instant modified;
     String srcSystem;

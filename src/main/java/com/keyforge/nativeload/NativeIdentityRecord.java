@@ -36,6 +36,7 @@ public final class NativeIdentityRecord {
     String capabilitiesJson;
     String controlledScopesJson;
     String attributesJson;
+    String score;
 
     // timestamps
     Instant created;

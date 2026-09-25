@@ -3,13 +3,20 @@ package com.keyforge.nativeiiq.mapper;
 import com.keyforge.nativeiiq.model.NativeRoleRow;
 import com.keyforge.nativeiiq.wire.JsonSafe;
 
+import com.keyforge.nativeiiq.wire.NativeSerialize;
+
+import sailpoint.object.Application;
 import sailpoint.object.Attributes;
 import sailpoint.object.Bundle;
 import sailpoint.object.Identity;
+import sailpoint.object.RoleTypeDefinition;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Maps a native {@code sailpoint.object.Bundle} (role) into a {@link NativeRoleRow}. Read-only: only
@@ -79,6 +86,13 @@ public final class NativeRoleMapper {
             }
         }
 
+        // Additional native fields (source-truth): role type name, member/monitored app names, role risk.
+        RoleTypeDefinition rtd = bundle.getRoleTypeDefinition();
+        row.setRoleTypeDefinition(rtd == null ? null : rtd.getName());
+        row.setApplications(NativeSerialize.jsonArray(appNames(bundle.getApplications())));
+        row.setMonitoredApplications(NativeSerialize.jsonArray(appNames(bundle.getMonitoredApplications())));
+        row.setScorecard(NativeSerialize.xml(bundle.getScorecard()));
+
         row.setCreated(toInstant(bundle.getCreated()));
         row.setModified(toInstant(bundle.getModified()));
 
@@ -86,6 +100,18 @@ public final class NativeRoleMapper {
         row.setExtractionRunId(extractionRunId);
         row.setExtractedAt(Instant.now());
         return row;
+    }
+
+    private static List<String> appNames(Set<Application> apps) {
+        List<String> out = new ArrayList<String>();
+        if (apps != null) {
+            for (Application a : apps) {
+                if (a != null && a.getName() != null) {
+                    out.add(a.getName());
+                }
+            }
+        }
+        return out;
     }
 
     private static Instant toInstant(Date d) {

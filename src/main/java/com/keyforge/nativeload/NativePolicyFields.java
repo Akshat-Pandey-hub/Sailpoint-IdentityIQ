@@ -17,6 +17,11 @@ final class NativePolicyFields {
     static final String VIOLATION_OWNER_ID = "violationOwnerId";
     static final String VIOLATION_OWNER_NAME = "violationOwnerName";
     static final String CONSTRAINT_COUNT = "constraintCount";
+    static final String STATE = "state";
+    static final String VIOLATION_RULE = "violationRule";
+    static final String VIOLATION_WORKFLOW = "violationWorkflow";
+    static final String SIGNATURE = "signature";
+    static final String CERTIFICATION_ACTIONS = "certificationActions";
     static final String CREATED = "created";
     static final String MODIFIED = "modified";
     static final String SRC_SYSTEM = "srcSystem";

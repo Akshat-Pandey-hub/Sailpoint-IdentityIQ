@@ -1,6 +1,7 @@
 package com.keyforge.nativeiiq.mapper;
 
 import com.keyforge.nativeiiq.model.NativeCertificationRow;
+import com.keyforge.nativeiiq.wire.NativeSerialize;
 
 import sailpoint.object.Certification;
 import sailpoint.object.CertificationGroup;
@@ -8,6 +9,7 @@ import sailpoint.object.Identity;
 import sailpoint.object.SignOffHistory;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -94,6 +96,27 @@ public final class NativeCertificationMapper {
             row.setOwnerId(owner.getId());
             row.setOwnerName(owner.getName());
         }
+
+        // Additional native config fields (source-truth).
+        sailpoint.object.Reference approverRule = c.getApproverRule();
+        row.setApproverRule(approverRule == null ? null : approverRule.getName());
+        row.setAutomaticClosingDate(NativeSerialize.iso(c.getAutomaticClosingDate()));
+        List<String> statuses = new ArrayList<String>();
+        if (c.getAllowedStatuses() != null) {
+            for (Object s : c.getAllowedStatuses()) {
+                statuses.add(NativeSerialize.enumName(s));
+            }
+        }
+        row.setAllowedStatuses(NativeSerialize.jsonArray(statuses));
+        List<String> tagNames = new ArrayList<String>();
+        if (c.getTags() != null) {
+            for (sailpoint.object.Tag t : c.getTags()) {
+                if (t != null && t.getName() != null) {
+                    tagNames.add(t.getName());
+                }
+            }
+        }
+        row.setTags(NativeSerialize.jsonArray(tagNames));
 
         row.setSrcSystem(sourceSystem);
         row.setExtractionRunId(extractionRunId);

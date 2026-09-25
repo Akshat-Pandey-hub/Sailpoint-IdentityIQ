@@ -114,6 +114,10 @@ public final class NativeApplicationWire {
 
         m.put("descriptions", new LinkedHashMap<String, String>(r.getDescriptions()));
         m.put("attributes", new LinkedHashMap<String, Object>(r.getAttributes()));
+        m.put("provisioningConfig", r.getProvisioningConfig());
+        m.put("accountCorrelationConfig", r.getAccountCorrelationConfig());
+        m.put("managerCorrelationRule", r.getManagerCorrelationRule());
+        m.put("managerCorrelationFilter", r.getManagerCorrelationFilter());
 
         m.put("created", iso(r.getCreated()));
         m.put("modified", iso(r.getModified()));

@@ -46,6 +46,10 @@ public final class NativeRoleRow {
     // --- lifecycle dates ---
     private Instant activationDate;
     private Instant deactivationDate;
+    private String roleTypeDefinition;
+    private String applications;
+    private String monitoredApplications;
+    private String scorecard;
 
     // --- descriptions + extended attributes (JSON-safe) ---
     private final Map<String, String> descriptions = new LinkedHashMap<String, String>();
@@ -127,6 +131,14 @@ public final class NativeRoleRow {
 
     public Instant getActivationDate() { return activationDate; }
     public void setActivationDate(Instant v) { this.activationDate = v; }
+    public String getRoleTypeDefinition() { return roleTypeDefinition; }
+    public void setRoleTypeDefinition(String v) { this.roleTypeDefinition = v; }
+    public String getApplications() { return applications; }
+    public void setApplications(String v) { this.applications = v; }
+    public String getMonitoredApplications() { return monitoredApplications; }
+    public void setMonitoredApplications(String v) { this.monitoredApplications = v; }
+    public String getScorecard() { return scorecard; }
+    public void setScorecard(String v) { this.scorecard = v; }
 
     public Instant getDeactivationDate() { return deactivationDate; }
     public void setDeactivationDate(Instant v) { this.deactivationDate = v; }

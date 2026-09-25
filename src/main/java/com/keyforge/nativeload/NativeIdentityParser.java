@@ -93,6 +93,7 @@ final class NativeIdentityParser {
         rec.capabilitiesJson = json(r, NativeIdentityFields.CAPABILITIES);
         rec.controlledScopesJson = json(r, NativeIdentityFields.CONTROLLED_SCOPES);
         rec.attributesJson = json(r, NativeIdentityFields.ATTRIBUTES);
+        rec.score = text(r, NativeIdentityFields.SCORE);
 
         rec.created = instant(r, NativeIdentityFields.CREATED);
         rec.modified = instant(r, NativeIdentityFields.MODIFIED);

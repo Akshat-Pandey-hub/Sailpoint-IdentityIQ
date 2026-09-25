@@ -25,6 +25,7 @@ public final class NativeCertificationItemRepository {
     private final String targetTable;
     private final String createSchemaSql;
     private final String createTableSql;
+    private final String alterTableSql;
     private final String upsertSql;
 
     public enum UpsertOutcome { INSERTED, UPDATED }
@@ -51,10 +52,15 @@ public final class NativeCertificationItemRepository {
                         + "action_mitigation_expiration timestamptz, action_is_approved boolean, "
                         + "action_is_remediation boolean, action_is_mitigation boolean, action_is_delegation boolean, "
                         + "action_is_revoke_account boolean, action_is_auto_decision boolean, "
-                        + "action_is_bulk_certified boolean, owner_id text, owner_name text, created_at timestamptz, "
+                        + "action_is_bulk_certified boolean, owner_id text, owner_name text, "
+                        + "policy_violation_id text, role_assignment text, created_at timestamptz, "
                         + "modified_at timestamptz, record_hash text, source_system text, source_interface text, "
                         + "source_object_type text, extraction_run_id text, "
                         + "extracted_at timestamptz NOT NULL DEFAULT now())";
+        this.alterTableSql =
+                "ALTER TABLE " + targetTable
+                        + " ADD COLUMN IF NOT EXISTS policy_violation_id text,"
+                        + " ADD COLUMN IF NOT EXISTS role_assignment text";
         this.upsertSql =
                 "INSERT INTO " + targetTable + " ("
                         + "certificationitemid, source_id, certification_id, entity_id, identity, type, sub_type, "
@@ -68,12 +74,13 @@ public final class NativeCertificationItemRepository {
                         + "action_actor_display_name, action_comments, action_completion_comments, action_owner_name, "
                         + "action_mitigation_expiration, action_is_approved, action_is_remediation, "
                         + "action_is_mitigation, action_is_delegation, action_is_revoke_account, "
-                        + "action_is_auto_decision, action_is_bulk_certified, owner_id, owner_name, created_at, "
+                        + "action_is_auto_decision, action_is_bulk_certified, owner_id, owner_name, "
+                        + "policy_violation_id, role_assignment, created_at, "
                         + "modified_at, record_hash, source_system, source_interface, source_object_type, "
                         + "extraction_run_id) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
                         + "?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                        + "?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (certificationitemid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, certification_id = EXCLUDED.certification_id, "
                         + "entity_id = EXCLUDED.entity_id, identity = EXCLUDED.identity, type = EXCLUDED.type, "
@@ -111,6 +118,8 @@ public final class NativeCertificationItemRepository {
                         + "action_is_auto_decision = EXCLUDED.action_is_auto_decision, "
                         + "action_is_bulk_certified = EXCLUDED.action_is_bulk_certified, "
                         + "owner_id = EXCLUDED.owner_id, owner_name = EXCLUDED.owner_name, "
+                        + "policy_violation_id = EXCLUDED.policy_violation_id, "
+                        + "role_assignment = EXCLUDED.role_assignment, "
                         + "created_at = EXCLUDED.created_at, modified_at = EXCLUDED.modified_at, "
                         + "record_hash = EXCLUDED.record_hash, source_system = EXCLUDED.source_system, "
                         + "source_interface = EXCLUDED.source_interface, source_object_type = EXCLUDED.source_object_type, "
@@ -154,6 +163,8 @@ public final class NativeCertificationItemRepository {
         b.put("action_comments", r.actionComments);
         b.put("action_remediation_action", r.actionRemediationAction);
         b.put("iiq_elevated_access", r.iiqElevatedAccess);
+        b.put("policy_violation_id", r.policyViolationId);
+        b.put("role_assignment", r.roleAssignment);
         return NativeRecordHash.of(b);
     }
 
@@ -161,6 +172,7 @@ public final class NativeCertificationItemRepository {
         try (Statement st = conn.createStatement()) {
             st.execute(createSchemaSql);
             st.execute(createTableSql);
+            st.execute(alterTableSql);
         }
     }
 
@@ -219,6 +231,8 @@ public final class NativeCertificationItemRepository {
             setBool(ps, i++, r.actionIsBulkCertified);
             ps.setString(i++, r.ownerId);
             ps.setString(i++, r.ownerName);
+            ps.setString(i++, r.policyViolationId);
+            ps.setString(i++, r.roleAssignment);
             setTs(ps, i++, r.created);
             setTs(ps, i++, r.modified);
             ps.setString(i++, recordHash(r));

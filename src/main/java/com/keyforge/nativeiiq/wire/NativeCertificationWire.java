@@ -86,6 +86,10 @@ public final class NativeCertificationWire {
         m.put("signOffHistory", new ArrayList<Map<String, Object>>(r.getSignOffHistory()));
         m.put("ownerId", r.getOwnerId());
         m.put("ownerName", r.getOwnerName());
+        m.put("approverRule", r.getApproverRule());
+        m.put("automaticClosingDate", r.getAutomaticClosingDate());
+        m.put("allowedStatuses", r.getAllowedStatuses());
+        m.put("tags", r.getTags());
         m.put("srcSystem", r.getSrcSystem());
         m.put("srcInterface", r.getSrcInterface());
         m.put("srcObjectType", r.getSrcObjectType());

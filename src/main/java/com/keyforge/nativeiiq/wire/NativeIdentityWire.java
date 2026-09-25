@@ -125,6 +125,7 @@ public final class NativeIdentityWire {
         m.put("modified", iso(r.getModified()));
         m.put("lastRefresh", iso(r.getLastRefresh()));
         m.put("lastLogin", iso(r.getLastLogin()));
+        m.put("score", r.getScore());
 
         m.put("srcSystem", r.getSrcSystem());
         m.put("srcInterface", r.getSrcInterface());

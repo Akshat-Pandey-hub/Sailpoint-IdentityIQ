@@ -40,6 +40,7 @@ final class NativeIdentityFields {
     static final String CAPABILITIES = "capabilities";
     static final String CONTROLLED_SCOPES = "controlledScopes";
     static final String ATTRIBUTES = "attributes";
+    static final String SCORE = "score";
 
     // timestamps (ISO-8601 strings)
     static final String CREATED = "created";

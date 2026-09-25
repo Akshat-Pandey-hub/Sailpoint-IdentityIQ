@@ -29,6 +29,7 @@ public final class NativeRoleRepository {
     private final String targetTable;
     private final String createSchemaSql;
     private final String createTableSql;
+    private final String alterTableSql;
     private final String upsertSql;
 
     public enum UpsertOutcome { INSERTED, UPDATED }
@@ -65,6 +66,10 @@ public final class NativeRoleRepository {
                         + "deactivation_date timestamptz, "
                         + "descriptions jsonb, "
                         + "attributes jsonb, "
+                        + "role_type_definition text, "
+                        + "applications text, "
+                        + "monitored_applications text, "
+                        + "scorecard text, "
                         + "created_at timestamptz, "
                         + "modified_at timestamptz, "
                         + "record_hash text, "
@@ -74,16 +79,24 @@ public final class NativeRoleRepository {
                         + "extraction_run_id text, "
                         + "extracted_at timestamptz NOT NULL DEFAULT now()"
                         + ")";
+        this.alterTableSql =
+                "ALTER TABLE " + targetTable
+                        + " ADD COLUMN IF NOT EXISTS role_type_definition text,"
+                        + " ADD COLUMN IF NOT EXISTS applications text,"
+                        + " ADD COLUMN IF NOT EXISTS monitored_applications text,"
+                        + " ADD COLUMN IF NOT EXISTS scorecard text";
         this.upsertSql =
                 "INSERT INTO " + targetTable + " ("
                         + "roleid, source_id, name, display_name, displayable_name, full_name, description, type, "
                         + "assignment_id, activity_enabled, allow_duplicate_accounts, allow_multiple_assignments, "
                         + "auto_promotion, differencable, iiq_elevated_access, merge_templates, or_profiles, "
                         + "pending_delete, has_selector, risk_score_weight, owner_id, owner_name, activation_date, "
-                        + "deactivation_date, descriptions, attributes, created_at, modified_at, record_hash, "
+                        + "deactivation_date, descriptions, attributes, "
+                        + "role_type_definition, applications, monitored_applications, scorecard, "
+                        + "created_at, modified_at, record_hash, "
                         + "source_system, source_interface, source_object_type, extraction_run_id) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                        + "?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?) "
+                        + "?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (roleid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, name = EXCLUDED.name, "
                         + "display_name = EXCLUDED.display_name, displayable_name = EXCLUDED.displayable_name, "
@@ -98,7 +111,12 @@ public final class NativeRoleRepository {
                         + "risk_score_weight = EXCLUDED.risk_score_weight, owner_id = EXCLUDED.owner_id, "
                         + "owner_name = EXCLUDED.owner_name, activation_date = EXCLUDED.activation_date, "
                         + "deactivation_date = EXCLUDED.deactivation_date, descriptions = EXCLUDED.descriptions, "
-                        + "attributes = EXCLUDED.attributes, created_at = EXCLUDED.created_at, "
+                        + "attributes = EXCLUDED.attributes, "
+                        + "role_type_definition = EXCLUDED.role_type_definition, "
+                        + "applications = EXCLUDED.applications, "
+                        + "monitored_applications = EXCLUDED.monitored_applications, "
+                        + "scorecard = EXCLUDED.scorecard, "
+                        + "created_at = EXCLUDED.created_at, "
                         + "modified_at = EXCLUDED.modified_at, record_hash = EXCLUDED.record_hash, "
                         + "source_system = EXCLUDED.source_system, source_interface = EXCLUDED.source_interface, "
                         + "source_object_type = EXCLUDED.source_object_type, "
@@ -151,6 +169,10 @@ public final class NativeRoleRepository {
         b.put("deactivation_date", r.deactivationDate);
         b.put("descriptions", r.descriptionsJson);
         b.put("attributes", r.attributesJson);
+        b.put("role_type_definition", r.roleTypeDefinition);
+        b.put("applications", r.applicationsJson);
+        b.put("monitored_applications", r.monitoredApplicationsJson);
+        b.put("scorecard", r.scorecard);
         b.put("created_at", r.created);
         b.put("modified_at", r.modified);
         return NativeRecordHash.of(b);
@@ -160,6 +182,7 @@ public final class NativeRoleRepository {
         try (Statement st = conn.createStatement()) {
             st.execute(createSchemaSql);
             st.execute(createTableSql);
+            st.execute(alterTableSql);
         }
     }
 
@@ -192,6 +215,10 @@ public final class NativeRoleRepository {
             setTs(ps, i++, r.deactivationDate);
             ps.setString(i++, r.descriptionsJson);
             ps.setString(i++, r.attributesJson);
+            ps.setString(i++, r.roleTypeDefinition);
+            ps.setString(i++, r.applicationsJson);
+            ps.setString(i++, r.monitoredApplicationsJson);
+            ps.setString(i++, r.scorecard);
             setTs(ps, i++, r.created);
             setTs(ps, i++, r.modified);
             ps.setString(i++, recordHash(r));

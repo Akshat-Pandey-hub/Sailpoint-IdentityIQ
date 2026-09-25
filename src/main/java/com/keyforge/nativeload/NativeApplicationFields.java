@@ -61,6 +61,10 @@ final class NativeApplicationFields {
     static final String SCHEMAS = "schemas";
     static final String DESCRIPTIONS = "descriptions";
     static final String ATTRIBUTES = "attributes";
+    static final String PROVISIONING_CONFIG = "provisioningConfig";
+    static final String ACCOUNT_CORRELATION_CONFIG = "accountCorrelationConfig";
+    static final String MANAGER_CORRELATION_RULE = "managerCorrelationRule";
+    static final String MANAGER_CORRELATION_FILTER = "managerCorrelationFilter";
 
     static final String CREATED = "created";
     static final String MODIFIED = "modified";

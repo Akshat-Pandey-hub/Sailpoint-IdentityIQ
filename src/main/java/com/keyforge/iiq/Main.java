@@ -233,6 +233,10 @@ public final class Main {
             runStartRest();   // blocks until the process is stopped
             return;
         }
+        if ("inspect-entitlement-source".equals(command)) {
+            System.exit(runInspectEntitlementSource(args));
+            return;
+        }
 
         switch (command) {
             case "extract-users" -> System.exit(runExtractUsers());
@@ -3615,6 +3619,84 @@ public final class Main {
 
     // ---- Phase 2: REST query service over the Parquet datasets (read-only; no IIQ, no PostgreSQL) ----
 
+    /**
+     * SOURCE-TRUTH inspection: pulls the ACTUAL native ManagedAttribute (entitlement) object model from the
+     * KeyForge plugin's read-only endpoint over the same authenticated IIQ session this tool already uses,
+     * and writes it to a JSON file. No SCIM, no kf_entitlement mapping/renaming — the JSON carries the real
+     * native getter values, the raw {@code getAttributes()} map, and IIQ's own XML serialization.
+     *
+     * <p>Usage: {@code java -jar iiq-migration-tool.jar inspect-entitlement-source [outputFile]}
+     * (default output: {@code entitlement_source.json} in the current directory). Set {@code -DINCLUDE_XML=false}
+     * to omit the per-record native XML.
+     */
+    private static int runInspectEntitlementSource(String[] args) {
+        final String path = "plugin/rest/keyForgeNativeIIQ/entitlements-source";
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            String outFile = (args.length > 1 && args[1] != null && !args[1].isBlank())
+                    ? args[1].trim() : "entitlement_source.json";
+            String inclXml = System.getProperty("INCLUDE_XML", System.getenv("INCLUDE_XML"));
+            boolean includeXml = inclXml == null || !"false".equalsIgnoreCase(inclXml.trim());
+
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("Source: native SailPoint Java API via plugin REST (" + path + "), full population");
+
+            IiqSessionClient session = new IiqSessionClient(iiqConfig);
+            session.warmCsrfToken();
+            Map<String, String> params = new java.util.LinkedHashMap<>();
+            params.put("start", "0");
+            params.put("limit", "0"); // 0 = full population
+            params.put("includeXml", Boolean.toString(includeXml));
+            String rawJson = session.get(path, params);
+
+            // Pretty-print (nulls preserved) and write; keep the server's exact field names/values.
+            com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+            Object tree = om.readValue(rawJson, Object.class);
+            String pretty = om.writerWithDefaultPrettyPrinter().writeValueAsString(tree);
+            java.nio.file.Path out = java.nio.file.Path.of(outFile);
+            if (out.getParent() != null) {
+                java.nio.file.Files.createDirectories(out.getParent());
+            }
+            java.nio.file.Files.write(out, pretty.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+            printInspectSummary(tree, out);
+            return 0;
+        } catch (ConfigException e) {
+            System.err.println("Configuration error: " + e.getMessage());
+            return 3;
+        } catch (IiqApiException e) {
+            System.err.println("IdentityIQ plugin API error: " + e.getMessage());
+            return 4;
+        } catch (java.io.IOException e) {
+            System.err.println("Could not read response or write output file: " + e.getMessage());
+            return 5;
+        } catch (RuntimeException e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            return 1;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void printInspectSummary(Object tree, java.nio.file.Path out) {
+        if (tree instanceof Map) {
+            Map<String, Object> env = (Map<String, Object>) tree;
+            Object count = env.get("count");
+            Object summary = env.get("native_getter_property_summary");
+            Object extKeys = env.get("native_extended_attribute_keys");
+            int propCount = summary instanceof Map ? ((Map<String, Object>) summary).size() : 0;
+            int extCount = extKeys instanceof java.util.List ? ((java.util.List<Object>) extKeys).size() : 0;
+            System.out.println("object_type: " + env.get("object_type"));
+            System.out.println("records: " + count
+                    + " | native getter properties: " + propCount
+                    + " | extended attribute keys: " + extCount);
+            if (summary instanceof Map) {
+                System.out.println("native property names: "
+                        + new java.util.ArrayList<>(((Map<String, Object>) summary).keySet()));
+            }
+        }
+        System.out.println("JSON written to: " + out.toAbsolutePath());
+    }
+
     private static void runStartRest() {
         try {
             ParquetConfig pq = ParquetConfig.load();
@@ -4894,6 +4976,9 @@ public final class Main {
         System.out.println("                                          " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + "/{dataset}[?fields=&sort=&order=&limit=&offset=&filter.<f>.<op>=]");
         System.out.println("                                          Native datasets (current.parquet): " + com.keyforge.iiq.rest.ParquetRestServer.NATIVE_PREFIX + "/datasets,");
         System.out.println("                                          " + com.keyforge.iiq.rest.ParquetRestServer.NATIVE_PREFIX + "/{dataset}[/schema][?...] (same query engine, isolated from " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + ")");
+        System.out.println("  inspect-entitlement-source [outFile]    Dump the ACTUAL native ManagedAttribute (entitlement) source model to JSON");
+        System.out.println("                                          (native Java API via plugin; NOT kf_entitlement; no renaming). Default outFile:");
+        System.out.println("                                          entitlement_source.json. Full native getters + raw attributes + native XML.");
         System.out.println("  extract-accounts      Retrieve all Accounts from IdentityIQ and print a summary");
         System.out.println("  extract-accounts-db   Retrieve all Accounts and upsert them into <schema>.kf_account");
         System.out.println("  extract-assignments   Derive Account -> Entitlement assignments and print a summary");

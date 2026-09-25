@@ -1,6 +1,7 @@
 package com.keyforge.nativeiiq.mapper;
 
 import com.keyforge.nativeiiq.model.NativeCertificationItemRow;
+import com.keyforge.nativeiiq.wire.NativeSerialize;
 
 import sailpoint.object.Certification;
 import sailpoint.object.CertificationAction;
@@ -67,6 +68,13 @@ public final class NativeCertificationItemMapper {
             row.setOwnerId(owner.getId());
             row.setOwnerName(owner.getName());
         }
+
+        // Additional native links (source-truth): the policy violation this item concerns (by id) and
+        // the role assignment it refers to (IIQ XML). Read-only; null when the source has none.
+        sailpoint.object.PolicyViolation pv = safePolicyViolation(c);
+        row.setPolicyViolationId(pv == null ? null : pv.getId());
+        row.setRoleAssignment(NativeSerialize.xml(safeRoleAssignment(c)));
+
         row.setCreated(toInstant(c.getCreated()));
         row.setModified(toInstant(c.getModified()));
 
@@ -74,6 +82,22 @@ public final class NativeCertificationItemMapper {
         row.setExtractionRunId(extractionRunId);
         row.setExtractedAt(Instant.now());
         return row;
+    }
+
+    private static sailpoint.object.PolicyViolation safePolicyViolation(CertificationItem c) {
+        try {
+            return c.getPolicyViolation();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static sailpoint.object.RoleAssignment safeRoleAssignment(CertificationItem c) {
+        try {
+            return c.getRoleAssignment();
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     private static void mapAction(CertificationItem c, NativeCertificationItemRow row) {

@@ -25,6 +25,7 @@ public final class NativePolicyRepository {
     private final String targetTable;
     private final String createSchemaSql;
     private final String createTableSql;
+    private final String alterTableSql;
     private final String upsertSql;
 
     public enum UpsertOutcome { INSERTED, UPDATED }
@@ -46,6 +47,11 @@ public final class NativePolicyRepository {
                         + "violation_owner_id text, "
                         + "violation_owner_name text, "
                         + "constraint_count integer, "
+                        + "state text, "
+                        + "violation_rule text, "
+                        + "violation_workflow text, "
+                        + "signature text, "
+                        + "certification_actions text, "
                         + "created_at timestamptz, "
                         + "modified_at timestamptz, "
                         + "record_hash text, "
@@ -55,19 +61,34 @@ public final class NativePolicyRepository {
                         + "extraction_run_id text, "
                         + "extracted_at timestamptz NOT NULL DEFAULT now()"
                         + ")";
+        // Additive migration for tables created before these columns existed (preserves existing rows;
+        // new columns default to NULL and are backfilled by the next upsert).
+        this.alterTableSql =
+                "ALTER TABLE " + targetTable
+                        + " ADD COLUMN IF NOT EXISTS state text,"
+                        + " ADD COLUMN IF NOT EXISTS violation_rule text,"
+                        + " ADD COLUMN IF NOT EXISTS violation_workflow text,"
+                        + " ADD COLUMN IF NOT EXISTS signature text,"
+                        + " ADD COLUMN IF NOT EXISTS certification_actions text";
         this.upsertSql =
                 "INSERT INTO " + targetTable + " ("
                         + "policyid, source_id, name, type, type_key, description, descriptions, executor, "
-                        + "violation_owner_id, violation_owner_name, constraint_count, created_at, modified_at, "
+                        + "violation_owner_id, violation_owner_name, constraint_count, "
+                        + "state, violation_rule, violation_workflow, signature, certification_actions, "
+                        + "created_at, modified_at, "
                         + "record_hash, source_system, source_interface, source_object_type, extraction_run_id) "
-                        + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (policyid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, name = EXCLUDED.name, type = EXCLUDED.type, "
                         + "type_key = EXCLUDED.type_key, description = EXCLUDED.description, "
                         + "descriptions = EXCLUDED.descriptions, executor = EXCLUDED.executor, "
                         + "violation_owner_id = EXCLUDED.violation_owner_id, "
                         + "violation_owner_name = EXCLUDED.violation_owner_name, "
-                        + "constraint_count = EXCLUDED.constraint_count, created_at = EXCLUDED.created_at, "
+                        + "constraint_count = EXCLUDED.constraint_count, "
+                        + "state = EXCLUDED.state, violation_rule = EXCLUDED.violation_rule, "
+                        + "violation_workflow = EXCLUDED.violation_workflow, signature = EXCLUDED.signature, "
+                        + "certification_actions = EXCLUDED.certification_actions, "
+                        + "created_at = EXCLUDED.created_at, "
                         + "modified_at = EXCLUDED.modified_at, record_hash = EXCLUDED.record_hash, "
                         + "source_system = EXCLUDED.source_system, source_interface = EXCLUDED.source_interface, "
                         + "source_object_type = EXCLUDED.source_object_type, "
@@ -103,6 +124,11 @@ public final class NativePolicyRepository {
         b.put("violation_owner_id", r.violationOwnerId);
         b.put("violation_owner_name", r.violationOwnerName);
         b.put("constraint_count", r.constraintCount);
+        b.put("state", r.state);
+        b.put("violation_rule", r.violationRule);
+        b.put("violation_workflow", r.violationWorkflow);
+        b.put("signature", r.signature);
+        b.put("certification_actions", r.certificationActions);
         b.put("created_at", r.created);
         b.put("modified_at", r.modified);
         return NativeRecordHash.of(b);
@@ -112,6 +138,7 @@ public final class NativePolicyRepository {
         try (Statement st = conn.createStatement()) {
             st.execute(createSchemaSql);
             st.execute(createTableSql);
+            st.execute(alterTableSql);
         }
     }
 
@@ -129,6 +156,11 @@ public final class NativePolicyRepository {
             ps.setString(i++, r.violationOwnerId);
             ps.setString(i++, r.violationOwnerName);
             setInt(ps, i++, r.constraintCount);
+            ps.setString(i++, r.state);
+            ps.setString(i++, r.violationRule);
+            ps.setString(i++, r.violationWorkflow);
+            ps.setString(i++, r.signature);
+            ps.setString(i++, r.certificationActions);
             setTs(ps, i++, r.created);
             setTs(ps, i++, r.modified);
             ps.setString(i++, recordHash(r));

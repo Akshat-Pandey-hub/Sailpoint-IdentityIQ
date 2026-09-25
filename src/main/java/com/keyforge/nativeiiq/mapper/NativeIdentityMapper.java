@@ -151,6 +151,7 @@ public final class NativeIdentityMapper {
         row.setModified(toInstant(id.getModified()));
         row.setLastRefresh(toInstant(id.getLastRefresh()));
         row.setLastLogin(toInstant(id.getLastLogin()));
+        row.setScore(Integer.toString(id.getScore()));   // identity composite risk score
 
         row.setSrcSystem(sourceSystem);
         row.setExtractionRunId(extractionRunId);

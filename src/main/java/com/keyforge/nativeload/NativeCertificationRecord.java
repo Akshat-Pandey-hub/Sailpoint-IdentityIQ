@@ -44,6 +44,10 @@ public final class NativeCertificationRecord {
     String signOffHistoryJson;
     String ownerId;
     String ownerName;
+    String approverRule;
+    String automaticClosingDate;
+    String allowedStatusesJson;
+    String tagsJson;
 
     // lineage envelope
     String srcSystem;

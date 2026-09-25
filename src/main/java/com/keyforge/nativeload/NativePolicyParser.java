@@ -60,6 +60,11 @@ final class NativePolicyParser {
         rec.violationOwnerId = text(r, NativePolicyFields.VIOLATION_OWNER_ID);
         rec.violationOwnerName = text(r, NativePolicyFields.VIOLATION_OWNER_NAME);
         rec.constraintCount = intOrNull(r, NativePolicyFields.CONSTRAINT_COUNT);
+        rec.state = text(r, NativePolicyFields.STATE);
+        rec.violationRule = text(r, NativePolicyFields.VIOLATION_RULE);
+        rec.violationWorkflow = text(r, NativePolicyFields.VIOLATION_WORKFLOW);
+        rec.signature = text(r, NativePolicyFields.SIGNATURE);
+        rec.certificationActions = text(r, NativePolicyFields.CERTIFICATION_ACTIONS);
         rec.created = instant(r, NativePolicyFields.CREATED);
         rec.modified = instant(r, NativePolicyFields.MODIFIED);
         rec.srcSystem = text(r, NativePolicyFields.SRC_SYSTEM);

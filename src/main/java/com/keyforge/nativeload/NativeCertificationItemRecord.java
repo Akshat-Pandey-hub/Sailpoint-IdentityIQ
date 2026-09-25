@@ -56,6 +56,8 @@ public final class NativeCertificationItemRecord {
     Boolean actionIsBulkCertified;
     String ownerId;
     String ownerName;
+    String policyViolationId;
+    String roleAssignment;
     Instant created;
     Instant modified;
 

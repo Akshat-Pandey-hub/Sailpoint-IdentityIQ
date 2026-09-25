@@ -61,6 +61,10 @@ public final class NativeApplicationRecord {
     String schemasJson;
     String descriptionsJson;
     String attributesJson;
+    String provisioningConfig;
+    String accountCorrelationConfig;
+    String managerCorrelationRule;
+    String managerCorrelationFilter;
 
     // timestamps
     Instant created;

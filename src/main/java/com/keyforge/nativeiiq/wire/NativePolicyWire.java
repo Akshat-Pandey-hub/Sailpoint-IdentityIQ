@@ -56,6 +56,11 @@ public final class NativePolicyWire {
         m.put("violationOwnerId", r.getViolationOwnerId());
         m.put("violationOwnerName", r.getViolationOwnerName());
         m.put("constraintCount", r.getConstraintCount());
+        m.put("state", r.getState());
+        m.put("violationRule", r.getViolationRule());
+        m.put("violationWorkflow", r.getViolationWorkflow());
+        m.put("signature", r.getSignature());
+        m.put("certificationActions", r.getCertificationActions());
         m.put("created", iso(r.getCreated()));
         m.put("modified", iso(r.getModified()));
         m.put("srcSystem", r.getSrcSystem());

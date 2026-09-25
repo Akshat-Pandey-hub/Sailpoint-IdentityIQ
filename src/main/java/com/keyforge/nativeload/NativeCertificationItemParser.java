@@ -76,6 +76,8 @@ final class NativeCertificationItemParser {
         rec.expirationDate = instant(r, NativeCertificationItemFields.EXPIRATION_DATE);
         rec.finishedDate = instant(r, NativeCertificationItemFields.FINISHED_DATE);
         rec.iiqElevatedAccess = bool(r, NativeCertificationItemFields.IIQ_ELEVATED_ACCESS);
+        rec.policyViolationId = text(r, NativeCertificationItemFields.POLICY_VIOLATION_ID);
+        rec.roleAssignment = text(r, NativeCertificationItemFields.ROLE_ASSIGNMENT);
         rec.reviewed = bool(r, NativeCertificationItemFields.REVIEWED);
         rec.delegated = bool(r, NativeCertificationItemFields.DELEGATED);
         rec.actedUpon = bool(r, NativeCertificationItemFields.ACTED_UPON);

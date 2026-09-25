@@ -4,6 +4,7 @@ import com.keyforge.nativeiiq.model.NativeApplicationRow;
 import com.keyforge.nativeiiq.model.NativeReferenceRef;
 import com.keyforge.nativeiiq.model.NativeSchemaRef;
 import com.keyforge.nativeiiq.wire.JsonSafe;
+import com.keyforge.nativeiiq.wire.NativeSerialize;
 
 import sailpoint.object.Application;
 import sailpoint.object.AttributeDefinition;
@@ -141,6 +142,16 @@ public final class NativeApplicationMapper {
                 }
             }
         }
+
+        // Additional native config (source-truth; config objects serialized to IIQ XML, rule as its name).
+        row.setProvisioningConfig(NativeSerialize.xml(app.getProvisioningConfig()));
+        row.setAccountCorrelationConfig(NativeSerialize.xml(app.getAccountCorrelationConfig()));
+        Rule managerRule = app.getManagerCorrelationRule();
+        row.setManagerCorrelationRule(managerRule == null ? null : managerRule.getName());
+        sailpoint.object.Filter managerFilter = app.getManagerCorrelationFilter();
+        String managerFilterXml = NativeSerialize.xml(managerFilter);
+        row.setManagerCorrelationFilter(
+                managerFilterXml != null ? managerFilterXml : (managerFilter == null ? null : managerFilter.toString()));
 
         row.setCreated(toInstant(app.getCreated()));
         row.setModified(toInstant(app.getModified()));

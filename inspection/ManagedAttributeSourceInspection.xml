@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE TaskDefinition PUBLIC "sailpoint.dtd" "sailpoint.dtd">
+<!--
+  Read-only source-inspection task for the native ManagedAttribute (entitlement) object.
+
+  Import via IdentityIQ: gear/Setup -> Debug -> Import XML (paste this file), or `iiq console`:
+     > import inspection/ManagedAttributeSourceInspection.xml
+  Then run it from Setup -> Tasks -> "KeyForge - ManagedAttribute Source Inspection".
+
+  It uses ONLY the native SailPoint Java API (SailPointContext), no SCIM, no REST, and none of the
+  kf_entitlement mapper/schema. It writes a JSON dump of the actual source model to `outputFile`
+  and changes no IIQ data.
+
+  NOTE on classpath: the executor class ships in the KeyForge plugin jar
+  (com.keyforge.nativeiiq.task.NativeManagedAttributeInspectTask). It must be resolvable by IIQ's task
+  engine at run time — i.e. the KeyForge plugin is installed (and, if your IIQ build does not expose
+  plugin classes to the task classloader, the jar is present on the IIQ web-app classpath). This
+  definition does not modify the existing plugin manifest or the REST/SCIM baseline.
+-->
+<TaskDefinition name="KeyForge - ManagedAttribute Source Inspection"
+                executor="com.keyforge.nativeiiq.task.NativeManagedAttributeInspectTask"
+                resultAction="Rename"
+                subType="task_item_type_generic"
+                type="Generic">
+    <Description>Read-only export of the native sailpoint.object.ManagedAttribute (entitlement) source model to a JSON file, exactly as IdentityIQ exposes it (native Java API only; no SCIM/REST; no kf_entitlement). Source-understanding utility only.</Description>
+    <Attributes>
+        <Map>
+            <!-- Leave outputFile blank to default to <java.io.tmpdir>/keyforge_managedattribute_source.json -->
+            <entry key="outputFile" value=""/>
+            <entry key="start" value="0"/>
+            <entry key="limit" value="0"/>          <!-- 0 = export the full population -->
+            <entry key="includeXml" value="true"/>  <!-- include IIQ's native XMLObjectFactory serialization -->
+            <entry key="echoStdout" value="false"/> <!-- true also prints the full JSON to the server log -->
+        </Map>
+    </Attributes>
+    <Signature>
+        <Inputs>
+            <Argument name="outputFile" type="string">
+                <Prompt>Absolute path for the JSON output file (blank = temp dir default)</Prompt>
+            </Argument>
+            <Argument name="start" type="int">
+                <Prompt>First row (0-based)</Prompt>
+            </Argument>
+            <Argument name="limit" type="int">
+                <Prompt>Max rows (0 = full population)</Prompt>
+            </Argument>
+            <Argument name="includeXml" type="boolean">
+                <Prompt>Include native XML serialization per record</Prompt>
+            </Argument>
+            <Argument name="echoStdout" type="boolean">
+                <Prompt>Also echo full JSON to the server log</Prompt>
+            </Argument>
+        </Inputs>
+    </Signature>
+</TaskDefinition>

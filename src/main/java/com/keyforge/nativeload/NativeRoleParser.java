@@ -80,6 +80,10 @@ final class NativeRoleParser {
 
         rec.descriptionsJson = json(r, NativeRoleFields.DESCRIPTIONS);
         rec.attributesJson = json(r, NativeRoleFields.ATTRIBUTES);
+        rec.roleTypeDefinition = text(r, NativeRoleFields.ROLE_TYPE_DEFINITION);
+        rec.applicationsJson = text(r, NativeRoleFields.APPLICATIONS);
+        rec.monitoredApplicationsJson = text(r, NativeRoleFields.MONITORED_APPLICATIONS);
+        rec.scorecard = text(r, NativeRoleFields.SCORECARD);
 
         rec.created = instant(r, NativeRoleFields.CREATED);
         rec.modified = instant(r, NativeRoleFields.MODIFIED);

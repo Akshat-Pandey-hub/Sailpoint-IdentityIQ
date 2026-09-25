@@ -94,6 +94,10 @@ final class NativeCertificationParser {
         rec.signOffHistoryJson = json(r, NativeCertificationFields.SIGN_OFF_HISTORY);
         rec.ownerId = text(r, NativeCertificationFields.OWNER_ID);
         rec.ownerName = text(r, NativeCertificationFields.OWNER_NAME);
+        rec.approverRule = text(r, NativeCertificationFields.APPROVER_RULE);
+        rec.automaticClosingDate = text(r, NativeCertificationFields.AUTOMATIC_CLOSING_DATE);
+        rec.allowedStatusesJson = text(r, NativeCertificationFields.ALLOWED_STATUSES);
+        rec.tagsJson = text(r, NativeCertificationFields.TAGS);
         rec.srcSystem = text(r, NativeCertificationFields.SRC_SYSTEM);
         rec.srcInterface = text(r, NativeCertificationFields.SRC_INTERFACE);
         rec.srcObjectType = text(r, NativeCertificationFields.SRC_OBJECT_TYPE);

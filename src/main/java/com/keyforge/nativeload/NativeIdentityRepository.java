@@ -29,6 +29,7 @@ public final class NativeIdentityRepository {
     private final String targetTable;
     private final String createSchemaSql;
     private final String createTableSql;
+    private final String alterTableSql;
     private final String upsertSql;
 
     public enum UpsertOutcome { INSERTED, UPDATED }
@@ -63,6 +64,7 @@ public final class NativeIdentityRepository {
                         + "capabilities jsonb, "
                         + "controlled_scopes jsonb, "
                         + "attributes jsonb, "
+                        + "score text, "
                         + "created_at timestamptz, "
                         + "modified_at timestamptz, "
                         + "last_refresh timestamptz, "
@@ -73,17 +75,20 @@ public final class NativeIdentityRepository {
                         + "extraction_run_id text, "
                         + "extracted_at timestamptz NOT NULL DEFAULT now()"
                         + ")";
+        // Additive migration for tables created before this column existed.
+        this.alterTableSql =
+                "ALTER TABLE " + targetTable + " ADD COLUMN IF NOT EXISTS score text";
         this.upsertSql =
                 "INSERT INTO " + targetTable + " ("
                         + "userid, source_id, name, display_name, displayable_name, first_name, last_name, email, "
                         + "inactive, type, correlated, manager_status, manager_id, manager_name, "
                         + "administrator_id, administrator_name, accounts, assigned_roles, detected_roles, "
                         + "role_assignments, role_detections, capabilities, controlled_scopes, attributes, "
-                        + "created_at, modified_at, last_refresh, last_login, "
+                        + "score, created_at, modified_at, last_refresh, last_login, "
                         + "source_system, source_interface, source_object_type, extraction_run_id) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
                         + "?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, "
-                        + "?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (userid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, name = EXCLUDED.name, "
                         + "display_name = EXCLUDED.display_name, displayable_name = EXCLUDED.displayable_name, "
@@ -96,7 +101,8 @@ public final class NativeIdentityRepository {
                         + "assigned_roles = EXCLUDED.assigned_roles, detected_roles = EXCLUDED.detected_roles, "
                         + "role_assignments = EXCLUDED.role_assignments, role_detections = EXCLUDED.role_detections, "
                         + "capabilities = EXCLUDED.capabilities, controlled_scopes = EXCLUDED.controlled_scopes, "
-                        + "attributes = EXCLUDED.attributes, created_at = EXCLUDED.created_at, "
+                        + "attributes = EXCLUDED.attributes, score = EXCLUDED.score, "
+                        + "created_at = EXCLUDED.created_at, "
                         + "modified_at = EXCLUDED.modified_at, last_refresh = EXCLUDED.last_refresh, "
                         + "last_login = EXCLUDED.last_login, source_system = EXCLUDED.source_system, "
                         + "source_interface = EXCLUDED.source_interface, "
@@ -117,6 +123,7 @@ public final class NativeIdentityRepository {
         try (Statement st = conn.createStatement()) {
             st.execute(createSchemaSql);
             st.execute(createTableSql);
+            st.execute(alterTableSql);
         }
     }
 
@@ -165,6 +172,7 @@ public final class NativeIdentityRepository {
             ps.setString(i++, r.capabilitiesJson);
             ps.setString(i++, r.controlledScopesJson);
             ps.setString(i++, r.attributesJson);
+            ps.setString(i++, r.score);
             setTs(ps, i++, r.created);
             setTs(ps, i++, r.modified);
             setTs(ps, i++, r.lastRefresh);

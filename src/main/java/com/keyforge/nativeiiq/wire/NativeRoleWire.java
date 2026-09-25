@@ -76,6 +76,10 @@ public final class NativeRoleWire {
         m.put("deactivationDate", iso(r.getDeactivationDate()));
         m.put("descriptions", new LinkedHashMap<String, String>(r.getDescriptions()));
         m.put("attributes", new LinkedHashMap<String, Object>(r.getAttributes()));
+        m.put("roleTypeDefinition", r.getRoleTypeDefinition());
+        m.put("applications", r.getApplications());
+        m.put("monitoredApplications", r.getMonitoredApplications());
+        m.put("scorecard", r.getScorecard());
         m.put("created", iso(r.getCreated()));
         m.put("modified", iso(r.getModified()));
         m.put("srcSystem", r.getSrcSystem());

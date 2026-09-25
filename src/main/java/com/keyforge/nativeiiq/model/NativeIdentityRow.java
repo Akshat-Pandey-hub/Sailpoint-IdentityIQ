@@ -56,6 +56,7 @@ public final class NativeIdentityRow {
     private Instant modified;
     private Instant lastRefresh;
     private Instant lastLogin;
+    private String score;
 
     // --- lineage envelope (source identification; same concept as the REST path) ---
     private String srcSystem;
@@ -129,6 +130,8 @@ public final class NativeIdentityRow {
 
     public Instant getLastLogin() { return lastLogin; }
     public void setLastLogin(Instant v) { this.lastLogin = v; }
+    public String getScore() { return score; }
+    public void setScore(String v) { this.score = v; }
 
     public String getSrcSystem() { return srcSystem; }
     public void setSrcSystem(String v) { this.srcSystem = v; }
