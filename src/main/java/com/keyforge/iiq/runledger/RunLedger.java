@@ -215,7 +215,7 @@ public final class RunLedger {
                  "reconcile-canonical-views-db",
                  "reconcile-referential-integrity-db", "derive-record-lineage-db",
                  "reconcile-counts-db", "reconcile-native-workitems-db",
-                 "derive-native-events-db" -> "derived";
+                 "derive-native-events-db", "extract-native-parquet" -> "derived";
             default -> "unknown";
         };
     }

@@ -49,6 +49,7 @@ import com.keyforge.iiq.identityrole.IdentityRoleAssignment;
 import com.keyforge.iiq.identityrole.IdentityRoleService;
 import com.keyforge.iiq.identityrole.IdentityRolePersistenceService;
 import com.keyforge.iiq.parquet.ParquetConfig;
+import com.keyforge.iiq.nativeparquet.NativeParquetService;
 import com.keyforge.iiq.parquet.ParquetExtractionService;
 import com.keyforge.iiq.rest.RestConfig;
 import com.keyforge.iiq.rest.ParquetRestServer;
@@ -303,6 +304,7 @@ public final class Main {
             case "extract-native-audit-events-db" -> System.exit(RunLedger.run("extract-native-audit-events-db", Main::runExtractNativeAuditEventsDb));
             case "extract-native-policy-constraints-db" -> System.exit(RunLedger.run("extract-native-policy-constraints-db", Main::runExtractNativePolicyConstraintsDb));
             case "extract-native-syslog-events-db" -> System.exit(RunLedger.run("extract-native-syslog-events-db", Main::runExtractNativeSyslogEventsDb));
+            case "extract-native-parquet" -> System.exit(RunLedger.run("extract-native-parquet", Main::runExtractNativeParquet));
             case "extract-native-workgroup-db" -> System.exit(RunLedger.run("extract-native-workgroup-db", Main::runExtractNativeWorkgroupDb));
             case "extract-native-group-definition-db" -> System.exit(RunLedger.run("extract-native-group-definition-db", Main::runExtractNativeGroupDefinitionDb));
             case "extract-native-workitem-archive-db" -> System.exit(RunLedger.run("extract-native-workitem-archive-db", Main::runExtractNativeWorkItemArchiveDb));
@@ -1217,6 +1219,49 @@ public final class Main {
      * authenticated session and load native-rich rows into {@code iiq_native.kf_application}. IIQ-side
      * read-only; the only writes are to our PostgreSQL. Idempotent; full-scan deletion sweep.
      */
+    private static int runExtractNativeParquet() {
+        try {
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            ParquetConfig pq = ParquetConfig.load();
+            System.out.println("PostgreSQL (source): " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Parquet output dir: " + pq.outputDir().toAbsolutePath());
+            System.out.println("Native-source Parquet: 10 approved datasets, current-state, content-hash deduped "
+                    + "(extraction timestamp EXCLUDED from the hash; one stable file per dataset — no versions)");
+
+            String runId = RunLedger.currentRunId();
+            if (runId == null) {
+                runId = java.util.UUID.randomUUID().toString();
+            }
+            int totalRows = 0, totalNew = 0, totalChanged = 0, totalUnchanged = 0, failed = 0;
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                java.util.List<NativeParquetService.Result> results =
+                        new NativeParquetService(nativeSchema).run(conn, pq.outputDir(), runId);
+                System.out.println();
+                System.out.printf("%-24s %6s %6s %8s %10s%n", "dataset", "rows", "new", "changed", "unchanged");
+                for (NativeParquetService.Result r : results) {
+                    if (r.error() != null) {
+                        failed++;
+                        System.out.printf("%-24s   ERROR: %s%n", r.dataset(), r.error());
+                    } else {
+                        totalRows += r.total(); totalNew += r.inserted();
+                        totalChanged += r.changed(); totalUnchanged += r.unchanged();
+                        System.out.printf("%-24s %6d %6d %8d %10d%n",
+                                r.dataset(), r.total(), r.inserted(), r.changed(), r.unchanged());
+                    }
+                }
+                RunLedger.record("native_parquet", totalRows, totalNew, totalChanged, failed);
+                System.out.println();
+                System.out.println("TOTAL rows=" + totalRows + " new=" + totalNew + " changed=" + totalChanged
+                        + " unchanged=" + totalUnchanged + " datasets-failed=" + failed);
+                return failed > 0 ? 6 : 0;
+            }
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (SQLException e) { System.err.println("PostgreSQL/Parquet error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
     private static int runExtractNativeSyslogEventsDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
@@ -4816,6 +4861,7 @@ public final class Main {
         System.out.println("  extract-native-audit-events-db       Append native AuditEvent historical log into <iiq_native>.kf_audit_event (append-only, read-only in IIQ)");
         System.out.println("  extract-native-policy-constraints-db Pull native Policy SoD/generic/activity constraints into <iiq_native>.kf_policy_constraint (FK policy_id, read-only in IIQ)");
         System.out.println("  extract-native-syslog-events-db      Append native SyslogEvent operational log into <iiq_native>.kf_syslog_event (append-only, read-only in IIQ)");
+        System.out.println("  extract-native-parquet               Write the 10 approved native-source Parquet datasets from <iiq_native> PG, current-state + content-hash deduped (no versions)");
         System.out.println("  extract-native-workgroup-db  Pull native Workgroup data (Identity workgroup=true) from the plugin endpoint and upsert into <iiq_native>.kf_workgroup (read-only in IIQ)");
         System.out.println("  extract-native-group-definition-db  Pull native GroupDefinition data (Populations + Groups) from the plugin endpoint and upsert into <iiq_native>.kf_group_definition (read-only in IIQ)");
         System.out.println("  extract-native-workitem-archive-db  Append native WorkItemArchive evidence into <iiq_native>.kf_workitem_archive (read-only in IIQ; no deletion sweep)");
@@ -4846,6 +4892,8 @@ public final class Main {
         System.out.println("                                          (DuckDB; no IIQ/PostgreSQL). Config: REST_HOST (default 127.0.0.1),");
         System.out.println("                                          REST_PORT (default 8100), PARQUET_OUT_DIR. GET /health, " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + "/datasets,");
         System.out.println("                                          " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + "/{dataset}[?fields=&sort=&order=&limit=&offset=&filter.<f>.<op>=]");
+        System.out.println("                                          Native datasets (current.parquet): " + com.keyforge.iiq.rest.ParquetRestServer.NATIVE_PREFIX + "/datasets,");
+        System.out.println("                                          " + com.keyforge.iiq.rest.ParquetRestServer.NATIVE_PREFIX + "/{dataset}[/schema][?...] (same query engine, isolated from " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + ")");
         System.out.println("  extract-accounts      Retrieve all Accounts from IdentityIQ and print a summary");
         System.out.println("  extract-accounts-db   Retrieve all Accounts and upsert them into <schema>.kf_account");
         System.out.println("  extract-assignments   Derive Account -> Entitlement assignments and print a summary");

@@ -20,16 +20,35 @@ public final class DatasetCatalog {
 
     private final Map<String, Map<String, ParquetType>> columnsByDataset = new LinkedHashMap<>();
 
+    /** The REST/SCIM catalog, sourced from the existing {@link ParquetDatasets} registry. */
     public DatasetCatalog() {
         ParquetDatasets datasets = new ParquetDatasets();
         for (String name : datasets.names()) {
-            DatasetSpec spec = datasets.get(name).spec();
-            Map<String, ParquetType> cols = new LinkedHashMap<>();
-            for (Column c : spec.allColumns()) {
-                cols.put(c.name(), c.type());
-            }
-            columnsByDataset.put(name, cols);
+            addSpec(datasets.get(name).spec());
         }
+    }
+
+    private DatasetCatalog(List<DatasetSpec> specs) {
+        for (DatasetSpec spec : specs) {
+            addSpec(spec);
+        }
+    }
+
+    /**
+     * Builds a catalog from an explicit list of dataset specs (e.g. the native-source datasets), so the
+     * exact same validation + query engine can serve an isolated, separately-registered set of datasets
+     * without touching the REST/SCIM registry.
+     */
+    public static DatasetCatalog forSpecs(List<DatasetSpec> specs) {
+        return new DatasetCatalog(specs);
+    }
+
+    private void addSpec(DatasetSpec spec) {
+        Map<String, ParquetType> cols = new LinkedHashMap<>();
+        for (Column c : spec.allColumns()) {
+            cols.put(c.name(), c.type());
+        }
+        columnsByDataset.put(spec.name(), cols);
     }
 
     public List<String> datasets() {

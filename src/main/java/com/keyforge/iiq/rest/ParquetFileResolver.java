@@ -21,7 +21,7 @@ import java.util.stream.Stream;
  * name is a random UUID and is not time-ordered. A specific run can be requested with {@code ?run=};
  * that reads exactly {@code part-<run>.parquet}.
  */
-public final class ParquetFileResolver {
+public final class ParquetFileResolver implements FileResolver {
 
     private final ParquetConfig config;
 
@@ -30,6 +30,7 @@ public final class ParquetFileResolver {
     }
 
     /** The Parquet file to query, or empty if the dataset has no extracted part files yet. */
+    @Override
     public Optional<Path> resolve(String dataset, String run) {
         if (run != null && !run.isBlank()) {
             Path specific = config.datasetFile(dataset, run.trim());
