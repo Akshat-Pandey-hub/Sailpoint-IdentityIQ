@@ -43,6 +43,18 @@ public final class NativeManagedAttributeRecord {
     String associationsJson;
     String attributesJson;
 
+    // classifications + additional native source properties (audit findings)
+    String classificationsJson;
+    String classificationNamesJson;
+    String classificationDisplayNamesJson;
+    String sourceHash;
+    String memberAttribute;
+    String fullName;
+    Boolean groupType;
+    Boolean inactive;
+    Boolean autoPromotion;
+    Boolean differencable;
+
     // timestamps
     Instant created;
     Instant modified;

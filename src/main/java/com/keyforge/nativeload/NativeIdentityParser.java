@@ -84,6 +84,17 @@ final class NativeIdentityParser {
         rec.managerName = text(r, NativeIdentityFields.MANAGER_NAME);
         rec.administratorId = text(r, NativeIdentityFields.ADMINISTRATOR_ID);
         rec.administratorName = text(r, NativeIdentityFields.ADMINISTRATOR_NAME);
+        rec.fullName = text(r, NativeIdentityFields.FULL_NAME);
+        rec.protectedFlag = bool(r, NativeIdentityFields.IS_PROTECTED);
+        rec.needsRefresh = bool(r, NativeIdentityFields.IS_NEEDS_REFRESH);
+        rec.correlatedOverridden = bool(r, NativeIdentityFields.IS_CORRELATED_OVERRIDDEN);
+        rec.workgroup = bool(r, NativeIdentityFields.IS_WORKGROUP);
+        rec.authApplication = text(r, NativeIdentityFields.AUTH_APPLICATION);
+        rec.authAccount = text(r, NativeIdentityFields.AUTH_ACCOUNT);
+        rec.pendingRefreshWorkflow = text(r, NativeIdentityFields.PENDING_REFRESH_WORKFLOW);
+        rec.passwordExpiration = instant(r, NativeIdentityFields.PASSWORD_EXPIRATION);
+        rec.authLockStart = instant(r, NativeIdentityFields.AUTH_LOCK_START);
+        rec.useBy = instant(r, NativeIdentityFields.USE_BY);
 
         rec.accountsJson = json(r, NativeIdentityFields.ACCOUNTS);
         rec.assignedRolesJson = json(r, NativeIdentityFields.ASSIGNED_ROLES);

@@ -40,6 +40,16 @@ final class NativeManagedAttributeFields {
     static final String INHERITANCE = "inheritance";
     static final String ASSOCIATIONS = "associations";
     static final String ATTRIBUTES = "attributes";
+    static final String CLASSIFICATIONS = "classifications";
+    static final String CLASSIFICATION_NAMES = "classificationNames";
+    static final String CLASSIFICATION_DISPLAY_NAMES = "classificationDisplayNames";
+    static final String SOURCE_HASH = "sourceHash";
+    static final String MEMBER_ATTRIBUTE = "memberAttribute";
+    static final String FULL_NAME = "fullName";
+    static final String GROUP_TYPE = "groupType";
+    static final String INACTIVE = "inactive";
+    static final String AUTO_PROMOTION = "autoPromotion";
+    static final String DIFFERENCABLE = "differencable";
     static final String CREATED = "created";
     static final String MODIFIED = "modified";
     static final String LAST_REFRESH = "lastRefresh";

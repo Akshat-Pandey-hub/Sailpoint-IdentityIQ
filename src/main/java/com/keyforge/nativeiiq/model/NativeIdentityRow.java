@@ -31,6 +31,19 @@ public final class NativeIdentityRow {
     private Boolean correlated;
     private Boolean managerStatus;
 
+    // --- additional native source state (audit findings) ---
+    private String fullName;
+    private Boolean protectedFlag;
+    private Boolean needsRefresh;
+    private Boolean correlatedOverridden;
+    private Boolean workgroup;
+    private String authApplication;
+    private String authAccount;
+    private String pendingRefreshWorkflow;
+    private Instant passwordExpiration;
+    private Instant authLockStart;
+    private Instant useBy;
+
     // --- manager (native-only vs SCIM: the reference itself, not just an isManager flag) ---
     private String managerId;
     private String managerName;
@@ -97,6 +110,29 @@ public final class NativeIdentityRow {
 
     public Boolean getManagerStatus() { return managerStatus; }
     public void setManagerStatus(Boolean v) { this.managerStatus = v; }
+
+    public String getFullName() { return fullName; }
+    public void setFullName(String v) { this.fullName = v; }
+    public Boolean getProtected() { return protectedFlag; }
+    public void setProtected(Boolean v) { this.protectedFlag = v; }
+    public Boolean getNeedsRefresh() { return needsRefresh; }
+    public void setNeedsRefresh(Boolean v) { this.needsRefresh = v; }
+    public Boolean getCorrelatedOverridden() { return correlatedOverridden; }
+    public void setCorrelatedOverridden(Boolean v) { this.correlatedOverridden = v; }
+    public Boolean getWorkgroup() { return workgroup; }
+    public void setWorkgroup(Boolean v) { this.workgroup = v; }
+    public String getAuthApplication() { return authApplication; }
+    public void setAuthApplication(String v) { this.authApplication = v; }
+    public String getAuthAccount() { return authAccount; }
+    public void setAuthAccount(String v) { this.authAccount = v; }
+    public String getPendingRefreshWorkflow() { return pendingRefreshWorkflow; }
+    public void setPendingRefreshWorkflow(String v) { this.pendingRefreshWorkflow = v; }
+    public Instant getPasswordExpiration() { return passwordExpiration; }
+    public void setPasswordExpiration(Instant v) { this.passwordExpiration = v; }
+    public Instant getAuthLockStart() { return authLockStart; }
+    public void setAuthLockStart(Instant v) { this.authLockStart = v; }
+    public Instant getUseBy() { return useBy; }
+    public void setUseBy(Instant v) { this.useBy = v; }
 
     public String getManagerId() { return managerId; }
     public void setManagerId(String v) { this.managerId = v; }

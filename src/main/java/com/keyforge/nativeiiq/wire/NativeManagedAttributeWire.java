@@ -1,6 +1,7 @@
 package com.keyforge.nativeiiq.wire;
 
 import com.keyforge.nativeiiq.model.NativeAssociationRef;
+import com.keyforge.nativeiiq.model.NativeClassificationRef;
 import com.keyforge.nativeiiq.model.NativeManagedAttributeExtractionResult;
 import com.keyforge.nativeiiq.model.NativeManagedAttributeRow;
 import com.keyforge.nativeiiq.model.NativePermissionRef;
@@ -99,13 +100,54 @@ public final class NativeManagedAttributeWire {
             am.put("targetName", a.getTargetName());
             am.put("targetType", a.getTargetType());
             am.put("ownerType", a.getOwnerType());
+            am.put("ownerId", a.getOwnerId());
             am.put("applicationName", a.getApplicationName());
             am.put("objectId", a.getObjectId());
+            am.put("rights", a.getRights());
+            am.put("effective", Integer.valueOf(a.getEffective()));
+            am.put("lastAggregation", a.getLastAggregation());
+            am.put("hierarchy", a.getHierarchy());
+            am.put("effectiveTargetName", a.getEffectiveTargetName());
+            am.put("uniqueTargetName", a.getUniqueTargetName());
+            am.put("inherited", Boolean.valueOf(a.isInherited()));
+            am.put("flattened", Boolean.valueOf(a.isFlattened()));
+            am.put("permission", Boolean.valueOf(a.isPermission()));
+            am.put("account", Boolean.valueOf(a.isAccount()));
+            am.put("attribute", Boolean.valueOf(a.isAttribute()));
+            am.put("allowPermission", Boolean.valueOf(a.isAllowPermission()));
+            am.put("denyPermission", Boolean.valueOf(a.isDenyPermission()));
+            am.put("unstructured", Boolean.valueOf(a.isUnstructured()));
+            am.put("iiqElevatedAccess", Boolean.valueOf(a.isIiqElevatedAccess()));
             assoc.add(am);
         }
         m.put("associations", assoc);
 
         m.put("attributes", new LinkedHashMap<String, Object>(r.getAttributes()));
+
+        List<Map<String, Object>> classifications = new ArrayList<Map<String, Object>>();
+        for (NativeClassificationRef c : r.getClassifications()) {
+            Map<String, Object> cm = new LinkedHashMap<String, Object>();
+            cm.put("classificationName", c.getClassificationName());
+            cm.put("classificationDisplayName", c.getClassificationDisplayName());
+            cm.put("classificationType", c.getClassificationType());
+            cm.put("classificationOrigin", c.getClassificationOrigin());
+            cm.put("source", c.getSource());
+            cm.put("ownerType", c.getOwnerType());
+            cm.put("ownerId", c.getOwnerId());
+            cm.put("effective", c.getEffective());
+            classifications.add(cm);
+        }
+        m.put("classifications", classifications);
+        m.put("classificationNames", new ArrayList<String>(r.getClassificationNames()));
+        m.put("classificationDisplayNames", new ArrayList<String>(r.getClassificationDisplayNames()));
+
+        m.put("sourceHash", r.getSourceHash());
+        m.put("memberAttribute", r.getMemberAttribute());
+        m.put("fullName", r.getFullName());
+        m.put("groupType", r.getGroupType());
+        m.put("inactive", r.getInactive());
+        m.put("autoPromotion", r.getAutoPromotion());
+        m.put("differencable", r.getDifferencable());
 
         m.put("created", iso(r.getCreated()));
         m.put("modified", iso(r.getModified()));
@@ -127,6 +169,7 @@ public final class NativeManagedAttributeWire {
             pm.put("target", p.getTarget());
             pm.put("rights", p.getRights());
             pm.put("annotation", p.getAnnotation());
+            pm.put("aggregationSource", p.getAggregationSource());
             out.add(pm);
         }
         return out;

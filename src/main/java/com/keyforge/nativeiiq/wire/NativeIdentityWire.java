@@ -82,6 +82,18 @@ public final class NativeIdentityWire {
         m.put("administratorId", r.getAdministratorId());
         m.put("administratorName", r.getAdministratorName());
 
+        m.put("fullName", r.getFullName());
+        m.put("isProtected", r.getProtected());
+        m.put("isNeedsRefresh", r.getNeedsRefresh());
+        m.put("isCorrelatedOverridden", r.getCorrelatedOverridden());
+        m.put("isWorkgroup", r.getWorkgroup());
+        m.put("authApplication", r.getAuthApplication());
+        m.put("authAccount", r.getAuthAccount());
+        m.put("pendingRefreshWorkflow", r.getPendingRefreshWorkflow());
+        m.put("passwordExpiration", iso(r.getPasswordExpiration()));
+        m.put("authLockStart", iso(r.getAuthLockStart()));
+        m.put("useBy", iso(r.getUseBy()));
+
         List<Map<String, Object>> accounts = new ArrayList<Map<String, Object>>();
         for (NativeAccountRef a : r.getAccounts()) {
             Map<String, Object> am = new LinkedHashMap<String, Object>();

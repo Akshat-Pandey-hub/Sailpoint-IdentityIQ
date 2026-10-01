@@ -70,10 +70,20 @@ public final class NativeManagedAttributeRepository {
                         + "inheritance jsonb, "
                         + "associations jsonb, "
                         + "attributes jsonb, "
+                        + "classifications jsonb, "
+                        + "classification_names jsonb, "
+                        + "classification_display_names jsonb, "
+                        + "member_attribute text, "
+                        + "full_name text, "
+                        + "is_group_type boolean, "
+                        + "is_inactive boolean, "
+                        + "is_auto_promotion boolean, "
+                        + "is_differencable boolean, "
                         + "created_at timestamptz, "
                         + "modified_at timestamptz, "
                         + "last_refresh timestamptz, "
                         + "last_target_aggregation timestamptz, "
+                        + "source_hash text, "
                         + "record_hash text, "
                         + "source_system text, "
                         + "source_interface text, "
@@ -89,9 +99,13 @@ public final class NativeManagedAttributeRepository {
                         + "iiq_elevated_access, owner_id, owner_name, description, descriptions, permissions, "
                         + "target_permissions, inheritance, associations, attributes, created_at, modified_at, "
                         + "last_refresh, last_target_aggregation, record_hash, source_system, source_interface, "
-                        + "source_object_type, extraction_run_id) "
+                        + "source_object_type, extraction_run_id, "
+                        + "classifications, classification_names, classification_display_names, source_hash, "
+                        + "member_attribute, full_name, is_group_type, is_inactive, is_auto_promotion, "
+                        + "is_differencable) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                        + "?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+                        + "?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (entitlementid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, name = EXCLUDED.name, value = EXCLUDED.value, "
                         + "display_name = EXCLUDED.display_name, displayable_name = EXCLUDED.displayable_name, "
@@ -112,7 +126,14 @@ public final class NativeManagedAttributeRepository {
                         + "record_hash = EXCLUDED.record_hash, source_system = EXCLUDED.source_system, "
                         + "source_interface = EXCLUDED.source_interface, "
                         + "source_object_type = EXCLUDED.source_object_type, "
-                        + "extraction_run_id = EXCLUDED.extraction_run_id, extracted_at = now() "
+                        + "extraction_run_id = EXCLUDED.extraction_run_id, "
+                        + "classifications = EXCLUDED.classifications, "
+                        + "classification_names = EXCLUDED.classification_names, "
+                        + "classification_display_names = EXCLUDED.classification_display_names, "
+                        + "source_hash = EXCLUDED.source_hash, member_attribute = EXCLUDED.member_attribute, "
+                        + "full_name = EXCLUDED.full_name, is_group_type = EXCLUDED.is_group_type, "
+                        + "is_inactive = EXCLUDED.is_inactive, is_auto_promotion = EXCLUDED.is_auto_promotion, "
+                        + "is_differencable = EXCLUDED.is_differencable, extracted_at = now() "
                         + "RETURNING (xmax = 0) AS inserted";
     }
 
@@ -172,10 +193,32 @@ public final class NativeManagedAttributeRepository {
         return NativeRecordHash.of(b);
     }
 
+    /**
+     * Additive, non-destructive migrations for a {@code kf_entitlement} table created by an earlier version:
+     * {@code CREATE TABLE IF NOT EXISTS} never alters an existing table, so the columns added by the audit
+     * findings are back-filled with {@code ADD COLUMN IF NOT EXISTS} — a no-op on a current table, never a
+     * drop/rename, never touches data or the existing soft-delete columns.
+     */
+    private static final String[] ADD_COLUMNS = {
+            "classifications jsonb",
+            "classification_names jsonb",
+            "classification_display_names jsonb",
+            "source_hash text",
+            "member_attribute text",
+            "full_name text",
+            "is_group_type boolean",
+            "is_inactive boolean",
+            "is_auto_promotion boolean",
+            "is_differencable boolean",
+    };
+
     public void ensureTargetTable(Connection conn) throws SQLException {
         try (Statement st = conn.createStatement()) {
             st.execute(createSchemaSql);
             st.execute(createTableSql);
+            for (String col : ADD_COLUMNS) {
+                st.execute("ALTER TABLE " + targetTable + " ADD COLUMN IF NOT EXISTS " + col);
+            }
         }
     }
 
@@ -220,7 +263,17 @@ public final class NativeManagedAttributeRepository {
             ps.setString(i++, r.srcSystem);
             ps.setString(i++, r.srcInterface);
             ps.setString(i++, r.srcObjectType);
-            ps.setString(i, r.extractionRunId);
+            ps.setString(i++, r.extractionRunId);
+            ps.setString(i++, r.classificationsJson);
+            ps.setString(i++, r.classificationNamesJson);
+            ps.setString(i++, r.classificationDisplayNamesJson);
+            ps.setString(i++, r.sourceHash);
+            ps.setString(i++, r.memberAttribute);
+            ps.setString(i++, r.fullName);
+            setBool(ps, i++, r.groupType);
+            setBool(ps, i++, r.inactive);
+            setBool(ps, i++, r.autoPromotion);
+            setBool(ps, i, r.differencable);
 
             try (ResultSet rs = ps.executeQuery()) {
                 boolean inserted = rs.next() && rs.getBoolean("inserted");

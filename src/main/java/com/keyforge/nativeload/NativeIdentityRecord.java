@@ -26,6 +26,17 @@ public final class NativeIdentityRecord {
     String managerName;
     String administratorId;
     String administratorName;
+    String fullName;
+    Boolean protectedFlag;
+    Boolean needsRefresh;
+    Boolean correlatedOverridden;
+    Boolean workgroup;
+    String authApplication;
+    String authAccount;
+    String pendingRefreshWorkflow;
+    Instant passwordExpiration;
+    Instant authLockStart;
+    Instant useBy;
 
     // nested (jsonb)
     String accountsJson;

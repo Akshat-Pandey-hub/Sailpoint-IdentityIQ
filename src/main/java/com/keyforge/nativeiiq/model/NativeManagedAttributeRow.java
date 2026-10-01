@@ -54,6 +54,20 @@ public final class NativeManagedAttributeRow {
     private final List<NativeReferenceRef> inheritance = new ArrayList<NativeReferenceRef>();
     private final List<NativeAssociationRef> associations = new ArrayList<NativeAssociationRef>();
 
+    // --- classifications (native getClassifications / names / display names) ---
+    private final List<NativeClassificationRef> classifications = new ArrayList<NativeClassificationRef>();
+    private final List<String> classificationNames = new ArrayList<String>();
+    private final List<String> classificationDisplayNames = new ArrayList<String>();
+
+    // --- additional native source properties (audit findings) ---
+    private String sourceHash;         // ManagedAttribute.getHash() - SailPoint's own unique identity hash
+    private String memberAttribute;
+    private String fullName;
+    private Boolean groupType;
+    private Boolean inactive;
+    private Boolean autoPromotion;
+    private Boolean differencable;
+
     // --- extended attribute map (JSON-safe) ---
     private final Map<String, Object> attributes = new LinkedHashMap<String, Object>();
 
@@ -145,6 +159,25 @@ public final class NativeManagedAttributeRow {
     public List<NativeReferenceRef> getInheritance() { return inheritance; }
     public List<NativeAssociationRef> getAssociations() { return associations; }
     public Map<String, Object> getAttributes() { return attributes; }
+
+    public List<NativeClassificationRef> getClassifications() { return classifications; }
+    public List<String> getClassificationNames() { return classificationNames; }
+    public List<String> getClassificationDisplayNames() { return classificationDisplayNames; }
+
+    public String getSourceHash() { return sourceHash; }
+    public void setSourceHash(String v) { this.sourceHash = v; }
+    public String getMemberAttribute() { return memberAttribute; }
+    public void setMemberAttribute(String v) { this.memberAttribute = v; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String v) { this.fullName = v; }
+    public Boolean getGroupType() { return groupType; }
+    public void setGroupType(Boolean v) { this.groupType = v; }
+    public Boolean getInactive() { return inactive; }
+    public void setInactive(Boolean v) { this.inactive = v; }
+    public Boolean getAutoPromotion() { return autoPromotion; }
+    public void setAutoPromotion(Boolean v) { this.autoPromotion = v; }
+    public Boolean getDifferencable() { return differencable; }
+    public void setDifferencable(Boolean v) { this.differencable = v; }
 
     public Instant getCreated() { return created; }
     public void setCreated(Instant v) { this.created = v; }

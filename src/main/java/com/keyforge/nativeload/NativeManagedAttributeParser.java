@@ -94,6 +94,17 @@ final class NativeManagedAttributeParser {
         rec.associationsJson = json(r, NativeManagedAttributeFields.ASSOCIATIONS);
         rec.attributesJson = json(r, NativeManagedAttributeFields.ATTRIBUTES);
 
+        rec.classificationsJson = json(r, NativeManagedAttributeFields.CLASSIFICATIONS);
+        rec.classificationNamesJson = json(r, NativeManagedAttributeFields.CLASSIFICATION_NAMES);
+        rec.classificationDisplayNamesJson = json(r, NativeManagedAttributeFields.CLASSIFICATION_DISPLAY_NAMES);
+        rec.sourceHash = text(r, NativeManagedAttributeFields.SOURCE_HASH);
+        rec.memberAttribute = text(r, NativeManagedAttributeFields.MEMBER_ATTRIBUTE);
+        rec.fullName = text(r, NativeManagedAttributeFields.FULL_NAME);
+        rec.groupType = bool(r, NativeManagedAttributeFields.GROUP_TYPE);
+        rec.inactive = bool(r, NativeManagedAttributeFields.INACTIVE);
+        rec.autoPromotion = bool(r, NativeManagedAttributeFields.AUTO_PROMOTION);
+        rec.differencable = bool(r, NativeManagedAttributeFields.DIFFERENCABLE);
+
         rec.created = instant(r, NativeManagedAttributeFields.CREATED);
         rec.modified = instant(r, NativeManagedAttributeFields.MODIFIED);
         rec.lastRefresh = instant(r, NativeManagedAttributeFields.LAST_REFRESH);

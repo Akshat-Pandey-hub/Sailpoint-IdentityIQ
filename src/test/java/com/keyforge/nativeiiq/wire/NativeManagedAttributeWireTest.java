@@ -48,10 +48,12 @@ class NativeManagedAttributeWireTest {
         r.setOwnerName("spadmin");
         r.setDescription("Administrators group");
         r.getDescriptions().put("en_US", "Administrators group");
-        r.getPermissions().add(new NativePermissionRef("folderA", "read,write", null));
+        r.getPermissions().add(new NativePermissionRef("folderA", "read,write", null, "aggSrcA"));
         r.getTargetPermissions().add(new NativePermissionRef("share1", "read", "note"));
         r.getInheritance().add(new NativeReferenceRef("parent-1", "CN=AllStaff"));
-        r.getAssociations().add(new NativeAssociationRef("grpX", "group", "ManagedAttribute", "AD", "obj-1"));
+        r.getAssociations().add(new NativeAssociationRef("grpX", "group", "ManagedAttribute", "own-9", "AD",
+                "obj-1", "read", 1, null, "hier-1", "effName", "uniqName",
+                true, false, true, false, false, true, false, false, false));
         r.getAttributes().put("iiqDisabled", JsonSafe.toJsonSafe(Boolean.FALSE));
         r.setCreated(Instant.EPOCH);
         r.setModified(Instant.EPOCH);
@@ -80,6 +82,19 @@ class NativeManagedAttributeWireTest {
         assertEquals("CN=Admins,OU=Groups", row.get("value"));
         assertEquals("native_iiq_java_api", row.get("srcInterface"));
         assertEquals("sailpoint.object.ManagedAttribute", row.get("srcObjectType"));
+
+        // G4: enriched Permission + TargetAssociation source fields are emitted inside the nested JSON
+        List<Map<String, Object>> perms = (List<Map<String, Object>>) row.get("permissions");
+        assertEquals("aggSrcA", perms.get(0).get("aggregationSource"));
+        List<Map<String, Object>> assoc = (List<Map<String, Object>>) row.get("associations");
+        Map<String, Object> a0 = assoc.get(0);
+        for (String key : new String[]{"ownerId", "rights", "effective", "lastAggregation", "hierarchy",
+                "effectiveTargetName", "uniqueTargetName", "inherited", "flattened", "permission", "account",
+                "attribute", "allowPermission", "denyPermission", "unstructured", "iiqElevatedAccess"}) {
+            assertTrue(a0.containsKey(key), "association must contain field: " + key);
+        }
+        assertEquals("own-9", a0.get("ownerId"));
+        assertEquals(Boolean.TRUE, a0.get("inherited"));
     }
 
     @Test

@@ -65,6 +65,17 @@ public final class NativeIdentityRepository {
                         + "controlled_scopes jsonb, "
                         + "attributes jsonb, "
                         + "score text, "
+                        + "full_name text, "
+                        + "is_protected boolean, "
+                        + "is_needs_refresh boolean, "
+                        + "is_correlated_overridden boolean, "
+                        + "is_workgroup boolean, "
+                        + "auth_application text, "
+                        + "auth_account text, "
+                        + "pending_refresh_workflow text, "
+                        + "password_expiration timestamptz, "
+                        + "auth_lock_start timestamptz, "
+                        + "use_by timestamptz, "
                         + "created_at timestamptz, "
                         + "modified_at timestamptz, "
                         + "last_refresh timestamptz, "
@@ -85,10 +96,14 @@ public final class NativeIdentityRepository {
                         + "administrator_id, administrator_name, accounts, assigned_roles, detected_roles, "
                         + "role_assignments, role_detections, capabilities, controlled_scopes, attributes, "
                         + "score, created_at, modified_at, last_refresh, last_login, "
-                        + "source_system, source_interface, source_object_type, extraction_run_id) "
+                        + "source_system, source_interface, source_object_type, extraction_run_id, "
+                        + "full_name, is_protected, is_needs_refresh, is_correlated_overridden, is_workgroup, "
+                        + "auth_application, auth_account, pending_refresh_workflow, password_expiration, "
+                        + "auth_lock_start, use_by) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
                         + "?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, "
-                        + "?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "?, ?, ?, ?, ?, ?, ?, ?, ?, "
+                        + "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (userid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, name = EXCLUDED.name, "
                         + "display_name = EXCLUDED.display_name, displayable_name = EXCLUDED.displayable_name, "
@@ -107,7 +122,16 @@ public final class NativeIdentityRepository {
                         + "last_login = EXCLUDED.last_login, source_system = EXCLUDED.source_system, "
                         + "source_interface = EXCLUDED.source_interface, "
                         + "source_object_type = EXCLUDED.source_object_type, "
-                        + "extraction_run_id = EXCLUDED.extraction_run_id, extracted_at = now() "
+                        + "extraction_run_id = EXCLUDED.extraction_run_id, "
+                        + "full_name = EXCLUDED.full_name, is_protected = EXCLUDED.is_protected, "
+                        + "is_needs_refresh = EXCLUDED.is_needs_refresh, "
+                        + "is_correlated_overridden = EXCLUDED.is_correlated_overridden, "
+                        + "is_workgroup = EXCLUDED.is_workgroup, auth_application = EXCLUDED.auth_application, "
+                        + "auth_account = EXCLUDED.auth_account, "
+                        + "pending_refresh_workflow = EXCLUDED.pending_refresh_workflow, "
+                        + "password_expiration = EXCLUDED.password_expiration, "
+                        + "auth_lock_start = EXCLUDED.auth_lock_start, use_by = EXCLUDED.use_by, "
+                        + "extracted_at = now() "
                         + "RETURNING (xmax = 0) AS inserted";
     }
 
@@ -119,11 +143,33 @@ public final class NativeIdentityRepository {
         return targetTable;
     }
 
+    /**
+     * Additive, non-destructive back-fill for tables created before these native state columns existed:
+     * each is {@code ADD COLUMN IF NOT EXISTS} — a no-op on a current table, never a drop/rename, never
+     * touches data or existing columns.
+     */
+    private static final String[] ADD_COLUMNS = {
+            "full_name text",
+            "is_protected boolean",
+            "is_needs_refresh boolean",
+            "is_correlated_overridden boolean",
+            "is_workgroup boolean",
+            "auth_application text",
+            "auth_account text",
+            "pending_refresh_workflow text",
+            "password_expiration timestamptz",
+            "auth_lock_start timestamptz",
+            "use_by timestamptz",
+    };
+
     public void ensureTargetTable(Connection conn) throws SQLException {
         try (Statement st = conn.createStatement()) {
             st.execute(createSchemaSql);
             st.execute(createTableSql);
             st.execute(alterTableSql);
+            for (String col : ADD_COLUMNS) {
+                st.execute("ALTER TABLE " + targetTable + " ADD COLUMN IF NOT EXISTS " + col);
+            }
         }
     }
 
@@ -180,7 +226,18 @@ public final class NativeIdentityRepository {
             ps.setString(i++, r.srcSystem);
             ps.setString(i++, r.srcInterface);
             ps.setString(i++, r.srcObjectType);
-            ps.setString(i, r.extractionRunId);
+            ps.setString(i++, r.extractionRunId);
+            ps.setString(i++, r.fullName);
+            setBool(ps, i++, r.protectedFlag);
+            setBool(ps, i++, r.needsRefresh);
+            setBool(ps, i++, r.correlatedOverridden);
+            setBool(ps, i++, r.workgroup);
+            ps.setString(i++, r.authApplication);
+            ps.setString(i++, r.authAccount);
+            ps.setString(i++, r.pendingRefreshWorkflow);
+            setTs(ps, i++, r.passwordExpiration);
+            setTs(ps, i++, r.authLockStart);
+            setTs(ps, i, r.useBy);
 
             try (ResultSet rs = ps.executeQuery()) {
                 boolean inserted = rs.next() && rs.getBoolean("inserted");

@@ -49,6 +49,19 @@ public final class NativeIdentityMapper {
         row.setCorrelated(Boolean.valueOf(id.isCorrelated()));
         row.setManagerStatus(Boolean.valueOf(id.getManagerStatus()));
 
+        // additional native source state (audit findings) — exact source values; native null stays null
+        row.setFullName(id.getFullName());
+        row.setProtected(Boolean.valueOf(id.isProtected()));
+        row.setNeedsRefresh(Boolean.valueOf(id.isNeedsRefresh()));
+        row.setCorrelatedOverridden(Boolean.valueOf(id.isCorrelatedOverridden()));
+        row.setWorkgroup(Boolean.valueOf(id.isWorkgroup()));
+        row.setAuthApplication(id.getAuthApplication());
+        row.setAuthAccount(id.getAuthAccount());
+        row.setPendingRefreshWorkflow(id.getPendingRefreshWorkflow());
+        row.setPasswordExpiration(toInstant(id.getPasswordExpiration()));
+        row.setAuthLockStart(toInstant(id.getAuthLockStart()));
+        row.setUseBy(toInstant(id.getUseBy()));
+
         // manager (native-only vs SCIM): the reference itself
         Identity mgr = id.getManager();
         if (mgr != null) {

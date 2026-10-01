@@ -30,6 +30,17 @@ final class NativeIdentityFields {
     static final String MANAGER_NAME = "managerName";
     static final String ADMINISTRATOR_ID = "administratorId";
     static final String ADMINISTRATOR_NAME = "administratorName";
+    static final String FULL_NAME = "fullName";
+    static final String IS_PROTECTED = "isProtected";
+    static final String IS_NEEDS_REFRESH = "isNeedsRefresh";
+    static final String IS_CORRELATED_OVERRIDDEN = "isCorrelatedOverridden";
+    static final String IS_WORKGROUP = "isWorkgroup";
+    static final String AUTH_APPLICATION = "authApplication";
+    static final String AUTH_ACCOUNT = "authAccount";
+    static final String PENDING_REFRESH_WORKFLOW = "pendingRefreshWorkflow";
+    static final String PASSWORD_EXPIRATION = "passwordExpiration";
+    static final String AUTH_LOCK_START = "authLockStart";
+    static final String USE_BY = "useBy";
 
     // collections / maps (persisted as jsonb)
     static final String ACCOUNTS = "accounts";

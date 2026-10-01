@@ -1,6 +1,7 @@
 package com.keyforge.nativeiiq.mapper;
 
 import com.keyforge.nativeiiq.model.NativeAssociationRef;
+import com.keyforge.nativeiiq.model.NativeClassificationRef;
 import com.keyforge.nativeiiq.model.NativeManagedAttributeRow;
 import com.keyforge.nativeiiq.model.NativePermissionRef;
 import com.keyforge.nativeiiq.model.NativeReferenceRef;
@@ -8,8 +9,10 @@ import com.keyforge.nativeiiq.wire.JsonSafe;
 
 import sailpoint.object.Application;
 import sailpoint.object.Attributes;
+import sailpoint.object.Classification;
 import sailpoint.object.Identity;
 import sailpoint.object.ManagedAttribute;
+import sailpoint.object.ObjectClassification;
 import sailpoint.object.Permission;
 import sailpoint.object.TargetAssociation;
 
@@ -93,17 +96,49 @@ public final class NativeManagedAttributeMapper {
             }
         }
 
-        // target associations (group/association linkage)
+        // target associations (group/association linkage) — full source-authoritative field set
         List<TargetAssociation> associations = ma.getAssociations();
         if (associations != null) {
             for (TargetAssociation ta : associations) {
                 if (ta != null) {
                     row.getAssociations().add(new NativeAssociationRef(
-                            ta.getTargetName(), ta.getTargetType(), ta.getOwnerType(),
-                            ta.getApplicationName(), ta.getObjectId()));
+                            ta.getTargetName(), ta.getTargetType(), ta.getOwnerType(), ta.getOwnerId(),
+                            ta.getApplicationName(), ta.getObjectId(), ta.getRights(), ta.getEffective(),
+                            isoDate(ta.getLastAggregation()), ta.getHierarchy(), ta.getEffectiveTargetName(),
+                            ta.getUniqueTargetName(), ta.isInherited(), ta.isFlattened(), ta.isPermission(),
+                            ta.isAccount(), ta.isAttribute(), ta.isAllowPermission(), ta.isDenyPermission(),
+                            ta.isUnstructured(), ta.isIiqElevatedAccess()));
                 }
             }
         }
+
+        // classifications (native getClassifications + the name/display-name projections) — exact source values
+        List<ObjectClassification> classifications = ma.getClassifications();
+        if (classifications != null) {
+            for (ObjectClassification oc : classifications) {
+                if (oc != null) {
+                    Classification c = oc.getClassification();
+                    row.getClassifications().add(new NativeClassificationRef(
+                            c == null ? null : c.getName(),
+                            c == null ? null : c.getDisplayableName(),
+                            c == null ? null : c.getType(),
+                            c == null ? null : c.getOrigin(),
+                            oc.getSource(), oc.getOwnerType(), oc.getOwnerId(),
+                            Boolean.valueOf(oc.isEffective())));
+                }
+            }
+        }
+        addStrings(ma.getClassificationNames(), row.getClassificationNames());
+        addStrings(ma.getClassificationDisplayNames(), row.getClassificationDisplayNames());
+
+        // additional native source properties (audit findings) — stored verbatim; native null stays null
+        row.setSourceHash(ma.getHash());
+        row.setMemberAttribute(ma.getMemberAttribute());
+        row.setFullName(ma.getFullName());
+        row.setGroupType(Boolean.valueOf(ma.isGroupType()));
+        row.setInactive(Boolean.valueOf(ma.isInactive()));
+        row.setAutoPromotion(Boolean.valueOf(ma.isAutoPromotion()));
+        row.setDifferencable(Boolean.valueOf(ma.isDifferencable()));
 
         // full extended attribute map, made JSON-safe while still attached
         Attributes<String, Object> attrs = ma.getAttributes();
@@ -126,18 +161,32 @@ public final class NativeManagedAttributeMapper {
         return row;
     }
 
+    private static void addStrings(List<String> in, List<String> out) {
+        if (in == null) {
+            return;
+        }
+        for (String s : in) {
+            out.add(s);
+        }
+    }
+
     private static void addPermissions(List<Permission> perms, List<NativePermissionRef> out) {
         if (perms == null) {
             return;
         }
         for (Permission p : perms) {
             if (p != null) {
-                out.add(new NativePermissionRef(p.getTarget(), p.getRights(), p.getAnnotation()));
+                out.add(new NativePermissionRef(
+                        p.getTarget(), p.getRights(), p.getAnnotation(), p.getAggregationSource()));
             }
         }
     }
 
     private static Instant toInstant(Date d) {
         return d == null ? null : d.toInstant();
+    }
+
+    private static String isoDate(Date d) {
+        return d == null ? null : d.toInstant().toString();
     }
 }
