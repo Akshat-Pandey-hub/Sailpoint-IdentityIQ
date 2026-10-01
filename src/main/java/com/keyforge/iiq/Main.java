@@ -125,6 +125,12 @@ import com.keyforge.nativeload.NativeAuditEventClient;
 import com.keyforge.nativeload.NativeAuditEventImportService;
 import com.keyforge.nativeload.NativeAuditEventRepository;
 import com.keyforge.nativeload.NativeAuditEventSink;
+import com.keyforge.nativeload.NativeAccessHistoryClient;
+import com.keyforge.nativeload.NativeAccessHistoryImportService;
+import com.keyforge.nativeload.NativeAccessHistoryRepo;
+import com.keyforge.nativeload.NativeHistEntitlementCaptureRepository;
+import com.keyforge.nativeload.NativeHistIdentityEventRepository;
+import com.keyforge.nativeload.NativeHistCertificationRepository;
 import com.keyforge.nativeload.JdbcNativePolicyConstraintSink;
 import com.keyforge.nativeload.NativePolicyConstraintClient;
 import com.keyforge.nativeload.NativePolicyConstraintImportService;
@@ -306,6 +312,7 @@ public final class Main {
             case "extract-native-violations-db" -> System.exit(RunLedger.run("extract-native-violations-db", Main::runExtractNativeViolationsDb));
             case "extract-native-policies-db" -> System.exit(RunLedger.run("extract-native-policies-db", Main::runExtractNativePoliciesDb));
             case "extract-native-audit-events-db" -> System.exit(RunLedger.run("extract-native-audit-events-db", Main::runExtractNativeAuditEventsDb));
+            case "extract-native-access-history-db" -> System.exit(RunLedger.run("extract-native-access-history-db", Main::runExtractNativeAccessHistoryDb));
             case "extract-native-policy-constraints-db" -> System.exit(RunLedger.run("extract-native-policy-constraints-db", Main::runExtractNativePolicyConstraintsDb));
             case "extract-native-syslog-events-db" -> System.exit(RunLedger.run("extract-native-syslog-events-db", Main::runExtractNativeSyslogEventsDb));
             case "extract-native-parquet" -> System.exit(RunLedger.run("extract-native-parquet", Main::runExtractNativeParquet));
@@ -1394,6 +1401,79 @@ public final class Main {
         catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
         catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
         catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    /**
+     * Native SailPoint Access-History extraction: three immutable historical objects, one append-only table
+     * each — HistoricalEntitlementCapture, HistoricalIdentityEvent, HistoricalCertification. The source read
+     * is pure native SailPoint Java API inside the plugin (a DatabaseInstance.ACCESS_HISTORY SailPointContext);
+     * the plugin endpoint is ONLY the transport. Idempotent (ON CONFLICT DO NOTHING); no deletion sweep.
+     */
+    private static int runExtractNativeAccessHistoryDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            int pageSize = nativePageSize();
+            String runId = java.util.UUID.randomUUID().toString();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: native SailPoint Java API (DatabaseInstance.ACCESS_HISTORY) via plugin REST "
+                    + "(access-history/*), page size " + pageSize + " [APPEND-ONLY immutable historical evidence]");
+
+            NativeAccessHistoryClient client = new NativeAccessHistoryClient(new IiqSessionClient(iiqConfig));
+            java.util.List<NativeAccessHistoryImportService.Result> results =
+                    new java.util.ArrayList<NativeAccessHistoryImportService.Result>();
+            int totalFailed = 0;
+
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                java.util.LinkedHashMap<String, NativeAccessHistoryRepo> targets =
+                        new java.util.LinkedHashMap<String, NativeAccessHistoryRepo>();
+                targets.put(NativeAccessHistoryClient.ENTITLEMENT_CAPTURES_PATH,
+                        new NativeHistEntitlementCaptureRepository(nativeSchema, runId));
+                targets.put(NativeAccessHistoryClient.IDENTITY_EVENTS_PATH,
+                        new NativeHistIdentityEventRepository(nativeSchema, runId));
+                targets.put(NativeAccessHistoryClient.CERTIFICATIONS_PATH,
+                        new NativeHistCertificationRepository(nativeSchema, runId));
+
+                for (java.util.Map.Entry<String, NativeAccessHistoryRepo> t : targets.entrySet()) {
+                    NativeAccessHistoryRepo repo = t.getValue();
+                    NativeAccessHistoryImportService.Result result =
+                            new NativeAccessHistoryImportService(conn, client, t.getKey(), repo, pageSize).importAll();
+                    results.add(result);
+                    totalFailed += result.getFailed();
+                    RunLedger.record(shortTableName(result.getTargetTable()), result.getExtracted(),
+                            result.getInserted(), 0, result.getFailed());
+                }
+            }
+
+            System.out.println();
+            for (NativeAccessHistoryImportService.Result r : results) {
+                System.out.println(r.getEntity() + " -> " + r.getTargetTable());
+                System.out.println("  source count (IIQ):        " + r.getSourceCount());
+                System.out.println("  extracted:                 " + r.getExtracted());
+                System.out.println("  inserted (new):            " + r.getInserted());
+                System.out.println("  skipped (already present): " + r.getSkipped());
+                System.out.println("  failed:                    " + r.getFailed());
+                int shown = Math.min(r.getFailures().size(), 10);
+                for (int i = 0; i < shown; i++) {
+                    System.out.println("    - " + r.getFailures().get(i));
+                }
+            }
+            System.out.println("  append-only: no deletion sweep (immutable historical evidence); re-run is idempotent");
+            return totalFailed > 0 ? 6 : 0;
+        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4; }
+        catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
+        catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    /** {@code schema.kf_table} -> {@code kf_table} for the run-ledger entity name. */
+    private static String shortTableName(String qualified) {
+        int dot = qualified.lastIndexOf('.');
+        return dot >= 0 ? qualified.substring(dot + 1) : qualified;
     }
 
     private static int runExtractNativeViolationsDb() {
@@ -4941,6 +5021,7 @@ public final class Main {
         System.out.println("  extract-native-violations-db         Pull native PolicyViolation (identity/policy/constraint links) into <iiq_native>.kf_violation (current-state, read-only in IIQ)");
         System.out.println("  extract-native-policies-db           Pull native Policy definitions into <iiq_native>.kf_policy (current-state, read-only in IIQ)");
         System.out.println("  extract-native-audit-events-db       Append native AuditEvent historical log into <iiq_native>.kf_audit_event (append-only, read-only in IIQ)");
+        System.out.println("  extract-native-access-history-db     Append native Access-History (HistoricalEntitlementCapture/IdentityEvent/Certification) into <iiq_native>.kf_access_hist_* (native ACCESS_HISTORY read, append-only, read-only in IIQ)");
         System.out.println("  extract-native-policy-constraints-db Pull native Policy SoD/generic/activity constraints into <iiq_native>.kf_policy_constraint (FK policy_id, read-only in IIQ)");
         System.out.println("  extract-native-syslog-events-db      Append native SyslogEvent operational log into <iiq_native>.kf_syslog_event (append-only, read-only in IIQ)");
         System.out.println("  extract-native-parquet               Write the 10 approved native-source Parquet datasets from <iiq_native> PG, current-state + content-hash deduped (no versions)");
