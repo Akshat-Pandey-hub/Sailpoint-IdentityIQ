@@ -43,6 +43,8 @@ final class NativeRoleFields {
     static final String APPLICATIONS = "applications";
     static final String MONITORED_APPLICATIONS = "monitoredApplications";
     static final String SCORECARD = "scorecard";
+    static final String SELECTOR_SUMMARY = "selectorSummary";
+    static final String SELECTOR = "selector";
 
     static final String CREATED = "created";
     static final String MODIFIED = "modified";

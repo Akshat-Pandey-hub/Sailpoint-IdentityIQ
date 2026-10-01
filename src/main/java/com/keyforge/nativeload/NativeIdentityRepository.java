@@ -61,6 +61,8 @@ public final class NativeIdentityRepository {
                         + "detected_roles jsonb, "
                         + "role_assignments jsonb, "
                         + "role_detections jsonb, "
+                        + "role_requests jsonb, "
+                        + "mitigation_expirations jsonb, "
                         + "capabilities jsonb, "
                         + "controlled_scopes jsonb, "
                         + "attributes jsonb, "
@@ -94,14 +96,15 @@ public final class NativeIdentityRepository {
                         + "userid, source_id, name, display_name, displayable_name, first_name, last_name, email, "
                         + "inactive, type, correlated, manager_status, manager_id, manager_name, "
                         + "administrator_id, administrator_name, accounts, assigned_roles, detected_roles, "
-                        + "role_assignments, role_detections, capabilities, controlled_scopes, attributes, "
+                        + "role_assignments, role_detections, role_requests, mitigation_expirations, "
+                        + "capabilities, controlled_scopes, attributes, "
                         + "score, created_at, modified_at, last_refresh, last_login, "
                         + "source_system, source_interface, source_object_type, extraction_run_id, "
                         + "full_name, is_protected, is_needs_refresh, is_correlated_overridden, is_workgroup, "
                         + "auth_application, auth_account, pending_refresh_workflow, password_expiration, "
                         + "auth_lock_start, use_by) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                        + "?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, "
+                        + "?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, "
                         + "?, ?, ?, ?, ?, ?, ?, ?, ?, "
                         + "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (userid) DO UPDATE SET "
@@ -115,6 +118,8 @@ public final class NativeIdentityRepository {
                         + "administrator_name = EXCLUDED.administrator_name, accounts = EXCLUDED.accounts, "
                         + "assigned_roles = EXCLUDED.assigned_roles, detected_roles = EXCLUDED.detected_roles, "
                         + "role_assignments = EXCLUDED.role_assignments, role_detections = EXCLUDED.role_detections, "
+                        + "role_requests = EXCLUDED.role_requests, "
+                        + "mitigation_expirations = EXCLUDED.mitigation_expirations, "
                         + "capabilities = EXCLUDED.capabilities, controlled_scopes = EXCLUDED.controlled_scopes, "
                         + "attributes = EXCLUDED.attributes, score = EXCLUDED.score, "
                         + "created_at = EXCLUDED.created_at, "
@@ -160,6 +165,8 @@ public final class NativeIdentityRepository {
             "password_expiration timestamptz",
             "auth_lock_start timestamptz",
             "use_by timestamptz",
+            "role_requests jsonb",
+            "mitigation_expirations jsonb",
     };
 
     public void ensureTargetTable(Connection conn) throws SQLException {
@@ -215,6 +222,8 @@ public final class NativeIdentityRepository {
             ps.setString(i++, r.detectedRolesJson);
             ps.setString(i++, r.roleAssignmentsJson);
             ps.setString(i++, r.roleDetectionsJson);
+            ps.setString(i++, r.roleRequestsJson);
+            ps.setString(i++, r.mitigationExpirationsJson);
             ps.setString(i++, r.capabilitiesJson);
             ps.setString(i++, r.controlledScopesJson);
             ps.setString(i++, r.attributesJson);

@@ -65,6 +65,10 @@ public final class NativeApplicationRecord {
     String accountCorrelationConfig;
     String managerCorrelationRule;
     String managerCorrelationFilter;
+    String serviceAccountFilterJson;
+    String rpaAccountFilterJson;
+    String disableAccountFilterJson;
+    String lockAccountFilterJson;
 
     // timestamps
     Instant created;

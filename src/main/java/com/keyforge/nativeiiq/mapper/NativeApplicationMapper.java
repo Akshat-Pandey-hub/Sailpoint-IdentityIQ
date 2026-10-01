@@ -153,6 +153,12 @@ public final class NativeApplicationMapper {
         row.setManagerCorrelationFilter(
                 managerFilterXml != null ? managerFilterXml : (managerFilter == null ? null : managerFilter.toString()));
 
+        // Account classification filters (native Application config; preserved as structured source config).
+        addFilters(app.getServiceAccountFilter(), row.getServiceAccountFilter());
+        addFilters(app.getRpaAccountFilter(), row.getRpaAccountFilter());
+        addFilters(app.getDisableAccountFilter(), row.getDisableAccountFilter());
+        addFilters(app.getLockAccountFilter(), row.getLockAccountFilter());
+
         row.setCreated(toInstant(app.getCreated()));
         row.setModified(toInstant(app.getModified()));
 
@@ -160,6 +166,22 @@ public final class NativeApplicationMapper {
         row.setExtractionRunId(extractionRunId);
         row.setExtractedAt(Instant.now());
         return row;
+    }
+
+    private static void addFilters(List<sailpoint.service.listfilter.ListFilterValue> filters,
+                                   List<com.keyforge.nativeiiq.model.NativeListFilterRef> out) {
+        if (filters == null) {
+            return;
+        }
+        for (sailpoint.service.listfilter.ListFilterValue f : filters) {
+            if (f != null) {
+                out.add(new com.keyforge.nativeiiq.model.NativeListFilterRef(
+                        f.getProperty(),
+                        NativeSerialize.enumName(f.getOperation()),
+                        JsonSafe.toJsonSafe(f.getValue()),
+                        f.getDisplayString()));
+            }
+        }
     }
 
     private static void addIdentityRefs(List<Identity> identities, List<NativeReferenceRef> out) {

@@ -65,6 +65,10 @@ final class NativeApplicationFields {
     static final String ACCOUNT_CORRELATION_CONFIG = "accountCorrelationConfig";
     static final String MANAGER_CORRELATION_RULE = "managerCorrelationRule";
     static final String MANAGER_CORRELATION_FILTER = "managerCorrelationFilter";
+    static final String SERVICE_ACCOUNT_FILTER = "serviceAccountFilter";
+    static final String RPA_ACCOUNT_FILTER = "rpaAccountFilter";
+    static final String DISABLE_ACCOUNT_FILTER = "disableAccountFilter";
+    static final String LOCK_ACCOUNT_FILTER = "lockAccountFilter";
 
     static final String CREATED = "created";
     static final String MODIFIED = "modified";

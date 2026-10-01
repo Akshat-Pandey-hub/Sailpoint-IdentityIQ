@@ -48,6 +48,8 @@ class NativeApplicationWireTest {
         r.getRemediators().add(new NativeReferenceRef("id3", "Bob"));
         r.getDependencies().add(new NativeReferenceRef("app2", "LDAP"));
         r.getSchemas().add(new NativeSchemaRef("account", "user", "sAMAccountName", "displayName", null, Integer.valueOf(12)));
+        r.getServiceAccountFilter().add(new com.keyforge.nativeiiq.model.NativeListFilterRef(
+                "accountType", "Equals", "service", "Account Type == service"));
         r.getDescriptions().put("en_US", "AD connector");
         r.getAttributes().put("host", JsonSafe.toJsonSafe("dc01.example.com"));
         r.getAttributes().put("password", "<redacted>");
@@ -80,6 +82,14 @@ class NativeApplicationWireTest {
         assertEquals("CreateRule", row.get("applicationCreationRule"));
         assertEquals("rule-create-id", row.get("applicationCreationRuleId"));
         assertEquals("<redacted>", ((Map<String, Object>) row.get("attributes")).get("password"));
+
+        // Application account-classification filters emit structured (property/operation/value), not a boolean
+        List<Map<String, Object>> svc = (List<Map<String, Object>>) row.get("serviceAccountFilter");
+        assertEquals(1, svc.size());
+        assertEquals("accountType", svc.get(0).get("property"));
+        assertEquals("Equals", svc.get(0).get("operation"));
+        assertEquals("service", svc.get(0).get("value"));
+        assertTrue(((List<?>) row.get("rpaAccountFilter")).isEmpty());
     }
 
     @Test

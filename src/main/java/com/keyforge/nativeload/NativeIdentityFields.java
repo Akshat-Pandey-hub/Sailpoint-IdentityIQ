@@ -48,6 +48,8 @@ final class NativeIdentityFields {
     static final String DETECTED_ROLES = "detectedRoles";
     static final String ROLE_ASSIGNMENTS = "roleAssignments";
     static final String ROLE_DETECTIONS = "roleDetections";
+    static final String ROLE_REQUESTS = "roleRequests";
+    static final String MITIGATION_EXPIRATIONS = "mitigationExpirations";
     static final String CAPABILITIES = "capabilities";
     static final String CONTROLLED_SCOPES = "controlledScopes";
     static final String ATTRIBUTES = "attributes";

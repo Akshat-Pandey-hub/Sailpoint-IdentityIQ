@@ -51,6 +51,11 @@ public final class NativeRoleRow {
     private String monitoredApplications;
     private String scorecard;
 
+    // --- assignment condition (IdentitySelector): the native birthright / auto-assignment rule.
+    //     has_selector (above) is presence only; these carry the actual selector expression. ---
+    private String selectorSummary;
+    private final Map<String, Object> selector = new LinkedHashMap<String, Object>();
+
     // --- descriptions + extended attributes (JSON-safe) ---
     private final Map<String, String> descriptions = new LinkedHashMap<String, String>();
     private final Map<String, Object> attributes = new LinkedHashMap<String, Object>();
@@ -139,6 +144,9 @@ public final class NativeRoleRow {
     public void setMonitoredApplications(String v) { this.monitoredApplications = v; }
     public String getScorecard() { return scorecard; }
     public void setScorecard(String v) { this.scorecard = v; }
+    public String getSelectorSummary() { return selectorSummary; }
+    public void setSelectorSummary(String v) { this.selectorSummary = v; }
+    public Map<String, Object> getSelector() { return selector; }
 
     public Instant getDeactivationDate() { return deactivationDate; }
     public void setDeactivationDate(Instant v) { this.deactivationDate = v; }

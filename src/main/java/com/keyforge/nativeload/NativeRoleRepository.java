@@ -70,6 +70,8 @@ public final class NativeRoleRepository {
                         + "applications text, "
                         + "monitored_applications text, "
                         + "scorecard text, "
+                        + "selector_summary text, "
+                        + "selector jsonb, "
                         + "created_at timestamptz, "
                         + "modified_at timestamptz, "
                         + "record_hash text, "
@@ -84,7 +86,9 @@ public final class NativeRoleRepository {
                         + " ADD COLUMN IF NOT EXISTS role_type_definition text,"
                         + " ADD COLUMN IF NOT EXISTS applications text,"
                         + " ADD COLUMN IF NOT EXISTS monitored_applications text,"
-                        + " ADD COLUMN IF NOT EXISTS scorecard text";
+                        + " ADD COLUMN IF NOT EXISTS scorecard text,"
+                        + " ADD COLUMN IF NOT EXISTS selector_summary text,"
+                        + " ADD COLUMN IF NOT EXISTS selector jsonb";
         this.upsertSql =
                 "INSERT INTO " + targetTable + " ("
                         + "roleid, source_id, name, display_name, displayable_name, full_name, description, type, "
@@ -93,10 +97,11 @@ public final class NativeRoleRepository {
                         + "pending_delete, has_selector, risk_score_weight, owner_id, owner_name, activation_date, "
                         + "deactivation_date, descriptions, attributes, "
                         + "role_type_definition, applications, monitored_applications, scorecard, "
+                        + "selector_summary, selector, "
                         + "created_at, modified_at, record_hash, "
                         + "source_system, source_interface, source_object_type, extraction_run_id) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                        + "?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (roleid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, name = EXCLUDED.name, "
                         + "display_name = EXCLUDED.display_name, displayable_name = EXCLUDED.displayable_name, "
@@ -116,6 +121,7 @@ public final class NativeRoleRepository {
                         + "applications = EXCLUDED.applications, "
                         + "monitored_applications = EXCLUDED.monitored_applications, "
                         + "scorecard = EXCLUDED.scorecard, "
+                        + "selector_summary = EXCLUDED.selector_summary, selector = EXCLUDED.selector, "
                         + "created_at = EXCLUDED.created_at, "
                         + "modified_at = EXCLUDED.modified_at, record_hash = EXCLUDED.record_hash, "
                         + "source_system = EXCLUDED.source_system, source_interface = EXCLUDED.source_interface, "
@@ -173,6 +179,8 @@ public final class NativeRoleRepository {
         b.put("applications", r.applicationsJson);
         b.put("monitored_applications", r.monitoredApplicationsJson);
         b.put("scorecard", r.scorecard);
+        b.put("selector_summary", r.selectorSummary);
+        b.put("selector", r.selectorJson);
         b.put("created_at", r.created);
         b.put("modified_at", r.modified);
         return NativeRecordHash.of(b);
@@ -219,6 +227,8 @@ public final class NativeRoleRepository {
             ps.setString(i++, r.applicationsJson);
             ps.setString(i++, r.monitoredApplicationsJson);
             ps.setString(i++, r.scorecard);
+            ps.setString(i++, r.selectorSummary);
+            ps.setString(i++, r.selectorJson);
             setTs(ps, i++, r.created);
             setTs(ps, i++, r.modified);
             ps.setString(i++, recordHash(r));

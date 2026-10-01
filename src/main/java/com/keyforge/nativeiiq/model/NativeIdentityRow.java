@@ -58,6 +58,9 @@ public final class NativeIdentityRow {
     private final List<String> detectedRoles = new ArrayList<String>();
     private final List<NativeRoleAssignmentRef> roleAssignments = new ArrayList<NativeRoleAssignmentRef>();
     private final List<NativeRoleDetectionRef> roleDetections = new ArrayList<NativeRoleDetectionRef>();
+    private final List<NativeRoleRequestRef> roleRequests = new ArrayList<NativeRoleRequestRef>();
+    private final List<NativeMitigationExpirationRef> mitigationExpirations =
+            new ArrayList<NativeMitigationExpirationRef>();
     private final List<String> capabilities = new ArrayList<String>();
     private final List<String> controlledScopes = new ArrayList<String>();
 
@@ -151,6 +154,8 @@ public final class NativeIdentityRow {
     public List<String> getDetectedRoles() { return detectedRoles; }
     public List<NativeRoleAssignmentRef> getRoleAssignments() { return roleAssignments; }
     public List<NativeRoleDetectionRef> getRoleDetections() { return roleDetections; }
+    public List<NativeRoleRequestRef> getRoleRequests() { return roleRequests; }
+    public List<NativeMitigationExpirationRef> getMitigationExpirations() { return mitigationExpirations; }
     public List<String> getCapabilities() { return capabilities; }
     public List<String> getControlledScopes() { return controlledScopes; }
     public Map<String, Object> getAttributes() { return attributes; }

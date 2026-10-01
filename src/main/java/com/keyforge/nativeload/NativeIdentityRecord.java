@@ -44,6 +44,8 @@ public final class NativeIdentityRecord {
     String detectedRolesJson;
     String roleAssignmentsJson;
     String roleDetectionsJson;
+    String roleRequestsJson;
+    String mitigationExpirationsJson;
     String capabilitiesJson;
     String controlledScopesJson;
     String attributesJson;

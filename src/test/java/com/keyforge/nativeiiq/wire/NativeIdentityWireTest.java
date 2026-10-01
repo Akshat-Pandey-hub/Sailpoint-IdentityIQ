@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keyforge.nativeiiq.model.NativeAccountRef;
 import com.keyforge.nativeiiq.model.NativeExtractionResult;
 import com.keyforge.nativeiiq.model.NativeIdentityRow;
+import com.keyforge.nativeiiq.model.NativeMitigationExpirationRef;
 import com.keyforge.nativeiiq.model.NativeRoleAssignmentRef;
 import com.keyforge.nativeiiq.model.NativeRoleDetectionRef;
+import com.keyforge.nativeiiq.model.NativeRoleRequestRef;
 
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +30,8 @@ class NativeIdentityWireTest {
             "sourceId", "name", "displayName", "displayableName", "firstName", "lastName", "email",
             "inactive", "type", "correlated", "managerId", "managerName", "administratorId",
             "administratorName", "accounts", "assignedRoles", "detectedRoles", "roleAssignments",
-            "roleDetections", "capabilities", "controlledScopes", "created", "modified", "lastRefresh",
+            "roleDetections", "roleRequests", "mitigationExpirations",
+            "capabilities", "controlledScopes", "created", "modified", "lastRefresh",
             "lastLogin", "srcSystem", "srcInterface", "srcObjectType", "extractionRunId", "extractedAt"
     };
 
@@ -54,6 +57,12 @@ class NativeIdentityWireTest {
         r.getDetectedRoles().add("Contractor");
         r.getRoleAssignments().add(new NativeRoleAssignmentRef("Engineer", "role-1", "granted"));
         r.getRoleDetections().add(new NativeRoleDetectionRef("Contractor", "role-2", Instant.EPOCH, "a1"));
+        r.getRoleRequests().add(new NativeRoleRequestRef(
+                "Engineer", "role-1", "spadmin", Instant.EPOCH, "LCM", Boolean.FALSE,
+                Instant.EPOCH, null, "assign-1", "approved", "pb-1", "Permitter"));
+        r.getMitigationExpirations().add(new NativeMitigationExpirationRef(
+                "mit-1", "certifier", Instant.EPOCH, "temporary exception", "Mitigation", Instant.EPOCH,
+                "Engineer", null, null, "AD", null, "cn=jsmith", "memberOf", "admins", Boolean.FALSE));
         r.getCapabilities().add("SystemAdministrator");
         r.getControlledScopes().add("US");
         // attribute value already JSON-safe (as the mapper produces via JsonSafe)
@@ -90,6 +99,21 @@ class NativeIdentityWireTest {
         assertEquals("jsmith", row.get("name"));
         assertEquals("native_iiq_java_api", row.get("srcInterface"));
         assertEquals("IT", ((Map<String, Object>) row.get("attributes")).get("department"));
+
+        // Role-request grant provenance: assigner / source / sunrise carried (not just role name).
+        List<Map<String, Object>> rrs = (List<Map<String, Object>>) row.get("roleRequests");
+        assertEquals(1, rrs.size());
+        assertEquals("spadmin", rrs.get(0).get("assigner"));
+        assertEquals("LCM", rrs.get(0).get("source"));
+        assertEquals(Boolean.FALSE, rrs.get(0).get("negative"));
+        assertEquals("Permitter", rrs.get(0).get("permittedByName"));
+
+        // Mitigation (certification exception) provenance: mitigator + expiration + target.
+        List<Map<String, Object>> mes = (List<Map<String, Object>>) row.get("mitigationExpirations");
+        assertEquals(1, mes.size());
+        assertEquals("certifier", mes.get(0).get("mitigatorName"));
+        assertEquals("Mitigation", mes.get(0).get("action"));
+        assertEquals("Engineer", mes.get(0).get("roleName"));
     }
 
     @Test

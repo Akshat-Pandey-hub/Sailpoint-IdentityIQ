@@ -101,6 +101,8 @@ final class NativeIdentityParser {
         rec.detectedRolesJson = json(r, NativeIdentityFields.DETECTED_ROLES);
         rec.roleAssignmentsJson = json(r, NativeIdentityFields.ROLE_ASSIGNMENTS);
         rec.roleDetectionsJson = json(r, NativeIdentityFields.ROLE_DETECTIONS);
+        rec.roleRequestsJson = json(r, NativeIdentityFields.ROLE_REQUESTS);
+        rec.mitigationExpirationsJson = json(r, NativeIdentityFields.MITIGATION_EXPIRATIONS);
         rec.capabilitiesJson = json(r, NativeIdentityFields.CAPABILITIES);
         rec.controlledScopesJson = json(r, NativeIdentityFields.CONTROLLED_SCOPES);
         rec.attributesJson = json(r, NativeIdentityFields.ATTRIBUTES);

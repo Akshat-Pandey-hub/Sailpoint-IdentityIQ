@@ -108,6 +108,10 @@ final class NativeApplicationParser {
         rec.accountCorrelationConfig = text(r, NativeApplicationFields.ACCOUNT_CORRELATION_CONFIG);
         rec.managerCorrelationRule = text(r, NativeApplicationFields.MANAGER_CORRELATION_RULE);
         rec.managerCorrelationFilter = text(r, NativeApplicationFields.MANAGER_CORRELATION_FILTER);
+        rec.serviceAccountFilterJson = json(r, NativeApplicationFields.SERVICE_ACCOUNT_FILTER);
+        rec.rpaAccountFilterJson = json(r, NativeApplicationFields.RPA_ACCOUNT_FILTER);
+        rec.disableAccountFilterJson = json(r, NativeApplicationFields.DISABLE_ACCOUNT_FILTER);
+        rec.lockAccountFilterJson = json(r, NativeApplicationFields.LOCK_ACCOUNT_FILTER);
 
         rec.created = instant(r, NativeApplicationFields.CREATED);
         rec.modified = instant(r, NativeApplicationFields.MODIFIED);

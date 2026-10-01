@@ -118,6 +118,10 @@ public final class NativeApplicationWire {
         m.put("accountCorrelationConfig", r.getAccountCorrelationConfig());
         m.put("managerCorrelationRule", r.getManagerCorrelationRule());
         m.put("managerCorrelationFilter", r.getManagerCorrelationFilter());
+        m.put("serviceAccountFilter", filters(r.getServiceAccountFilter()));
+        m.put("rpaAccountFilter", filters(r.getRpaAccountFilter()));
+        m.put("disableAccountFilter", filters(r.getDisableAccountFilter()));
+        m.put("lockAccountFilter", filters(r.getLockAccountFilter()));
 
         m.put("created", iso(r.getCreated()));
         m.put("modified", iso(r.getModified()));
@@ -128,6 +132,19 @@ public final class NativeApplicationWire {
         m.put("extractionRunId", r.getExtractionRunId());
         m.put("extractedAt", iso(r.getExtractedAt()));
         return m;
+    }
+
+    private static List<Map<String, Object>> filters(List<com.keyforge.nativeiiq.model.NativeListFilterRef> fs) {
+        List<Map<String, Object>> out = new ArrayList<Map<String, Object>>();
+        for (com.keyforge.nativeiiq.model.NativeListFilterRef f : fs) {
+            Map<String, Object> fm = new LinkedHashMap<String, Object>();
+            fm.put("property", f.getProperty());
+            fm.put("operation", f.getOperation());
+            fm.put("value", f.getValue());
+            fm.put("displayString", f.getDisplayString());
+            out.add(fm);
+        }
+        return out;
     }
 
     private static List<Map<String, Object>> refs(List<NativeReferenceRef> refs) {

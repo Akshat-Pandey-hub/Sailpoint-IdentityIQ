@@ -2,8 +2,10 @@ package com.keyforge.nativeiiq.mapper;
 
 import com.keyforge.nativeiiq.model.NativeAccountRef;
 import com.keyforge.nativeiiq.model.NativeIdentityRow;
+import com.keyforge.nativeiiq.model.NativeMitigationExpirationRef;
 import com.keyforge.nativeiiq.model.NativeRoleAssignmentRef;
 import com.keyforge.nativeiiq.model.NativeRoleDetectionRef;
+import com.keyforge.nativeiiq.model.NativeRoleRequestRef;
 import com.keyforge.nativeiiq.wire.JsonSafe;
 
 import sailpoint.object.Attributes;
@@ -11,8 +13,10 @@ import sailpoint.object.Bundle;
 import sailpoint.object.Capability;
 import sailpoint.object.Identity;
 import sailpoint.object.Link;
+import sailpoint.object.MitigationExpiration;
 import sailpoint.object.RoleAssignment;
 import sailpoint.object.RoleDetection;
+import sailpoint.object.RoleRequest;
 import sailpoint.object.Scope;
 
 import java.time.Instant;
@@ -26,8 +30,9 @@ import java.util.List;
  * are confirmed at compile time against the real {@code identityiq.jar} under the native Maven profile.
  *
  * <p>Preserves the native-rich projection (manager/administrator references, the full attribute map,
- * the assignment/detection role graph, capabilities and controlled scopes) rather than flattening to
- * the REST/SCIM shape.
+ * the assignment/detection role graph, role-request grant/removal provenance, certification
+ * mitigation-exception provenance, capabilities and controlled scopes) rather than flattening to the
+ * REST/SCIM shape.
  */
 public final class NativeIdentityMapper {
 
@@ -126,6 +131,42 @@ public final class NativeIdentityMapper {
             }
         }
 
+        // role requests (native-only): the authoritative role grant/removal provenance — who assigned or
+        // removed which role, when, from what source, with sunrise/sunset. Distinct from roleAssignments
+        // (name/id/comments only) and not represented anywhere else in the native source model.
+        List<RoleRequest> roleRequests = id.getRoleRequests();
+        if (roleRequests != null) {
+            for (RoleRequest rr : roleRequests) {
+                if (rr != null) {
+                    row.getRoleRequests().add(new NativeRoleRequestRef(
+                            rr.getRoleName(), rr.getRoleId(), rr.getAssigner(), toInstant(rr.getDate()),
+                            rr.getSource(), Boolean.valueOf(rr.isNegative()), toInstant(rr.getStartDate()),
+                            toInstant(rr.getEndDate()), rr.getAssignmentId(), rr.getComments(),
+                            rr.getPermittedById(), rr.getPermittedByName()));
+                }
+            }
+        }
+
+        // mitigation expirations (native-only): certification exception/mitigation provenance — an access
+        // exception temporarily allowed during certification (mitigator, expiration, target role/
+        // entitlement/policy). Governance provenance not represented by the campaign/item/decision tables.
+        List<MitigationExpiration> mitigations = id.getMitigationExpirations();
+        if (mitigations != null) {
+            for (MitigationExpiration me : mitigations) {
+                if (me != null) {
+                    Identity mitigator = me.getMitigator();
+                    row.getMitigationExpirations().add(new NativeMitigationExpirationRef(
+                            mitigator == null ? null : mitigator.getId(),
+                            mitigator == null ? null : mitigator.getName(),
+                            toInstant(me.getExpiration()), me.getComments(), enumName(me.getAction()),
+                            toInstant(me.getLastActionDate()), me.getRoleName(), me.getPolicy(),
+                            me.getConstraintName(), me.getApplication(), me.getInstance(),
+                            me.getNativeIdentity(), me.getAttributeName(), me.getAttributeValue(),
+                            Boolean.valueOf(me.isPermission())));
+                }
+            }
+        }
+
         // capabilities (native-only)
         List<Capability> capabilities = id.getCapabilities();
         if (capabilities != null) {
@@ -174,5 +215,9 @@ public final class NativeIdentityMapper {
 
     private static Instant toInstant(Date d) {
         return d == null ? null : d.toInstant();
+    }
+
+    private static String enumName(Enum<?> e) {
+        return e == null ? null : e.name();
     }
 }

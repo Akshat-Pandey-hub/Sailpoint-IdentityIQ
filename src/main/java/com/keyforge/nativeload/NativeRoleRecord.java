@@ -42,6 +42,8 @@ public final class NativeRoleRecord {
     String applicationsJson;
     String monitoredApplicationsJson;
     String scorecard;
+    String selectorSummary;
+    String selectorJson;
 
     // timestamps
     Instant created;

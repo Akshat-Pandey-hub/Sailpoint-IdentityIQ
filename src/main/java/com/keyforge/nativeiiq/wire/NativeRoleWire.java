@@ -80,6 +80,8 @@ public final class NativeRoleWire {
         m.put("applications", r.getApplications());
         m.put("monitoredApplications", r.getMonitoredApplications());
         m.put("scorecard", r.getScorecard());
+        m.put("selectorSummary", r.getSelectorSummary());
+        m.put("selector", r.getSelector().isEmpty() ? null : new LinkedHashMap<String, Object>(r.getSelector()));
         m.put("created", iso(r.getCreated()));
         m.put("modified", iso(r.getModified()));
         m.put("srcSystem", r.getSrcSystem());

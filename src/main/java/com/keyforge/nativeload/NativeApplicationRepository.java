@@ -92,6 +92,10 @@ public final class NativeApplicationRepository {
                         + "account_correlation_config text, "
                         + "manager_correlation_rule text, "
                         + "manager_correlation_filter text, "
+                        + "service_account_filter jsonb, "
+                        + "rpa_account_filter jsonb, "
+                        + "disable_account_filter jsonb, "
+                        + "lock_account_filter jsonb, "
                         + "created_at timestamptz, "
                         + "modified_at timestamptz, "
                         + "record_hash text, "
@@ -119,10 +123,11 @@ public final class NativeApplicationRepository {
                         + "dependencies, schemas, descriptions, attributes, created_at, modified_at, "
                         + "provisioning_config, account_correlation_config, manager_correlation_rule, "
                         + "manager_correlation_filter, "
+                        + "service_account_filter, rpa_account_filter, disable_account_filter, lock_account_filter, "
                         + "record_hash, source_system, source_interface, source_object_type, extraction_run_id) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
                         + "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, "
-                        + "?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "?::jsonb, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (applicationid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, name = EXCLUDED.name, description = EXCLUDED.description, "
                         + "type = EXCLUDED.type, connector = EXCLUDED.connector, "
@@ -162,6 +167,10 @@ public final class NativeApplicationRepository {
                         + "account_correlation_config = EXCLUDED.account_correlation_config, "
                         + "manager_correlation_rule = EXCLUDED.manager_correlation_rule, "
                         + "manager_correlation_filter = EXCLUDED.manager_correlation_filter, "
+                        + "service_account_filter = EXCLUDED.service_account_filter, "
+                        + "rpa_account_filter = EXCLUDED.rpa_account_filter, "
+                        + "disable_account_filter = EXCLUDED.disable_account_filter, "
+                        + "lock_account_filter = EXCLUDED.lock_account_filter, "
                         + "created_at = EXCLUDED.created_at, "
                         + "modified_at = EXCLUDED.modified_at, record_hash = EXCLUDED.record_hash, "
                         + "source_system = EXCLUDED.source_system, source_interface = EXCLUDED.source_interface, "
@@ -242,6 +251,10 @@ public final class NativeApplicationRepository {
         b.put("account_correlation_config", r.accountCorrelationConfig);
         b.put("manager_correlation_rule", r.managerCorrelationRule);
         b.put("manager_correlation_filter", r.managerCorrelationFilter);
+        b.put("service_account_filter", r.serviceAccountFilterJson);
+        b.put("rpa_account_filter", r.rpaAccountFilterJson);
+        b.put("disable_account_filter", r.disableAccountFilterJson);
+        b.put("lock_account_filter", r.lockAccountFilterJson);
         b.put("created_at", r.created);
         b.put("modified_at", r.modified);
         return NativeRecordHash.of(b);
@@ -267,7 +280,11 @@ public final class NativeApplicationRepository {
                     + " ADD COLUMN IF NOT EXISTS provisioning_config text, "
                     + " ADD COLUMN IF NOT EXISTS account_correlation_config text, "
                     + " ADD COLUMN IF NOT EXISTS manager_correlation_rule text, "
-                    + " ADD COLUMN IF NOT EXISTS manager_correlation_filter text");
+                    + " ADD COLUMN IF NOT EXISTS manager_correlation_filter text, "
+                    + " ADD COLUMN IF NOT EXISTS service_account_filter jsonb, "
+                    + " ADD COLUMN IF NOT EXISTS rpa_account_filter jsonb, "
+                    + " ADD COLUMN IF NOT EXISTS disable_account_filter jsonb, "
+                    + " ADD COLUMN IF NOT EXISTS lock_account_filter jsonb");
         }
     }
 
@@ -329,6 +346,10 @@ public final class NativeApplicationRepository {
             ps.setString(i++, r.accountCorrelationConfig);
             ps.setString(i++, r.managerCorrelationRule);
             ps.setString(i++, r.managerCorrelationFilter);
+            ps.setString(i++, r.serviceAccountFilterJson);
+            ps.setString(i++, r.rpaAccountFilterJson);
+            ps.setString(i++, r.disableAccountFilterJson);
+            ps.setString(i++, r.lockAccountFilterJson);
             ps.setString(i++, recordHash(r));
             ps.setString(i++, r.srcSystem);
             ps.setString(i++, r.srcInterface);

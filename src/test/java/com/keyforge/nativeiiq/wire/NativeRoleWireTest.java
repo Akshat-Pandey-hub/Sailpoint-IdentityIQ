@@ -21,7 +21,8 @@ class NativeRoleWireTest {
             "sourceId", "name", "displayName", "displayableName", "fullName", "description", "type",
             "assignmentId", "activityEnabled", "allowMultipleAssignments", "iiqElevatedAccess",
             "pendingDelete", "hasSelector", "riskScoreWeight", "ownerId", "ownerName", "activationDate",
-            "deactivationDate", "descriptions", "attributes", "created", "modified", "srcSystem",
+            "deactivationDate", "descriptions", "attributes", "selectorSummary", "selector",
+            "created", "modified", "srcSystem",
             "srcInterface", "srcObjectType", "extractionRunId", "extractedAt"
     };
 
@@ -39,6 +40,9 @@ class NativeRoleWireTest {
         r.setIiqElevatedAccess(Boolean.FALSE);
         r.setPendingDelete(Boolean.FALSE);
         r.setHasSelector(Boolean.TRUE);
+        r.setSelectorSummary("Department == Engineering");
+        r.getSelector().put("summary", "Department == Engineering");
+        r.getSelector().put("populationName", "Engineering");
         r.setRiskScoreWeight(Integer.valueOf(300));
         r.setOwnerId("own-1");
         r.setOwnerName("spadmin");
@@ -70,6 +74,26 @@ class NativeRoleWireTest {
         }
         assertEquals("Engineer", row.get("name"));
         assertEquals("sailpoint.object.Bundle", row.get("srcObjectType"));
+
+        // Selector detail: the assignment/birthright condition is extracted, not just flagged present.
+        assertEquals("Department == Engineering", row.get("selectorSummary"));
+        Map<String, Object> selector = (Map<String, Object>) row.get("selector");
+        assertEquals("Department == Engineering", selector.get("summary"));
+        assertEquals("Engineering", selector.get("populationName"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void absentSelectorEmitsNullNotEmptyObject() {
+        NativeRoleRow r = sampleRow();
+        r.setHasSelector(Boolean.FALSE);
+        r.setSelectorSummary(null);
+        r.getSelector().clear();
+
+        Map<String, Object> row = NativeRoleWire.row(r);
+        assertTrue(row.containsKey("selector"), "selector key always present");
+        assertEquals(null, row.get("selector"), "no selector -> null jsonb, not {}");
+        assertEquals(null, row.get("selectorSummary"));
     }
 
     @Test

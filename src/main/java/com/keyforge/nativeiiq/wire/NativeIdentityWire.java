@@ -3,8 +3,10 @@ package com.keyforge.nativeiiq.wire;
 import com.keyforge.nativeiiq.model.NativeAccountRef;
 import com.keyforge.nativeiiq.model.NativeExtractionResult;
 import com.keyforge.nativeiiq.model.NativeIdentityRow;
+import com.keyforge.nativeiiq.model.NativeMitigationExpirationRef;
 import com.keyforge.nativeiiq.model.NativeRoleAssignmentRef;
 import com.keyforge.nativeiiq.model.NativeRoleDetectionRef;
+import com.keyforge.nativeiiq.model.NativeRoleRequestRef;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -128,6 +130,47 @@ public final class NativeIdentityWire {
             rds.add(rm);
         }
         m.put("roleDetections", rds);
+
+        List<Map<String, Object>> rrs = new ArrayList<Map<String, Object>>();
+        for (NativeRoleRequestRef rr : r.getRoleRequests()) {
+            Map<String, Object> rm = new LinkedHashMap<String, Object>();
+            rm.put("roleName", rr.getRoleName());
+            rm.put("roleId", rr.getRoleId());
+            rm.put("assigner", rr.getAssigner());
+            rm.put("date", iso(rr.getDate()));
+            rm.put("source", rr.getSource());
+            rm.put("negative", rr.getNegative());
+            rm.put("startDate", iso(rr.getStartDate()));
+            rm.put("endDate", iso(rr.getEndDate()));
+            rm.put("assignmentId", rr.getAssignmentId());
+            rm.put("comments", rr.getComments());
+            rm.put("permittedById", rr.getPermittedById());
+            rm.put("permittedByName", rr.getPermittedByName());
+            rrs.add(rm);
+        }
+        m.put("roleRequests", rrs);
+
+        List<Map<String, Object>> mes = new ArrayList<Map<String, Object>>();
+        for (NativeMitigationExpirationRef me : r.getMitigationExpirations()) {
+            Map<String, Object> em = new LinkedHashMap<String, Object>();
+            em.put("mitigatorId", me.getMitigatorId());
+            em.put("mitigatorName", me.getMitigatorName());
+            em.put("expiration", iso(me.getExpiration()));
+            em.put("comments", me.getComments());
+            em.put("action", me.getAction());
+            em.put("lastActionDate", iso(me.getLastActionDate()));
+            em.put("roleName", me.getRoleName());
+            em.put("policy", me.getPolicy());
+            em.put("constraintName", me.getConstraintName());
+            em.put("application", me.getApplication());
+            em.put("instance", me.getInstance());
+            em.put("nativeIdentity", me.getNativeIdentity());
+            em.put("attributeName", me.getAttributeName());
+            em.put("attributeValue", me.getAttributeValue());
+            em.put("permission", me.getPermission());
+            mes.add(em);
+        }
+        m.put("mitigationExpirations", mes);
 
         m.put("capabilities", new ArrayList<String>(r.getCapabilities()));
         m.put("controlledScopes", new ArrayList<String>(r.getControlledScopes()));

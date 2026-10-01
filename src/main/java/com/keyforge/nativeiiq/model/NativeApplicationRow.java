@@ -64,6 +64,12 @@ public final class NativeApplicationRow {
     private String managerCorrelationRule;
     private String managerCorrelationFilter;
 
+    // --- account classification filters (native Application configuration: ListFilterValue lists) ---
+    private final List<NativeListFilterRef> serviceAccountFilter = new ArrayList<NativeListFilterRef>();
+    private final List<NativeListFilterRef> rpaAccountFilter = new ArrayList<NativeListFilterRef>();
+    private final List<NativeListFilterRef> disableAccountFilter = new ArrayList<NativeListFilterRef>();
+    private final List<NativeListFilterRef> lockAccountFilter = new ArrayList<NativeListFilterRef>();
+
     // --- owner + related identities (native references) ---
     private String ownerId;
     private String ownerName;
@@ -211,6 +217,11 @@ public final class NativeApplicationRow {
     public void setManagerCorrelationRule(String v) { this.managerCorrelationRule = v; }
     public String getManagerCorrelationFilter() { return managerCorrelationFilter; }
     public void setManagerCorrelationFilter(String v) { this.managerCorrelationFilter = v; }
+
+    public List<NativeListFilterRef> getServiceAccountFilter() { return serviceAccountFilter; }
+    public List<NativeListFilterRef> getRpaAccountFilter() { return rpaAccountFilter; }
+    public List<NativeListFilterRef> getDisableAccountFilter() { return disableAccountFilter; }
+    public List<NativeListFilterRef> getLockAccountFilter() { return lockAccountFilter; }
 
     public String getOwnerId() { return ownerId; }
     public void setOwnerId(String v) { this.ownerId = v; }
