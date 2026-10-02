@@ -76,11 +76,14 @@ final class NativeLinkParser {
         rec.targetPermissionsJson = json(r, NativeLinkFields.TARGET_PERMISSIONS);
         rec.attributesJson = json(r, NativeLinkFields.ATTRIBUTES);
         rec.entitlementAttributesJson = json(r, NativeLinkFields.ENTITLEMENT_ATTRIBUTES);
+        rec.attributeMetadataJson = json(r, NativeLinkFields.ATTRIBUTE_METADATA);
 
         rec.created = instant(r, NativeLinkFields.CREATED);
         rec.modified = instant(r, NativeLinkFields.MODIFIED);
         rec.lastRefresh = instant(r, NativeLinkFields.LAST_REFRESH);
         rec.lastTargetAggregation = instant(r, NativeLinkFields.LAST_TARGET_AGGREGATION);
+        rec.significantModified = instant(r, NativeLinkFields.SIGNIFICANT_MODIFIED);
+        rec.priorSignificantModified = instant(r, NativeLinkFields.PRIOR_SIGNIFICANT_MODIFIED);
 
         rec.srcSystem = text(r, NativeLinkFields.SRC_SYSTEM);
         rec.srcInterface = text(r, NativeLinkFields.SRC_INTERFACE);

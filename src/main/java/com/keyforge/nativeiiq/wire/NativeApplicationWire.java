@@ -3,6 +3,7 @@ package com.keyforge.nativeiiq.wire;
 import com.keyforge.nativeiiq.model.NativeApplicationExtractionResult;
 import com.keyforge.nativeiiq.model.NativeApplicationRow;
 import com.keyforge.nativeiiq.model.NativeReferenceRef;
+import com.keyforge.nativeiiq.model.NativeSchemaAttributeRef;
 import com.keyforge.nativeiiq.model.NativeSchemaRef;
 
 import java.time.Instant;
@@ -108,6 +109,18 @@ public final class NativeApplicationWire {
             sm.put("displayAttribute", s.getDisplayAttribute());
             sm.put("instanceAttribute", s.getInstanceAttribute());
             sm.put("attributeCount", s.getAttributeCount());
+            sm.put("featuresString", s.getFeaturesString());
+            sm.put("groupAttribute", s.getGroupAttribute());
+            sm.put("hierarchyAttribute", s.getHierarchyAttribute());
+            sm.put("descriptionAttribute", s.getDescriptionAttribute());
+            sm.put("aggregationType", s.getAggregationType());
+            sm.put("associationSchemaName", s.getAssociationSchemaName());
+            sm.put("includePermissions", s.getIncludePermissions());
+            sm.put("indexPermissions", s.getIndexPermissions());
+            sm.put("groupAggregation", s.getGroupAggregation());
+            sm.put("childHierarchy", s.getChildHierarchy());
+            sm.put("entitlementAttributeNames", new ArrayList<String>(s.getEntitlementAttributeNames()));
+            sm.put("attributes", schemaAttributes(s.getAttributes()));
             schemas.add(sm);
         }
         m.put("schemas", schemas);
@@ -143,6 +156,31 @@ public final class NativeApplicationWire {
             fm.put("value", f.getValue());
             fm.put("displayString", f.getDisplayString());
             out.add(fm);
+        }
+        return out;
+    }
+
+    private static List<Map<String, Object>> schemaAttributes(List<NativeSchemaAttributeRef> attrs) {
+        List<Map<String, Object>> out = new ArrayList<Map<String, Object>>();
+        for (NativeSchemaAttributeRef a : attrs) {
+            Map<String, Object> am = new LinkedHashMap<String, Object>();
+            am.put("name", a.getName());
+            am.put("type", a.getType());
+            am.put("displayName", a.getDisplayName());
+            am.put("description", a.getDescription());
+            am.put("entitlement", a.getEntitlement());
+            am.put("managed", a.getManaged());
+            am.put("multiValued", a.getMultiValued());
+            am.put("group", a.getGroup());
+            am.put("schemaObjectType", a.getSchemaObjectType());
+            am.put("correlationKey", a.getCorrelationKey());
+            am.put("required", a.getRequired());
+            am.put("minable", a.getMinable());
+            am.put("indexed", a.getIndexed());
+            am.put("source", a.getSource());
+            am.put("compositeSourceApplication", a.getCompositeSourceApplication());
+            am.put("compositeSourceAttribute", a.getCompositeSourceAttribute());
+            out.add(am);
         }
         return out;
     }

@@ -34,12 +34,15 @@ public final class NativeLinkRecord {
     String targetPermissionsJson;
     String attributesJson;
     String entitlementAttributesJson;
+    String attributeMetadataJson;
 
     // timestamps
     Instant created;
     Instant modified;
     Instant lastRefresh;
     Instant lastTargetAggregation;
+    Instant significantModified;
+    Instant priorSignificantModified;
 
     // lineage envelope
     String srcSystem;

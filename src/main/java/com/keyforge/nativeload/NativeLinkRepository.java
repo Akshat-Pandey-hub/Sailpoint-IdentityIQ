@@ -29,6 +29,7 @@ public final class NativeLinkRepository {
     private final String targetTable;
     private final String createSchemaSql;
     private final String createTableSql;
+    private final String alterTableSql;
     private final String upsertSql;
 
     public enum UpsertOutcome { INSERTED, UPDATED }
@@ -62,10 +63,13 @@ public final class NativeLinkRepository {
                         + "target_permissions jsonb, "
                         + "attributes jsonb, "
                         + "entitlement_attributes jsonb, "
+                        + "attribute_metadata jsonb, "
                         + "created_at timestamptz, "
                         + "modified_at timestamptz, "
                         + "last_refresh timestamptz, "
                         + "last_target_aggregation timestamptz, "
+                        + "significant_modified timestamptz, "
+                        + "prior_significant_modified timestamptz, "
                         + "record_hash text, "
                         + "source_system text, "
                         + "source_interface text, "
@@ -73,16 +77,24 @@ public final class NativeLinkRepository {
                         + "extraction_run_id text, "
                         + "extracted_at timestamptz NOT NULL DEFAULT now()"
                         + ")";
+        // Additive, non-destructive back-fill for tables created before these native columns existed.
+        this.alterTableSql =
+                "ALTER TABLE " + targetTable
+                        + " ADD COLUMN IF NOT EXISTS attribute_metadata jsonb,"
+                        + " ADD COLUMN IF NOT EXISTS significant_modified timestamptz,"
+                        + " ADD COLUMN IF NOT EXISTS prior_significant_modified timestamptz";
         this.upsertSql =
                 "INSERT INTO " + targetTable + " ("
                         + "accountid, source_id, link_uuid, native_identity, display_name, displayable_name, "
                         + "instance, component_ids, application_id, application_name, identity_id, identity_name, "
                         + "disabled, locked, composite, manually_correlated, has_entitlements, iiq_disabled, "
                         + "iiq_locked, permissions, target_permissions, attributes, entitlement_attributes, "
-                        + "created_at, modified_at, last_refresh, last_target_aggregation, record_hash, "
+                        + "attribute_metadata, "
+                        + "created_at, modified_at, last_refresh, last_target_aggregation, "
+                        + "significant_modified, prior_significant_modified, record_hash, "
                         + "source_system, source_interface, source_object_type, extraction_run_id) "
                         + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                        + "?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (accountid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, link_uuid = EXCLUDED.link_uuid, "
                         + "native_identity = EXCLUDED.native_identity, display_name = EXCLUDED.display_name, "
@@ -96,9 +108,12 @@ public final class NativeLinkRepository {
                         + "iiq_locked = EXCLUDED.iiq_locked, permissions = EXCLUDED.permissions, "
                         + "target_permissions = EXCLUDED.target_permissions, attributes = EXCLUDED.attributes, "
                         + "entitlement_attributes = EXCLUDED.entitlement_attributes, "
+                        + "attribute_metadata = EXCLUDED.attribute_metadata, "
                         + "created_at = EXCLUDED.created_at, modified_at = EXCLUDED.modified_at, "
                         + "last_refresh = EXCLUDED.last_refresh, "
                         + "last_target_aggregation = EXCLUDED.last_target_aggregation, "
+                        + "significant_modified = EXCLUDED.significant_modified, "
+                        + "prior_significant_modified = EXCLUDED.prior_significant_modified, "
                         + "record_hash = EXCLUDED.record_hash, source_system = EXCLUDED.source_system, "
                         + "source_interface = EXCLUDED.source_interface, "
                         + "source_object_type = EXCLUDED.source_object_type, "
@@ -149,10 +164,13 @@ public final class NativeLinkRepository {
         b.put("target_permissions", r.targetPermissionsJson);
         b.put("attributes", r.attributesJson);
         b.put("entitlement_attributes", r.entitlementAttributesJson);
+        b.put("attribute_metadata", r.attributeMetadataJson);
         b.put("created_at", r.created);
         b.put("modified_at", r.modified);
         b.put("last_refresh", r.lastRefresh);
         b.put("last_target_aggregation", r.lastTargetAggregation);
+        b.put("significant_modified", r.significantModified);
+        b.put("prior_significant_modified", r.priorSignificantModified);
         return NativeRecordHash.of(b);
     }
 
@@ -160,6 +178,7 @@ public final class NativeLinkRepository {
         try (Statement st = conn.createStatement()) {
             st.execute(createSchemaSql);
             st.execute(createTableSql);
+            st.execute(alterTableSql);
         }
     }
 
@@ -189,10 +208,13 @@ public final class NativeLinkRepository {
             ps.setString(i++, r.targetPermissionsJson);
             ps.setString(i++, r.attributesJson);
             ps.setString(i++, r.entitlementAttributesJson);
+            ps.setString(i++, r.attributeMetadataJson);
             setTs(ps, i++, r.created);
             setTs(ps, i++, r.modified);
             setTs(ps, i++, r.lastRefresh);
             setTs(ps, i++, r.lastTargetAggregation);
+            setTs(ps, i++, r.significantModified);
+            setTs(ps, i++, r.priorSignificantModified);
             ps.setString(i++, recordHash(r));
             ps.setString(i++, r.srcSystem);
             ps.setString(i++, r.srcInterface);

@@ -1,5 +1,6 @@
 package com.keyforge.nativeiiq.wire;
 
+import com.keyforge.nativeiiq.model.NativeAttributeMetadataRef;
 import com.keyforge.nativeiiq.model.NativeLinkExtractionResult;
 import com.keyforge.nativeiiq.model.NativeLinkRow;
 import com.keyforge.nativeiiq.model.NativePermissionRef;
@@ -74,10 +75,13 @@ public final class NativeLinkWire {
         m.put("targetPermissions", permissions(r.getTargetPermissions()));
         m.put("attributes", new LinkedHashMap<String, Object>(r.getAttributes()));
         m.put("entitlementAttributes", new LinkedHashMap<String, Object>(r.getEntitlementAttributes()));
+        m.put("attributeMetadata", attributeMetadata(r.getAttributeMetadata()));
         m.put("created", iso(r.getCreated()));
         m.put("modified", iso(r.getModified()));
         m.put("lastRefresh", iso(r.getLastRefresh()));
         m.put("lastTargetAggregation", iso(r.getLastTargetAggregation()));
+        m.put("significantModified", iso(r.getSignificantModified()));
+        m.put("priorSignificantModified", iso(r.getPriorSignificantModified()));
         m.put("srcSystem", r.getSrcSystem());
         m.put("srcInterface", r.getSrcInterface());
         m.put("srcObjectType", r.getSrcObjectType());
@@ -94,6 +98,20 @@ public final class NativeLinkWire {
             pm.put("rights", p.getRights());
             pm.put("annotation", p.getAnnotation());
             out.add(pm);
+        }
+        return out;
+    }
+
+    private static List<Map<String, Object>> attributeMetadata(List<NativeAttributeMetadataRef> metas) {
+        List<Map<String, Object>> out = new ArrayList<Map<String, Object>>();
+        for (NativeAttributeMetadataRef meta : metas) {
+            Map<String, Object> mm = new LinkedHashMap<String, Object>();
+            mm.put("attribute", meta.getAttribute());
+            mm.put("source", meta.getSource());
+            mm.put("user", meta.getUser());
+            mm.put("modified", iso(meta.getModified()));
+            mm.put("lastValue", meta.getLastValue());
+            out.add(mm);
         }
         return out;
     }

@@ -35,11 +35,14 @@ final class NativeLinkFields {
     static final String TARGET_PERMISSIONS = "targetPermissions";
     static final String ATTRIBUTES = "attributes";
     static final String ENTITLEMENT_ATTRIBUTES = "entitlementAttributes";
+    static final String ATTRIBUTE_METADATA = "attributeMetadata";
 
     static final String CREATED = "created";
     static final String MODIFIED = "modified";
     static final String LAST_REFRESH = "lastRefresh";
     static final String LAST_TARGET_AGGREGATION = "lastTargetAggregation";
+    static final String SIGNIFICANT_MODIFIED = "significantModified";
+    static final String PRIOR_SIGNIFICANT_MODIFIED = "priorSignificantModified";
 
     static final String SRC_SYSTEM = "srcSystem";
     static final String SRC_INTERFACE = "srcInterface";

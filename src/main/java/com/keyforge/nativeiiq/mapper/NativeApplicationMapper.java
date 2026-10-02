@@ -2,6 +2,7 @@ package com.keyforge.nativeiiq.mapper;
 
 import com.keyforge.nativeiiq.model.NativeApplicationRow;
 import com.keyforge.nativeiiq.model.NativeReferenceRef;
+import com.keyforge.nativeiiq.model.NativeSchemaAttributeRef;
 import com.keyforge.nativeiiq.model.NativeSchemaRef;
 import com.keyforge.nativeiiq.wire.JsonSafe;
 import com.keyforge.nativeiiq.wire.NativeSerialize;
@@ -107,16 +108,20 @@ public final class NativeApplicationMapper {
             }
         }
 
-        // schemas (compact summary)
+        // schemas: identity summary + schema metadata + the per-attribute definition semantics
+        // (entitlement / group / correlation-key / type) that explain account & entitlement relationships.
         List<Schema> schemas = app.getSchemas();
         if (schemas != null) {
             for (Schema s : schemas) {
                 if (s != null) {
                     List<AttributeDefinition> defs = s.getAttributes();
-                    row.getSchemas().add(new NativeSchemaRef(
+                    NativeSchemaRef schemaRef = new NativeSchemaRef(
                             s.getObjectType(), s.getNativeObjectType(), s.getIdentityAttribute(),
                             s.getDisplayAttribute(), s.getInstanceAttribute(),
-                            defs == null ? Integer.valueOf(0) : Integer.valueOf(defs.size())));
+                            defs == null ? Integer.valueOf(0) : Integer.valueOf(defs.size()));
+                    mapSchemaMetadata(s, schemaRef);
+                    mapSchemaAttributes(defs, schemaRef);
+                    row.getSchemas().add(schemaRef);
                 }
             }
         }
@@ -166,6 +171,51 @@ public final class NativeApplicationMapper {
         row.setExtractionRunId(extractionRunId);
         row.setExtractedAt(Instant.now());
         return row;
+    }
+
+    /** Schema-level metadata beyond the identity summary: features, group/hierarchy anchors, flags. */
+    private static void mapSchemaMetadata(Schema s, NativeSchemaRef ref) {
+        ref.setFeaturesString(s.getFeaturesString());
+        ref.setGroupAttribute(s.getGroupAttribute());
+        ref.setHierarchyAttribute(s.getHierarchyAttribute());
+        ref.setDescriptionAttribute(s.getDescriptionAttribute());
+        ref.setAggregationType(s.getAggregationType());
+        ref.setAssociationSchemaName(s.getAssociationSchemaName());
+        ref.setIncludePermissions(Boolean.valueOf(s.getIncludePermissions()));
+        ref.setIndexPermissions(Boolean.valueOf(s.isIndexPermissions()));
+        ref.setGroupAggregation(Boolean.valueOf(s.isGroupAggregation()));
+        ref.setChildHierarchy(Boolean.valueOf(s.isChildHierarchy()));
+        List<String> entNames = s.getEntitlementAttributeNames();
+        if (entNames != null) {
+            for (String n : entNames) {
+                if (n != null) {
+                    ref.getEntitlementAttributeNames().add(n);
+                }
+            }
+        }
+    }
+
+    /**
+     * Per-attribute {@code AttributeDefinition} semantics: the entitlement / group / correlation-key /
+     * type facts that explain what each account attribute means and how it links to entitlements and
+     * other schemas. A null definition list stays an empty attribute list (null-vs-empty preserved).
+     */
+    private static void mapSchemaAttributes(List<AttributeDefinition> defs, NativeSchemaRef ref) {
+        if (defs == null) {
+            return;
+        }
+        for (AttributeDefinition d : defs) {
+            if (d != null) {
+                ref.getAttributes().add(new NativeSchemaAttributeRef(
+                        d.getName(), d.getType(), d.getDisplayName(), d.getDescription(),
+                        Boolean.valueOf(d.isEntitlement()), Boolean.valueOf(d.isManaged()),
+                        Boolean.valueOf(d.isMultiValued()), Boolean.valueOf(d.isGroup()),
+                        d.getSchemaObjectType(), Integer.valueOf(d.getCorrelationKey()),
+                        Boolean.valueOf(d.isRequired()), Boolean.valueOf(d.isMinable()),
+                        Boolean.valueOf(d.isIndexed()), d.getSource(),
+                        d.getCompositeSourceApplication(), d.getCompositeSourceAttribute()));
+            }
+        }
     }
 
     private static void addFilters(List<sailpoint.service.listfilter.ListFilterValue> filters,

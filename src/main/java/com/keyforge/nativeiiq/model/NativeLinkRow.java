@@ -46,11 +46,17 @@ public final class NativeLinkRow {
     private final Map<String, Object> attributes = new LinkedHashMap<String, Object>();
     private final Map<String, Object> entitlementAttributes = new LinkedHashMap<String, Object>();
 
+    // --- per-attribute source provenance (AttributeMetaData: source/user/modified/lastValue) ---
+    private final List<NativeAttributeMetadataRef> attributeMetadata = new ArrayList<NativeAttributeMetadataRef>();
+
     // --- source timestamps ---
     private Instant created;
     private Instant modified;
     private Instant lastRefresh;
     private Instant lastTargetAggregation;
+    // "significant" change timestamps (a real attribute change, not a refresh touch) — SailPointObject.
+    private Instant significantModified;
+    private Instant priorSignificantModified;
 
     // --- lineage envelope ---
     private String srcSystem;
@@ -117,6 +123,7 @@ public final class NativeLinkRow {
     public List<NativePermissionRef> getTargetPermissions() { return targetPermissions; }
     public Map<String, Object> getAttributes() { return attributes; }
     public Map<String, Object> getEntitlementAttributes() { return entitlementAttributes; }
+    public List<NativeAttributeMetadataRef> getAttributeMetadata() { return attributeMetadata; }
 
     public Instant getCreated() { return created; }
     public void setCreated(Instant v) { this.created = v; }
@@ -129,6 +136,12 @@ public final class NativeLinkRow {
 
     public Instant getLastTargetAggregation() { return lastTargetAggregation; }
     public void setLastTargetAggregation(Instant v) { this.lastTargetAggregation = v; }
+
+    public Instant getSignificantModified() { return significantModified; }
+    public void setSignificantModified(Instant v) { this.significantModified = v; }
+
+    public Instant getPriorSignificantModified() { return priorSignificantModified; }
+    public void setPriorSignificantModified(Instant v) { this.priorSignificantModified = v; }
 
     public String getSrcSystem() { return srcSystem; }
     public void setSrcSystem(String v) { this.srcSystem = v; }

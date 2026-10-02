@@ -47,7 +47,16 @@ class NativeApplicationWireTest {
         r.getSecondaryOwners().add(new NativeReferenceRef("id2", "Jane"));
         r.getRemediators().add(new NativeReferenceRef("id3", "Bob"));
         r.getDependencies().add(new NativeReferenceRef("app2", "LDAP"));
-        r.getSchemas().add(new NativeSchemaRef("account", "user", "sAMAccountName", "displayName", null, Integer.valueOf(12)));
+        NativeSchemaRef schema = new NativeSchemaRef("account", "user", "sAMAccountName", "displayName", null, Integer.valueOf(12));
+        schema.setGroupAttribute("memberOf");
+        schema.setFeaturesString("PROVISIONING");
+        schema.getEntitlementAttributeNames().add("memberOf");
+        schema.getAttributes().add(new com.keyforge.nativeiiq.model.NativeSchemaAttributeRef(
+                "memberOf", "string", "Member Of", "Group membership",
+                Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, Boolean.FALSE,
+                "group", Integer.valueOf(0), Boolean.FALSE, Boolean.TRUE, Boolean.FALSE,
+                null, null, null));
+        r.getSchemas().add(schema);
         r.getServiceAccountFilter().add(new com.keyforge.nativeiiq.model.NativeListFilterRef(
                 "accountType", "Equals", "service", "Account Type == service"));
         r.getDescriptions().put("en_US", "AD connector");
@@ -90,6 +99,15 @@ class NativeApplicationWireTest {
         assertEquals("Equals", svc.get(0).get("operation"));
         assertEquals("service", svc.get(0).get("value"));
         assertTrue(((List<?>) row.get("rpaAccountFilter")).isEmpty());
+
+        // Schema enrichment: per-attribute semantics (entitlement / group link / type) are emitted.
+        List<Map<String, Object>> schemas = (List<Map<String, Object>>) row.get("schemas");
+        assertEquals("memberOf", schemas.get(0).get("groupAttribute"));
+        List<Map<String, Object>> schemaAttrs = (List<Map<String, Object>>) schemas.get(0).get("attributes");
+        assertEquals(1, schemaAttrs.size());
+        assertEquals("memberOf", schemaAttrs.get(0).get("name"));
+        assertEquals(Boolean.TRUE, schemaAttrs.get(0).get("entitlement"));
+        assertEquals("group", schemaAttrs.get(0).get("schemaObjectType"));
     }
 
     @Test

@@ -1,11 +1,13 @@
 package com.keyforge.nativeiiq.mapper;
 
+import com.keyforge.nativeiiq.model.NativeAttributeMetadataRef;
 import com.keyforge.nativeiiq.model.NativeLinkRow;
 import com.keyforge.nativeiiq.model.NativePermissionRef;
 import com.keyforge.nativeiiq.wire.JsonSafe;
 
 import sailpoint.object.Application;
 import sailpoint.object.AttributeDefinition;
+import sailpoint.object.AttributeMetaData;
 import sailpoint.object.Attributes;
 import sailpoint.object.BaseAttributeDefinition;
 import sailpoint.object.Identity;
@@ -74,10 +76,16 @@ public final class NativeLinkMapper {
         copyAttributes(link.getAttributes(), row.getAttributes(), secret);
         copyAttributes(link.getEntitlementAttributes(), row.getEntitlementAttributes(), secret);
 
+        // Per-attribute source provenance (which feed/user last set each attribute). Secret attribute
+        // values are redacted here too, so a secret's prior value is never persisted in clear.
+        addAttributeMetadata(link.getAttributeMetaData(), row.getAttributeMetadata(), secret);
+
         row.setCreated(toInstant(link.getCreated()));
         row.setModified(toInstant(link.getModified()));
         row.setLastRefresh(toInstant(link.getLastRefresh()));
         row.setLastTargetAggregation(toInstant(link.getLastTargetAggregation()));
+        row.setSignificantModified(toInstant(link.getSignificantModified()));
+        row.setPriorSignificantModified(toInstant(link.getPriorSignificantModified()));
 
         row.setSrcSystem(sourceSystem);
         row.setExtractionRunId(extractionRunId);
@@ -92,6 +100,26 @@ public final class NativeLinkMapper {
         for (Permission p : perms) {
             if (p != null) {
                 out.add(new NativePermissionRef(p.getTarget(), p.getRights(), p.getAnnotation()));
+            }
+        }
+    }
+
+    /**
+     * Copies per-attribute metadata (source/user/modified/lastValue) into the row. The {@code lastValue}
+     * of a schema-declared secret attribute is redacted; every other value is made JSON-safe while the
+     * object is still session-attached. A null source list stays empty (the mapper preserves null-vs-empty
+     * at the column level — an empty list serializes to {@code []}, a null column stays null).
+     */
+    private static void addAttributeMetadata(List<AttributeMetaData> metas, List<NativeAttributeMetadataRef> out,
+                                             Set<String> secret) {
+        if (metas == null) {
+            return;
+        }
+        for (AttributeMetaData m : metas) {
+            if (m != null) {
+                String name = m.getAttribute();
+                Object value = (name != null && secret.contains(name)) ? REDACTED : JsonSafe.toJsonSafe(m.getLastValue());
+                out.add(new NativeAttributeMetadataRef(name, m.getSource(), m.getUser(), toInstant(m.getModified()), value));
             }
         }
     }

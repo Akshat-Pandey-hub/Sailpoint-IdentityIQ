@@ -2,6 +2,7 @@ package com.keyforge.nativeiiq.wire;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keyforge.nativeiiq.model.NativeLinkExtractionResult;
+import com.keyforge.nativeiiq.model.NativeAttributeMetadataRef;
 import com.keyforge.nativeiiq.model.NativeLinkRow;
 import com.keyforge.nativeiiq.model.NativePermissionRef;
 
@@ -22,8 +23,10 @@ class NativeLinkWireTest {
             "sourceId", "uuid", "nativeIdentity", "displayName", "displayableName", "instance", "componentIds",
             "applicationId", "applicationName", "identityId", "identityName", "disabled", "locked", "composite",
             "manuallyCorrelated", "hasEntitlements", "iiqDisabled", "iiqLocked", "permissions",
-            "targetPermissions", "attributes", "entitlementAttributes", "created", "modified", "lastRefresh",
-            "lastTargetAggregation", "srcSystem", "srcInterface", "srcObjectType", "extractionRunId", "extractedAt"
+            "targetPermissions", "attributes", "entitlementAttributes", "attributeMetadata",
+            "created", "modified", "lastRefresh",
+            "lastTargetAggregation", "significantModified", "priorSignificantModified",
+            "srcSystem", "srcInterface", "srcObjectType", "extractionRunId", "extractedAt"
     };
 
     private static NativeLinkRow sampleRow() {
@@ -46,8 +49,11 @@ class NativeLinkWireTest {
         r.getAttributes().put("memberOf", JsonSafe.toJsonSafe("CN=Admins"));
         r.getAttributes().put("password", "<redacted>");
         r.getEntitlementAttributes().put("memberOf", JsonSafe.toJsonSafe("CN=Admins"));
+        r.getAttributeMetadata().add(new NativeAttributeMetadataRef(
+                "department", "HR Feed", "spadmin", Instant.EPOCH, JsonSafe.toJsonSafe("Finance")));
         r.setCreated(Instant.EPOCH);
         r.setModified(Instant.EPOCH);
+        r.setSignificantModified(Instant.EPOCH);
         r.setSrcSystem("IdentityIQ");
         r.setExtractionRunId("run-1");
         return r;
@@ -73,6 +79,14 @@ class NativeLinkWireTest {
         assertEquals("CN=jsmith,OU=Users", row.get("nativeIdentity"));
         assertEquals("sailpoint.object.Link", row.get("srcObjectType"));
         assertEquals("<redacted>", ((Map<String, Object>) row.get("attributes")).get("password"));
+
+        // Per-attribute source provenance: which feed/user last set each attribute.
+        List<Map<String, Object>> meta = (List<Map<String, Object>>) row.get("attributeMetadata");
+        assertEquals(1, meta.size());
+        assertEquals("department", meta.get(0).get("attribute"));
+        assertEquals("HR Feed", meta.get(0).get("source"));
+        assertEquals("spadmin", meta.get(0).get("user"));
+        assertEquals("Finance", meta.get(0).get("lastValue"));
     }
 
     @Test
