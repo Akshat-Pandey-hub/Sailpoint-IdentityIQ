@@ -61,6 +61,24 @@ class NativeSyslogEventImportServiceTest {
     }
 
     @Test
+    void sourceCountGrowthDuringScanIsToleratedForAppendOnly() throws SQLException {
+        // Page 0 reports 2 (full page a,b -> keep paging); page 1 reports 4 (2 new events appended at the
+        // tail) with a short page (c). Append-only growth must NOT abort; extracted(3) >= baseline(2).
+        FakeSink sink = new FakeSink();
+        NativeSyslogEventImportService.Result r = new NativeSyslogEventImportService(
+                new FakePages(List.of(page(2, "a", "b"), page(4, "c"))), sink, 2).importAll();
+        assertEquals(3, r.getInserted());
+        assertEquals(0, r.getSkipped());
+    }
+
+    @Test
+    void sourceCountShrinkDuringScanThrows() {
+        // Page 0 reports 4 (full page a,b); page 1 reports 2 (events removed mid-scan) -> fatal.
+        assertThrows(NativeImportException.class, () -> new NativeSyslogEventImportService(
+                new FakePages(List.of(page(4, "a", "b"), page(2, "c"))), new FakeSink(), 2).importAll());
+    }
+
+    @Test
     void emptyLogIsValidZeroResult() throws SQLException {
         NativeSyslogEventImportService.Result r = new NativeSyslogEventImportService(
                 new FakePages(List.of("{\"sourceCount\":0,\"rows\":[]}")), new FakeSink(), 100).importAll();

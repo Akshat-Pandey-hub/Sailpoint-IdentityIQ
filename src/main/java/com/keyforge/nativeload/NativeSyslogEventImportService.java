@@ -58,16 +58,26 @@ public final class NativeSyslogEventImportService {
         int sourceCount = -1;
         List<String> failures = new ArrayList<>();
 
+        int maxSourceCount = -1; // high-water source count observed across pages
         int start = 0;
         while (true) {
             String json = source.fetchPage(start, pageSize);
             int pageSourceCount = parser.sourceCount(json);
             if (pageSourceCount >= 0) {
-                if (sourceCount >= 0 && sourceCount != pageSourceCount) {
-                    throw new NativeImportException("SyslogEvent source count changed during paginated extraction: "
-                            + sourceCount + " -> " + pageSourceCount);
+                if (sourceCount < 0) {
+                    sourceCount = pageSourceCount; // baseline the scan commits to covering
                 }
-                sourceCount = pageSourceCount;
+                // SyslogEvent is append-only: the source count only GROWS as new events land at the tail
+                // during a multi-page scan. Growth is benign — the new tail events are captured later in
+                // this scan or on the next run, and the idempotent append (dedup on event id) absorbs any
+                // overlap, so no gap forms. A DECREASE means events were removed mid-scan (rotation/purge),
+                // which can shift the paging window and silently drop rows — that stays fatal.
+                if (maxSourceCount >= 0 && pageSourceCount < maxSourceCount) {
+                    throw new NativeImportException("SyslogEvent source count shrank during paginated extraction: "
+                            + maxSourceCount + " -> " + pageSourceCount
+                            + " (events removed mid-scan; aborting to avoid a gap)");
+                }
+                maxSourceCount = Math.max(maxSourceCount, pageSourceCount);
             }
             List<NativeSyslogEventRecord> page = parser.parse(json);
             if (page.isEmpty()) {
@@ -95,8 +105,10 @@ public final class NativeSyslogEventImportService {
             start += pageSize;
         }
 
-        if (sourceCount >= 0 && extracted != sourceCount) {
-            throw new NativeImportException("Incomplete SyslogEvent scan: sourceCount=" + sourceCount
+        // Complete iff we extracted at least the baseline the source had when the scan started. Extra
+        // tail events appended during the scan (extracted > baseline) are expected for append-only data.
+        if (sourceCount >= 0 && extracted < sourceCount) {
+            throw new NativeImportException("Incomplete SyslogEvent scan: baseline sourceCount=" + sourceCount
                     + ", extracted=" + extracted);
         }
         return new Result(extracted, inserted, skipped, failed, sourceCount, failures);
