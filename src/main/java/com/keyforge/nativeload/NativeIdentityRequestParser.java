@@ -182,7 +182,10 @@ final class NativeIdentityRequestParser {
         }
         a.srcSystem = req.srcSystem;
         a.srcInterface = req.srcInterface;
-        a.srcObjectType = "sailpoint.object.WorkItem";
+        // Lineage names the actual read surface: these rows are projected from
+        // IdentityRequest.getApprovalSummaries() -> WorkflowSummary.ApprovalSummary, NOT read from
+        // WorkItem objects. workItemId remains the (clearly named) join to kf_workitem/kf_workitem_archive.
+        a.srcObjectType = "sailpoint.object.WorkflowSummary$ApprovalSummary";
         a.extractionRunId = req.extractionRunId;
         return a;
     }
