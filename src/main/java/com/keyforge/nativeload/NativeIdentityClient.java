@@ -20,9 +20,20 @@ public final class NativeIdentityClient implements NativeIdentityPageSource {
     public static final String IDENTITIES_PATH = "plugin/rest/keyForgeNativeIIQ/identities";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativeIdentityClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    /**
+     * Sets the optional CSS incremental bound (ISO-8601 instant). When set, every page request carries
+     * {@code &modifiedAfter=}, so the IIQ plugin returns only identities changed after it (server-side
+     * {@code Filter.gt("modified", ...)}). {@code null}/blank clears it (full scan). Returns {@code this}.
+     */
+    public NativeIdentityClient withModifiedAfter(String modifiedAfter) {
+        this.modifiedAfter = (modifiedAfter == null || modifiedAfter.isBlank()) ? null : modifiedAfter.trim();
+        return this;
     }
 
     /**
@@ -36,6 +47,9 @@ public final class NativeIdentityClient implements NativeIdentityPageSource {
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) {
+            params.put("modifiedAfter", modifiedAfter); // server-side CSS incremental bound
+        }
         return session.get(IDENTITIES_PATH, params);
     }
 }

@@ -35,8 +35,14 @@ public final class NativeManagedAttributeExtractionService {
      */
     public NativeManagedAttributeExtractionResult extract(SailPointContext context, int start, int limit)
             throws GeneralException {
+        return extract(context, start, limit, null);
+    }
+
+    /** One page, optionally bounded to entitlements changed after {@code modifiedAfter} (CSS incremental). */
+    public NativeManagedAttributeExtractionResult extract(SailPointContext context, int start, int limit,
+                                                          java.util.Date modifiedAfter) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeManagedAttributeExtractor(context, config).extract(Math.max(0, start), limit);
+        return new NativeManagedAttributeExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
     }
 
     /** Extracts all managed attributes in a single deterministic scan (no page bound). */

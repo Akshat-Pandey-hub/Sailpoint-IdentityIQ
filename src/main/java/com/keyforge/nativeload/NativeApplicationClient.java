@@ -16,9 +16,16 @@ public final class NativeApplicationClient implements NativeApplicationPageSourc
     public static final String APPLICATIONS_PATH = "plugin/rest/keyForgeNativeIIQ/applications";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativeApplicationClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    /** Sets the optional CSS incremental bound (ISO-8601). When set, each page carries {@code modifiedAfter}. */
+    public NativeApplicationClient withModifiedAfter(String modifiedAfter) {
+        this.modifiedAfter = (modifiedAfter == null || modifiedAfter.isBlank()) ? null : modifiedAfter.trim();
+        return this;
     }
 
     @Override
@@ -27,6 +34,9 @@ public final class NativeApplicationClient implements NativeApplicationPageSourc
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) {
+            params.put("modifiedAfter", modifiedAfter);
+        }
         return session.get(APPLICATIONS_PATH, params);
     }
 }

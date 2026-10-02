@@ -69,9 +69,14 @@ public class NativeIdentityResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getIdentities(@QueryParam("start") @DefaultValue("0") int start,
-                                  @QueryParam("limit") @DefaultValue("100") int limit) {
+                                  @QueryParam("limit") @DefaultValue("100") int limit,
+                                  @QueryParam("modifiedAfter") String modifiedAfter) {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        // Optional CSS incremental bound: only identities changed after this ISO-8601 instant. Absent
+        // or unparseable -> null -> full page (unchanged behaviour). Server-side filter, not post-hoc.
+        java.util.Date modifiedAfterDate =
+                com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         // Boundary logging: records the last successful stage; no credentials or Identity data.
         // Authorization is enforced by IIQ's PluginAuthorizationFilter via the @SystemAdmin annotation
         // above (the caller must be a System Administrator) — the required IIQ 8.4 plugin-REST gate.
@@ -84,7 +89,7 @@ public class NativeIdentityResource extends BasePluginResource {
 
             stage = "extract";
             NativeExtractionResult result =
-                    new NativeIdentityExtractionService().extract(context, safeStart, safeLimit);
+                    new NativeIdentityExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
 
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeIdentityWire.envelope(result, safeStart, safeLimit);

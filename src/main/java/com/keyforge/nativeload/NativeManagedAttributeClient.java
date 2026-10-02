@@ -17,9 +17,16 @@ public final class NativeManagedAttributeClient implements NativeManagedAttribut
     public static final String ENTITLEMENTS_PATH = "plugin/rest/keyForgeNativeIIQ/entitlements";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativeManagedAttributeClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    /** Sets the optional CSS incremental bound (ISO-8601). When set, each page carries {@code modifiedAfter}. */
+    public NativeManagedAttributeClient withModifiedAfter(String modifiedAfter) {
+        this.modifiedAfter = (modifiedAfter == null || modifiedAfter.isBlank()) ? null : modifiedAfter.trim();
+        return this;
     }
 
     @Override
@@ -28,6 +35,9 @@ public final class NativeManagedAttributeClient implements NativeManagedAttribut
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) {
+            params.put("modifiedAfter", modifiedAfter);
+        }
         return session.get(ENTITLEMENTS_PATH, params);
     }
 }

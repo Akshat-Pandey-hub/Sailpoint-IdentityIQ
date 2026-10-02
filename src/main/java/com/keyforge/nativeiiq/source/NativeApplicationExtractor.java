@@ -33,6 +33,15 @@ public final class NativeApplicationExtractor {
 
     /** Extracts a stable-ordered window (rows {@code start}..{@code start+limit}); {@code limit<=0}=all. */
     public NativeApplicationExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    /**
+     * Paginated read with an optional server-side CSS incremental bound: when {@code modifiedAfter} is
+     * non-null, IIQ returns only applications whose {@code modified} time is after it (native
+     * {@code Filter.gt("modified", ...)} via {@link NativeIncrementalQuery}). {@code null} = full scan.
+     */
+    public NativeApplicationExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("name", true);
         if (start > 0) {
@@ -41,6 +50,7 @@ public final class NativeApplicationExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
+        NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         return extract(qo);
     }
 

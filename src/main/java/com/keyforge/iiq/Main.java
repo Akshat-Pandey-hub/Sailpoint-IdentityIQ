@@ -159,6 +159,7 @@ import com.keyforge.nativeload.NativeGroupDefinitionClient;
 import com.keyforge.nativeload.NativeGroupDefinitionImportService;
 import com.keyforge.nativeload.NativeGroupDefinitionRepository;
 import com.keyforge.nativeload.NativeGroupDefinitionSink;
+import com.keyforge.nativeload.NativeCssExtraction;
 import com.keyforge.nativeload.NativeIdentityClient;
 import com.keyforge.nativeload.NativeIdentityImportService;
 import com.keyforge.nativeload.NativeIdentityRepository;
@@ -300,6 +301,7 @@ public final class Main {
             case "extract-identity-entitlements-db" -> System.exit(RunLedger.run("extract-identity-entitlements-db", Main::runExtractIdentityEntitlementsDb));
             case "extract-identity-roles" -> System.exit(runExtractIdentityRoles());
             case "extract-identity-roles-db" -> System.exit(RunLedger.run("extract-identity-roles-db", Main::runExtractIdentityRolesDb));
+            case "extract-native-db" -> System.exit(runExtractNativeAllDb());
             case "extract-native-identity-db" -> System.exit(RunLedger.run("extract-native-identity-db", Main::runExtractNativeIdentityDb));
             case "extract-native-entitlement-db" -> System.exit(RunLedger.run("extract-native-entitlement-db", Main::runExtractNativeEntitlementDb));
             case "extract-native-application-db" -> System.exit(RunLedger.run("extract-native-application-db", Main::runExtractNativeApplicationDb));
@@ -1068,6 +1070,131 @@ public final class Main {
      * {@code iiq_native.kf_identity} table. IIQ-side is strictly read-only (the plugin only reads);
      * the only writes are to our PostgreSQL. Idempotent — re-running updates rows, never duplicates.
      */
+    /**
+     * How a native extraction type behaves under {@code --incremental}, per the KeyForge Connector
+     * Design CSS/CEC split. Only {@link #CSS} consumes the shared watermark incremental engine
+     * ({@link com.keyforge.nativeload.NativeCssExtraction}); every other category runs its existing
+     * strategy regardless of the flag. The category is descriptive here (the individual run methods
+     * already encode the behaviour) — it documents and logs the dispatch and guards future changes.
+     */
+    enum NativeExtractionCategory {
+        /** Current-state object: modified-watermark incremental when {@code --incremental}. */
+        CSS,
+        /** Event/decision object: append-only, event-time — never CSS modified-watermark. */
+        CEC,
+        /** Relationship/edge rederived from its source entities — full. */
+        DERIVED,
+        /** Configuration / governance / low-volume — full is the correct strategy. */
+        CONFIG
+    }
+
+    /** One entry in the whole-native extraction plan: a command name, its category, and its runner. */
+    record NativeExtractionJob(String command, NativeExtractionCategory category,
+                               java.util.function.IntSupplier runner) {
+    }
+
+    /**
+     * The ordered whole-native extraction plan consumed by {@code extract-native-db}. Each entry reuses
+     * the existing per-entity {@code runExtractNative*Db} method unchanged; the category records how it
+     * behaves under {@code --incremental}. Order: CSS core, then relationships/derived, then
+     * governance/config, then CEC/event. {@code extract-native-parquet} (separate Parquet path) and the
+     * {@code derive-*}/{@code reconcile-*} commands are deliberately not part of the extraction plan.
+     */
+    static java.util.List<NativeExtractionJob> nativeExtractionRegistry() {
+        java.util.List<NativeExtractionJob> jobs = new java.util.ArrayList<>();
+        // CSS current-state (shared watermark incremental via NativeCssExtraction when --incremental).
+        jobs.add(new NativeExtractionJob("extract-native-application-db", NativeExtractionCategory.CSS, Main::runExtractNativeApplicationDb));
+        jobs.add(new NativeExtractionJob("extract-native-identity-db", NativeExtractionCategory.CSS, Main::runExtractNativeIdentityDb));
+        jobs.add(new NativeExtractionJob("extract-native-entitlement-db", NativeExtractionCategory.CSS, Main::runExtractNativeEntitlementDb));
+        jobs.add(new NativeExtractionJob("extract-native-account-db", NativeExtractionCategory.CSS, Main::runExtractNativeAccountDb));
+        jobs.add(new NativeExtractionJob("extract-native-role-db", NativeExtractionCategory.CSS, Main::runExtractNativeRoleDb));
+        // Derived relationships / edges (rederived from source entities; full).
+        jobs.add(new NativeExtractionJob("extract-native-identity-role-db", NativeExtractionCategory.DERIVED, Main::runExtractNativeIdentityRoleDb));
+        jobs.add(new NativeExtractionJob("extract-native-role-relationships-db", NativeExtractionCategory.DERIVED, Main::runExtractNativeRoleRelationshipsDb));
+        jobs.add(new NativeExtractionJob("extract-native-identity-entitlement-db", NativeExtractionCategory.DERIVED, Main::runExtractNativeIdentityEntitlementDb));
+        jobs.add(new NativeExtractionJob("extract-native-account-entitlement-db", NativeExtractionCategory.DERIVED, Main::runExtractNativeAccountEntitlementDb));
+        // Configuration / governance / low-volume (existing full strategy).
+        jobs.add(new NativeExtractionJob("extract-native-group-definition-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeGroupDefinitionDb));
+        jobs.add(new NativeExtractionJob("extract-native-workgroup-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeWorkgroupDb));
+        jobs.add(new NativeExtractionJob("extract-native-workgroup-memberships-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeWorkgroupMembershipsDb));
+        jobs.add(new NativeExtractionJob("extract-native-workflows-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeWorkflowsDb));
+        jobs.add(new NativeExtractionJob("extract-native-policies-db", NativeExtractionCategory.CONFIG, Main::runExtractNativePoliciesDb));
+        jobs.add(new NativeExtractionJob("extract-native-policy-constraints-db", NativeExtractionCategory.CONFIG, Main::runExtractNativePolicyConstraintsDb));
+        jobs.add(new NativeExtractionJob("extract-native-violations-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeViolationsDb));
+        jobs.add(new NativeExtractionJob("extract-native-task-schedule-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeTaskScheduleDb));
+        jobs.add(new NativeExtractionJob("extract-native-task-result-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeTaskResultDb));
+        jobs.add(new NativeExtractionJob("extract-native-identity-request-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeIdentityRequestDb));
+        jobs.add(new NativeExtractionJob("extract-native-workitem-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeWorkItemDb));
+        jobs.add(new NativeExtractionJob("extract-native-provisioning-txn-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeProvisioningTxnDb));
+        jobs.add(new NativeExtractionJob("extract-native-certification-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeCertificationDb));
+        jobs.add(new NativeExtractionJob("extract-native-certification-entity-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeCertificationEntityDb));
+        jobs.add(new NativeExtractionJob("extract-native-certification-item-db", NativeExtractionCategory.CONFIG, Main::runExtractNativeCertificationItemDb));
+        // CEC / event (append-only, event-time; --incremental intentionally not applied).
+        jobs.add(new NativeExtractionJob("extract-native-audit-events-db", NativeExtractionCategory.CEC, Main::runExtractNativeAuditEventsDb));
+        jobs.add(new NativeExtractionJob("extract-native-syslog-events-db", NativeExtractionCategory.CEC, Main::runExtractNativeSyslogEventsDb));
+        jobs.add(new NativeExtractionJob("extract-native-access-history-db", NativeExtractionCategory.CEC, Main::runExtractNativeAccessHistoryDb));
+        jobs.add(new NativeExtractionJob("extract-native-workitem-archive-db", NativeExtractionCategory.CEC, Main::runExtractNativeWorkItemArchiveDb));
+        jobs.add(new NativeExtractionJob("extract-native-certification-archive-db", NativeExtractionCategory.CEC, Main::runExtractNativeCertificationArchiveDb));
+        return jobs;
+    }
+
+    /** Human label for how a category behaves under the active mode (logging only). */
+    private static String appliedStrategy(NativeExtractionCategory category) {
+        if (category == NativeExtractionCategory.CSS) {
+            return extractionMode.isIncremental() ? "incremental (watermark)" : "full";
+        }
+        if (category == NativeExtractionCategory.CEC) {
+            return "append-only (event-time)";
+        }
+        return "full";
+    }
+
+    /**
+     * Whole-native extraction: runs every native extraction type in {@link #nativeExtractionRegistry()}
+     * under the active {@link #extractionMode}, dispatching the correct strategy per category. Reuses the
+     * existing per-entity run methods and {@link RunLedger} unchanged — each job is wrapped in its own
+     * {@code RunLedger.run} so it produces the same ledger row as running the individual command. Runs
+     * continue-on-error: a failing extraction is recorded and the rest still run; the worst exit code is
+     * returned. {@code --incremental} is honoured only by CSS jobs; CEC/derived/config run their existing
+     * strategy regardless (only CSS methods consume {@link com.keyforge.nativeload.NativeCssExtraction}).
+     */
+    private static int runExtractNativeAllDb() {
+        java.util.List<NativeExtractionJob> jobs = nativeExtractionRegistry();
+        String mode = extractionMode.isIncremental() ? "INCREMENTAL" : "FULL";
+        System.out.println("Whole-native extraction [" + mode + "] - " + jobs.size() + " extraction types.");
+        System.out.println("  CSS current-state -> " + (extractionMode.isIncremental() ? "watermark incremental" : "full")
+                + " | CEC/event -> append-only | derived -> from source (full) | config -> full");
+
+        int worst = 0;
+        int ok = 0;
+        java.util.List<String> failures = new java.util.ArrayList<>();
+        for (NativeExtractionJob job : jobs) {
+            System.out.println();
+            System.out.println("=== " + job.command() + "  [" + job.category() + " / " + appliedStrategy(job.category()) + "] ===");
+            int code;
+            try {
+                code = RunLedger.run(job.command(), job.runner());
+            } catch (RuntimeException e) {
+                code = 1;
+                System.err.println("Unexpected error in " + job.command() + ": " + e.getMessage());
+            }
+            if (code == 0) {
+                ok++;
+            } else {
+                failures.add(job.command() + " (exit " + code + ")");
+                worst = Math.max(worst, code);
+            }
+        }
+
+        System.out.println();
+        System.out.println("Whole-native extraction [" + mode + "] complete: " + ok + " ok, "
+                + failures.size() + " failed (of " + jobs.size() + ").");
+        if (!failures.isEmpty()) {
+            System.out.println("  failed: " + String.join(", ", failures));
+        }
+        return worst;
+    }
+
     private static int runExtractNativeIdentityDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
@@ -1085,15 +1212,19 @@ public final class Main {
             NativeIdentityRepository repository = new NativeIdentityRepository(nativeSchema);
 
             try (Connection conn = PostgresConnection.open(pgConfig)) {
-                // Full current-state extraction: pull → upsert → deletion sweep (guarded, full-scan only).
+                // Reusable CSS engine owns mode/watermark/overlap/advance/run-ledger; this callback is
+                // only the entity's source query + persistence (and runs the shared sweep in FULL only).
                 NativeIdentitySink sink = new JdbcNativeIdentitySink(conn, repository, nativeSchema);
-                NativeIdentityImportService svc =
-                        new NativeIdentityImportService(client, sink, pageSize, true);
-                NativeIdentityImportService.Result result = svc.importAll();
-                RunLedger.record("kf_identity", result.getExtracted(),
-                        result.getInserted(), result.getUpdated(), result.getFailed());
-                printNativeIdentityDbSummary(result, repository.targetTable());
-                return result.getFailed() > 0 ? 6 : 0;
+                NativeCssExtraction.Outcome outcome = NativeCssExtraction.run(
+                        conn, nativeSchema, "kf_identity", extractionMode, (bound, incremental) -> {
+                    client.withModifiedAfter(bound);
+                    NativeIdentityImportService.Result result =
+                            new NativeIdentityImportService(client, sink, pageSize, !incremental).importAll();
+                    printNativeIdentityDbSummary(result, repository.targetTable());
+                    return new NativeCssExtraction.Outcome(result.getExtracted(),
+                            result.getInserted(), result.getUpdated(), result.getFailed());
+                });
+                return outcome.failed() > 0 ? 6 : 0;
             }
 
         } catch (ConfigException e) {
@@ -1175,13 +1306,16 @@ public final class Main {
 
             try (Connection conn = PostgresConnection.open(pgConfig)) {
                 NativeManagedAttributeSink sink = new JdbcNativeManagedAttributeSink(conn, repository, nativeSchema);
-                NativeManagedAttributeImportService svc =
-                        new NativeManagedAttributeImportService(client, sink, pageSize, true);
-                NativeManagedAttributeImportService.Result result = svc.importAll();
-                RunLedger.record("kf_entitlement", result.getExtracted(),
-                        result.getInserted(), result.getUpdated(), result.getFailed());
-                printNativeEntitlementDbSummary(result, repository.targetTable());
-                return result.getFailed() > 0 ? 6 : 0;
+                NativeCssExtraction.Outcome outcome = NativeCssExtraction.run(
+                        conn, nativeSchema, "kf_entitlement", extractionMode, (bound, incremental) -> {
+                    client.withModifiedAfter(bound);
+                    NativeManagedAttributeImportService.Result result =
+                            new NativeManagedAttributeImportService(client, sink, pageSize, !incremental).importAll();
+                    printNativeEntitlementDbSummary(result, repository.targetTable());
+                    return new NativeCssExtraction.Outcome(result.getExtracted(),
+                            result.getInserted(), result.getUpdated(), result.getFailed());
+                });
+                return outcome.failed() > 0 ? 6 : 0;
             }
 
         } catch (ConfigException e) {
@@ -1717,13 +1851,16 @@ public final class Main {
 
             try (Connection conn = PostgresConnection.open(pgConfig)) {
                 NativeApplicationSink sink = new JdbcNativeApplicationSink(conn, repository, nativeSchema);
-                NativeApplicationImportService svc =
-                        new NativeApplicationImportService(client, sink, pageSize, true);
-                NativeApplicationImportService.Result result = svc.importAll();
-                RunLedger.record("kf_application", result.getExtracted(),
-                        result.getInserted(), result.getUpdated(), result.getFailed());
-                printNativeApplicationDbSummary(result, repository.targetTable());
-                return result.getFailed() > 0 ? 6 : 0;
+                NativeCssExtraction.Outcome outcome = NativeCssExtraction.run(
+                        conn, nativeSchema, "kf_application", extractionMode, (bound, incremental) -> {
+                    client.withModifiedAfter(bound);
+                    NativeApplicationImportService.Result result =
+                            new NativeApplicationImportService(client, sink, pageSize, !incremental).importAll();
+                    printNativeApplicationDbSummary(result, repository.targetTable());
+                    return new NativeCssExtraction.Outcome(result.getExtracted(),
+                            result.getInserted(), result.getUpdated(), result.getFailed());
+                });
+                return outcome.failed() > 0 ? 6 : 0;
             }
 
         } catch (ConfigException e) {
@@ -1790,12 +1927,16 @@ public final class Main {
 
             try (Connection conn = PostgresConnection.open(pgConfig)) {
                 NativeLinkSink sink = new JdbcNativeLinkSink(conn, repository, nativeSchema);
-                NativeLinkImportService svc = new NativeLinkImportService(client, sink, pageSize, true);
-                NativeLinkImportService.Result result = svc.importAll();
-                RunLedger.record("kf_account", result.getExtracted(),
-                        result.getInserted(), result.getUpdated(), result.getFailed());
-                printNativeAccountDbSummary(result, repository.targetTable());
-                return result.getFailed() > 0 ? 6 : 0;
+                NativeCssExtraction.Outcome outcome = NativeCssExtraction.run(
+                        conn, nativeSchema, "kf_account", extractionMode, (bound, incremental) -> {
+                    client.withModifiedAfter(bound);
+                    NativeLinkImportService.Result result =
+                            new NativeLinkImportService(client, sink, pageSize, !incremental).importAll();
+                    printNativeAccountDbSummary(result, repository.targetTable());
+                    return new NativeCssExtraction.Outcome(result.getExtracted(),
+                            result.getInserted(), result.getUpdated(), result.getFailed());
+                });
+                return outcome.failed() > 0 ? 6 : 0;
             }
 
         } catch (ConfigException e) {
@@ -1952,12 +2093,16 @@ public final class Main {
 
             try (Connection conn = PostgresConnection.open(pgConfig)) {
                 NativeRoleSink sink = new JdbcNativeRoleSink(conn, repository, nativeSchema);
-                NativeRoleImportService svc = new NativeRoleImportService(client, sink, pageSize, true);
-                NativeRoleImportService.Result result = svc.importAll();
-                RunLedger.record("kf_role", result.getExtracted(),
-                        result.getInserted(), result.getUpdated(), result.getFailed());
-                printNativeRoleDbSummary(result, repository.targetTable());
-                return result.getFailed() > 0 ? 6 : 0;
+                NativeCssExtraction.Outcome outcome = NativeCssExtraction.run(
+                        conn, nativeSchema, "kf_role", extractionMode, (bound, incremental) -> {
+                    client.withModifiedAfter(bound);
+                    NativeRoleImportService.Result result =
+                            new NativeRoleImportService(client, sink, pageSize, !incremental).importAll();
+                    printNativeRoleDbSummary(result, repository.targetTable());
+                    return new NativeCssExtraction.Outcome(result.getExtracted(),
+                            result.getInserted(), result.getUpdated(), result.getFailed());
+                });
+                return outcome.failed() > 0 ? 6 : 0;
             }
 
         } catch (ConfigException e) {
@@ -5009,6 +5154,7 @@ public final class Main {
         System.out.println("  extract-identity-roles       Retrieve authoritative Identity->Role assignments (rest/identities/{id}) and print a summary");
         System.out.println("  extract-identity-roles-db    Retrieve Identity->Role assignments and upsert into <schema>.kf_identity_role");
         System.out.println("  --- Native SailPoint Java-API workstream (via KeyForgeNativeIIQ plugin REST; separate IIQ_NATIVE_SCHEMA, default iiq_native) ---");
+        System.out.println("  extract-native-db            Run the WHOLE native extraction layer [--full|--incremental]; CSS=watermark incremental, CEC=append-only, derived/config=full (reuses the per-entity commands)");
         System.out.println("  extract-native-identity-db   Pull native Identity data from the plugin endpoint and upsert into <iiq_native>.kf_identity (read-only in IIQ)");
         System.out.println("  extract-native-entitlement-db Pull native ManagedAttribute data from the plugin endpoint and upsert into <iiq_native>.kf_entitlement (read-only in IIQ)");
         System.out.println("  extract-native-application-db Pull native Application data from the plugin endpoint and upsert into <iiq_native>.kf_application (read-only in IIQ)");

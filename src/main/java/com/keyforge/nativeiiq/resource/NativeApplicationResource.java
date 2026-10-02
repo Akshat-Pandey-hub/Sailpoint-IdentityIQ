@@ -48,9 +48,12 @@ public class NativeApplicationResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getApplications(@QueryParam("start") @DefaultValue("0") int start,
-                                    @QueryParam("limit") @DefaultValue("100") int limit) {
+                                    @QueryParam("limit") @DefaultValue("100") int limit,
+                                    @QueryParam("modifiedAfter") String modifiedAfter) {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        java.util.Date modifiedAfterDate =
+                com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         String stage = "start";
         try {
             LOG.fine("KeyForgeNativeIIQ applications: entering (start=" + safeStart + ", limit=" + safeLimit + ")");
@@ -60,7 +63,7 @@ public class NativeApplicationResource extends BasePluginResource {
 
             stage = "extract";
             NativeApplicationExtractionResult result =
-                    new NativeApplicationExtractionService().extract(context, safeStart, safeLimit);
+                    new NativeApplicationExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
 
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeApplicationWire.envelope(result, safeStart, safeLimit);

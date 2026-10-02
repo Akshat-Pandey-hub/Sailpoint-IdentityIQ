@@ -47,6 +47,16 @@ public final class NativeIdentityExtractor {
      * across calls. {@code limit <= 0} means no limit. STRICTLY READ-ONLY, same as {@link #extract()}.
      */
     public NativeExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    /**
+     * Paginated read with an optional server-side CSS incremental bound: when {@code modifiedAfter} is
+     * non-null, IIQ returns only identities whose {@code modified} time is after it (native
+     * {@code Filter.gt("modified", ...)} via {@link NativeIncrementalQuery}). {@code null} = full scan
+     * (unchanged behaviour). Ordering/paging are identical in both modes. STRICTLY READ-ONLY.
+     */
+    public NativeExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("name", true); // ascending, stable window across pages
         if (start > 0) {
@@ -55,6 +65,7 @@ public final class NativeIdentityExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
+        NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         return extract(qo);
     }
 

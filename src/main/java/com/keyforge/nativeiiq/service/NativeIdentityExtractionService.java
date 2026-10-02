@@ -39,8 +39,17 @@ public final class NativeIdentityExtractionService {
      * @param limit   maximum identities to return ({@code <= 0} means no bound = full extraction)
      */
     public NativeExtractionResult extract(SailPointContext context, int start, int limit) throws GeneralException {
+        return extract(context, start, limit, null);
+    }
+
+    /**
+     * Extracts one page, optionally bounded to identities changed after {@code modifiedAfter} (native
+     * server-side CSS incremental). {@code null} = full page (unchanged behaviour).
+     */
+    public NativeExtractionResult extract(SailPointContext context, int start, int limit,
+                                          java.util.Date modifiedAfter) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeIdentityExtractor(context, config).extract(Math.max(0, start), limit);
+        return new NativeIdentityExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
     }
 
     /** Extracts all identities in a single deterministic scan (no page bound). */

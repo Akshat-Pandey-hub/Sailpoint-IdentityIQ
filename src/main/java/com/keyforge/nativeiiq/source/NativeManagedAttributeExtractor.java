@@ -38,6 +38,16 @@ public final class NativeManagedAttributeExtractor {
      * {@code limit <= 0} means no limit (full extraction).
      */
     public NativeManagedAttributeExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    /**
+     * Paginated read with an optional server-side CSS incremental bound: when {@code modifiedAfter} is
+     * non-null, IIQ returns only entitlements whose {@code modified} time is after it (native
+     * {@code Filter.gt("modified", ...)} via {@link NativeIncrementalQuery}). {@code null} = full scan.
+     */
+    public NativeManagedAttributeExtractionResult extract(int start, int limit, java.util.Date modifiedAfter)
+            throws GeneralException {
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("id", true); // deterministic; name may be null on a ManagedAttribute
         if (start > 0) {
@@ -46,6 +56,7 @@ public final class NativeManagedAttributeExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
+        NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         return extract(qo);
     }
 

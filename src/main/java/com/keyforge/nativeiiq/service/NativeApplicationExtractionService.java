@@ -27,8 +27,14 @@ public final class NativeApplicationExtractionService {
 
     public NativeApplicationExtractionResult extract(SailPointContext context, int start, int limit)
             throws GeneralException {
+        return extract(context, start, limit, null);
+    }
+
+    /** One page, optionally bounded to applications changed after {@code modifiedAfter} (CSS incremental). */
+    public NativeApplicationExtractionResult extract(SailPointContext context, int start, int limit,
+                                                     java.util.Date modifiedAfter) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeApplicationExtractor(context, config).extract(Math.max(0, start), limit);
+        return new NativeApplicationExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
     }
 
     public NativeApplicationExtractionResult extractAll(SailPointContext context) throws GeneralException {

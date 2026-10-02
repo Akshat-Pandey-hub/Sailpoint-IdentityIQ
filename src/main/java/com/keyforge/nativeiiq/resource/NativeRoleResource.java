@@ -47,9 +47,12 @@ public class NativeRoleResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRoles(@QueryParam("start") @DefaultValue("0") int start,
-                             @QueryParam("limit") @DefaultValue("100") int limit) {
+                             @QueryParam("limit") @DefaultValue("100") int limit,
+                             @QueryParam("modifiedAfter") String modifiedAfter) {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        java.util.Date modifiedAfterDate =
+                com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         String stage = "start";
         try {
             LOG.fine("KeyForgeNativeIIQ roles: entering (start=" + safeStart + ", limit=" + safeLimit + ")");
@@ -59,7 +62,7 @@ public class NativeRoleResource extends BasePluginResource {
 
             stage = "extract";
             NativeRoleExtractionResult result =
-                    new NativeRoleExtractionService().extract(context, safeStart, safeLimit);
+                    new NativeRoleExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
 
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeRoleWire.envelope(result, safeStart, safeLimit);

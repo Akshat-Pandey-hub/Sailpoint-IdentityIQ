@@ -48,9 +48,12 @@ public class NativeManagedAttributeResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getEntitlements(@QueryParam("start") @DefaultValue("0") int start,
-                                    @QueryParam("limit") @DefaultValue("100") int limit) {
+                                    @QueryParam("limit") @DefaultValue("100") int limit,
+                                    @QueryParam("modifiedAfter") String modifiedAfter) {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        java.util.Date modifiedAfterDate =
+                com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         // Authorization enforced by IIQ's PluginAuthorizationFilter via @SystemAdmin (required 8.4 gate).
         String stage = "start";
         try {
@@ -61,7 +64,7 @@ public class NativeManagedAttributeResource extends BasePluginResource {
 
             stage = "extract";
             NativeManagedAttributeExtractionResult result =
-                    new NativeManagedAttributeExtractionService().extract(context, safeStart, safeLimit);
+                    new NativeManagedAttributeExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
 
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeManagedAttributeWire.envelope(result, safeStart, safeLimit);

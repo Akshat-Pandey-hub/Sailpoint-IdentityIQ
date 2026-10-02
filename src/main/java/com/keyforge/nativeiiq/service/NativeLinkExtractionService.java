@@ -26,8 +26,14 @@ public final class NativeLinkExtractionService {
     }
 
     public NativeLinkExtractionResult extract(SailPointContext context, int start, int limit) throws GeneralException {
+        return extract(context, start, limit, null);
+    }
+
+    /** One page, optionally bounded to accounts changed after {@code modifiedAfter} (CSS incremental). */
+    public NativeLinkExtractionResult extract(SailPointContext context, int start, int limit,
+                                              java.util.Date modifiedAfter) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeLinkExtractor(context, config).extract(Math.max(0, start), limit);
+        return new NativeLinkExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
     }
 
     public NativeLinkExtractionResult extractAll(SailPointContext context) throws GeneralException {

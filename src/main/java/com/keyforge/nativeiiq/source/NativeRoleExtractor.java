@@ -30,6 +30,15 @@ public final class NativeRoleExtractor {
     }
 
     public NativeRoleExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    /**
+     * Paginated read with an optional server-side CSS incremental bound: when {@code modifiedAfter} is
+     * non-null, IIQ returns only roles whose {@code modified} time is after it (native
+     * {@code Filter.gt("modified", ...)} via {@link NativeIncrementalQuery}). {@code null} = full scan.
+     */
+    public NativeRoleExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("name", true);
         if (start > 0) {
@@ -38,6 +47,7 @@ public final class NativeRoleExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
+        NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         return extract(qo);
     }
 
