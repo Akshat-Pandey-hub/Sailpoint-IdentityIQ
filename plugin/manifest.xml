@@ -53,6 +53,7 @@
                         <String>com.keyforge.nativeiiq.resource.NativePolicyConstraintResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeSyslogEventResource</String>
                         <String>com.keyforge.nativeiiq.resource.NativeAccessHistoryResource</String>
+                        <String>com.keyforge.nativeiiq.resource.NativeSqlReportResource</String>
                     </List>
                 </value>
             </entry>

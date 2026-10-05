@@ -160,6 +160,9 @@ import com.keyforge.nativeload.NativeGroupDefinitionImportService;
 import com.keyforge.nativeload.NativeGroupDefinitionRepository;
 import com.keyforge.nativeload.NativeGroupDefinitionSink;
 import com.keyforge.nativeload.NativeCssExtraction;
+import com.keyforge.nativeload.NativeSqlReportClient;
+import com.keyforge.nativeload.NativeSqlReportImportService;
+import com.keyforge.nativeload.NativeSqlReportRepository;
 import com.keyforge.nativeload.NativeIdentityClient;
 import com.keyforge.nativeload.NativeIdentityImportService;
 import com.keyforge.nativeload.NativeIdentityRepository;
@@ -331,6 +334,7 @@ public final class Main {
             case "extract-native-certification-archive-db" -> System.exit(RunLedger.run("extract-native-certification-archive-db", Main::runExtractNativeCertificationArchiveDb));
             case "extract-native-provisioning-txn-db" -> System.exit(RunLedger.run("extract-native-provisioning-txn-db", Main::runExtractNativeProvisioningTxnDb));
             case "extract-native-identity-request-db" -> System.exit(RunLedger.run("extract-native-identity-request-db", Main::runExtractNativeIdentityRequestDb));
+            case "extract-native-entitlement-assignment-db" -> System.exit(RunLedger.run("extract-native-entitlement-assignment-db", Main::runExtractNativeEntitlementAssignmentDb));
             case "extract-native-workitem-db" -> System.exit(RunLedger.run("extract-native-workitem-db", Main::runExtractNativeWorkItemDb));
             case "extract-entitlements" -> System.exit(runExtractEntitlements());
             case "extract-accounts" -> System.exit(runExtractAccounts());
@@ -1193,6 +1197,57 @@ public final class Main {
             System.out.println("  failed: " + String.join(", ", failures));
         }
         return worst;
+    }
+
+    /**
+     * SQL-report extraction (new workstream): executes a business-authored SELECT verbatim inside IIQ
+     * (plugin → {@code SailPointContext.getJdbcConnection()} against the IIQ DB), and replace-loads the
+     * exact result into {@code <schema>.kf_entitlement_assignment}. The SQL is NOT translated to the
+     * KeyForge schema; its columns are the query's SELECT aliases, stored as text. Query 1 only.
+     */
+    private static int runExtractNativeEntitlementAssignmentDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: business SQL executed natively inside IIQ via the plugin "
+                    + "(" + NativeSqlReportClient.SQL_REPORT_PATH + "entitlementAssignment) "
+                    + "-> SailPointContext.getJdbcConnection() against the IIQ database (spt_*), verbatim.");
+
+            NativeSqlReportClient client = new NativeSqlReportClient(new IiqSessionClient(iiqConfig));
+            NativeSqlReportRepository repository = new NativeSqlReportRepository(nativeSchema, "kf_entitlement_assignment");
+
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                NativeSqlReportImportService svc = new NativeSqlReportImportService(
+                        () -> client.fetch("entitlementAssignment"), repository);
+                NativeSqlReportImportService.Result result = svc.importAll(conn, RunLedger.currentRunId());
+                RunLedger.record("kf_entitlement_assignment", result.getReturned(), result.getPersisted(), 0, 0);
+                System.out.println();
+                System.out.println("Successfully persisted " + result.getPersisted()
+                        + " result rows to " + repository.targetTable()
+                        + " (" + result.getColumnCount() + " columns)"
+                        + (result.isTruncated() ? "  [WARNING: server row cap hit — result TRUNCATED]" : ""));
+                return result.isTruncated() ? 6 : 0;
+            }
+        } catch (ConfigException e) {
+            System.err.println("Configuration error: " + e.getMessage());
+            return 3;
+        } catch (NativeImportException e) {
+            System.err.println("Native SQL-report error: " + e.getMessage());
+            return 4;
+        } catch (IiqApiException e) {
+            System.err.println("IdentityIQ plugin API error: " + e.getMessage());
+            return 4;
+        } catch (SQLException e) {
+            System.err.println("PostgreSQL error: " + e.getMessage());
+            return 5;
+        } catch (RuntimeException e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            return 1;
+        }
     }
 
     private static int runExtractNativeIdentityDb() {
@@ -5155,6 +5210,7 @@ public final class Main {
         System.out.println("  extract-identity-roles-db    Retrieve Identity->Role assignments and upsert into <schema>.kf_identity_role");
         System.out.println("  --- Native SailPoint Java-API workstream (via KeyForgeNativeIIQ plugin REST; separate IIQ_NATIVE_SCHEMA, default iiq_native) ---");
         System.out.println("  extract-native-db            Run the WHOLE native extraction layer [--full|--incremental]; CSS=watermark incremental, CEC=append-only, derived/config=full (reuses the per-entity commands)");
+        System.out.println("  extract-native-entitlement-assignment-db  Run the business entitlement-assignment SQL verbatim inside IIQ (plugin -> getJdbcConnection, spt_*) and replace-load the result into <iiq_native>.kf_entitlement_assignment (read-only in IIQ)");
         System.out.println("  extract-native-identity-db   Pull native Identity data from the plugin endpoint and upsert into <iiq_native>.kf_identity (read-only in IIQ)");
         System.out.println("  extract-native-entitlement-db Pull native ManagedAttribute data from the plugin endpoint and upsert into <iiq_native>.kf_entitlement (read-only in IIQ)");
         System.out.println("  extract-native-application-db Pull native Application data from the plugin endpoint and upsert into <iiq_native>.kf_application (read-only in IIQ)");
