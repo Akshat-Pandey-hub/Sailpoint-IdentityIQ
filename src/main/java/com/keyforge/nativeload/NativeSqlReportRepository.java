@@ -34,14 +34,26 @@ public final class NativeSqlReportRepository {
 
     private final String schema;
     private final String targetTable;
+    private final List<String> columns;
 
     public NativeSqlReportRepository(String schema) {
-        this(schema, "kf_entitlement_assignment");
+        this(schema, "kf_entitlement_assignment", COLUMNS);
     }
 
     public NativeSqlReportRepository(String schema, String table) {
+        this(schema, table, COLUMNS);
+    }
+
+    /**
+     * Columns-parameterized variant so a second baked report (e.g. the workgroup-members query) can
+     * reuse this exact replace-all/idempotency machinery with its own SELECT aliases and destination
+     * table. {@code columns} must equal that query's SELECT aliases, in order. Query 1 continues to use
+     * the {@link #COLUMNS} default via the other constructors — its behaviour is unchanged.
+     */
+    public NativeSqlReportRepository(String schema, String table, List<String> columns) {
         this.schema = SchemaName.validate(schema);
         this.targetTable = this.schema + "." + table;
+        this.columns = columns;
     }
 
     public String targetTable() {
@@ -51,7 +63,7 @@ public final class NativeSqlReportRepository {
     public void ensureTargetTable(Connection conn) throws SQLException {
         StringBuilder ddl = new StringBuilder("CREATE TABLE IF NOT EXISTS " + targetTable + " (");
         ddl.append("id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, ");
-        for (String col : COLUMNS) {
+        for (String col : columns) {
             ddl.append(col).append(" text, ");
         }
         ddl.append("source_system text, ");
@@ -74,7 +86,7 @@ public final class NativeSqlReportRepository {
 
         StringBuilder cols = new StringBuilder();
         StringBuilder qs = new StringBuilder();
-        for (String c : COLUMNS) {
+        for (String c : columns) {
             cols.append(c).append(", ");
             qs.append("?, ");
         }
@@ -91,7 +103,7 @@ public final class NativeSqlReportRepository {
             try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
                 for (Map<String, String> row : rows) {
                     int i = 1;
-                    for (String c : COLUMNS) {
+                    for (String c : columns) {
                         ps.setString(i++, row.get(c)); // null stays SQL NULL
                     }
                     ps.setString(i++, "IdentityIQ");

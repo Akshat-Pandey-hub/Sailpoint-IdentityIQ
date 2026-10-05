@@ -335,6 +335,9 @@ public final class Main {
             case "extract-native-provisioning-txn-db" -> System.exit(RunLedger.run("extract-native-provisioning-txn-db", Main::runExtractNativeProvisioningTxnDb));
             case "extract-native-identity-request-db" -> System.exit(RunLedger.run("extract-native-identity-request-db", Main::runExtractNativeIdentityRequestDb));
             case "extract-native-entitlement-assignment-db" -> System.exit(RunLedger.run("extract-native-entitlement-assignment-db", Main::runExtractNativeEntitlementAssignmentDb));
+            case "extract-native-workgroup-members-db" -> System.exit(RunLedger.run("extract-native-workgroup-members-db", Main::runExtractNativeWorkgroupMembersDb));
+            case "extract-native-entitlement-certification-db" -> System.exit(RunLedger.run("extract-native-entitlement-certification-db", Main::runExtractNativeEntitlementCertificationDb));
+            case "extract-native-entitlement-certification-status-db" -> System.exit(RunLedger.run("extract-native-entitlement-certification-status-db", Main::runExtractNativeEntitlementCertificationStatusDb));
             case "extract-native-workitem-db" -> System.exit(RunLedger.run("extract-native-workitem-db", Main::runExtractNativeWorkItemDb));
             case "extract-entitlements" -> System.exit(runExtractEntitlements());
             case "extract-accounts" -> System.exit(runExtractAccounts());
@@ -1225,6 +1228,184 @@ public final class Main {
                         () -> client.fetch("entitlementAssignment"), repository);
                 NativeSqlReportImportService.Result result = svc.importAll(conn, RunLedger.currentRunId());
                 RunLedger.record("kf_entitlement_assignment", result.getReturned(), result.getPersisted(), 0, 0);
+                System.out.println();
+                System.out.println("Successfully persisted " + result.getPersisted()
+                        + " result rows to " + repository.targetTable()
+                        + " (" + result.getColumnCount() + " columns)"
+                        + (result.isTruncated() ? "  [WARNING: server row cap hit — result TRUNCATED]" : ""));
+                return result.isTruncated() ? 6 : 0;
+            }
+        } catch (ConfigException e) {
+            System.err.println("Configuration error: " + e.getMessage());
+            return 3;
+        } catch (NativeImportException e) {
+            System.err.println("Native SQL-report error: " + e.getMessage());
+            return 4;
+        } catch (IiqApiException e) {
+            System.err.println("IdentityIQ plugin API error: " + e.getMessage());
+            return 4;
+        } catch (SQLException e) {
+            System.err.println("PostgreSQL error: " + e.getMessage());
+            return 5;
+        } catch (RuntimeException e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            return 1;
+        }
+    }
+
+    /** The 7 business columns of Query 2 = the workgroup-members SELECT aliases, in order (stored as text). */
+    private static final java.util.List<String> WORKGROUP_MEMBERS_COLUMNS = java.util.List.of(
+            "workgroup_name", "user_name", "display_name", "first_name", "last_name", "email", "user_status");
+
+    /**
+     * SQL-report extraction (Query 2): executes the business workgroup-members SELECT verbatim inside IIQ
+     * (plugin → {@code SailPointContext.getJdbcConnection()} against the IIQ DB), and replace-loads the
+     * exact result into {@code <schema>.kf_workgroup_members}. Same architecture/discipline as Query 1:
+     * the SQL is NOT translated; its columns are the query's SELECT aliases, stored as text. This table
+     * holds the business-SQL RESULT SET and is distinct from the native-object tables kf_workgroup /
+     * kf_workgroup_member, which remain authoritative.
+     */
+    private static int runExtractNativeWorkgroupMembersDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: business SQL executed natively inside IIQ via the plugin "
+                    + "(" + NativeSqlReportClient.SQL_REPORT_PATH + "workgroupMembers) "
+                    + "-> SailPointContext.getJdbcConnection() against the IIQ database (spt_*), verbatim.");
+
+            NativeSqlReportClient client = new NativeSqlReportClient(new IiqSessionClient(iiqConfig));
+            NativeSqlReportRepository repository =
+                    new NativeSqlReportRepository(nativeSchema, "kf_workgroup_members", WORKGROUP_MEMBERS_COLUMNS);
+
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                NativeSqlReportImportService svc = new NativeSqlReportImportService(
+                        () -> client.fetch("workgroupMembers"), repository);
+                NativeSqlReportImportService.Result result = svc.importAll(conn, RunLedger.currentRunId());
+                RunLedger.record("kf_workgroup_members", result.getReturned(), result.getPersisted(), 0, 0);
+                System.out.println();
+                System.out.println("Successfully persisted " + result.getPersisted()
+                        + " result rows to " + repository.targetTable()
+                        + " (" + result.getColumnCount() + " columns)"
+                        + (result.isTruncated() ? "  [WARNING: server row cap hit — result TRUNCATED]" : ""));
+                return result.isTruncated() ? 6 : 0;
+            }
+        } catch (ConfigException e) {
+            System.err.println("Configuration error: " + e.getMessage());
+            return 3;
+        } catch (NativeImportException e) {
+            System.err.println("Native SQL-report error: " + e.getMessage());
+            return 4;
+        } catch (IiqApiException e) {
+            System.err.println("IdentityIQ plugin API error: " + e.getMessage());
+            return 4;
+        } catch (SQLException e) {
+            System.err.println("PostgreSQL error: " + e.getMessage());
+            return 5;
+        } catch (RuntimeException e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            return 1;
+        }
+    }
+
+    /** The 9 business columns of Query 3 = the entitlement-certification SELECT aliases, in order (text). */
+    private static final java.util.List<String> ENTITLEMENT_CERTIFICATION_COLUMNS = java.util.List.of(
+            "user_id", "user_name", "application_name", "account_name", "entitlement_attribute",
+            "entitlement_value", "entitlement_assigned_date", "entitlement_modified_date", "never_certified");
+
+    /**
+     * SQL-report extraction (Query 3): executes the business entitlement/never-certified SELECT verbatim
+     * inside IIQ (plugin → {@code SailPointContext.getJdbcConnection()} against the IIQ DB), and
+     * replace-loads the exact result into {@code <schema>.kf_entitlement_certification}. Same
+     * architecture/discipline as Queries 1 and 2: the SQL is NOT translated; its columns are the query's
+     * SELECT aliases, stored as text. Distinct from the native-object tables kf_entitlement /
+     * kf_identity_entitlement / kf_certification*, which remain authoritative.
+     */
+    private static int runExtractNativeEntitlementCertificationDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: business SQL executed natively inside IIQ via the plugin "
+                    + "(" + NativeSqlReportClient.SQL_REPORT_PATH + "entitlementCertification) "
+                    + "-> SailPointContext.getJdbcConnection() against the IIQ database (spt_*), verbatim.");
+
+            NativeSqlReportClient client = new NativeSqlReportClient(new IiqSessionClient(iiqConfig));
+            NativeSqlReportRepository repository = new NativeSqlReportRepository(
+                    nativeSchema, "kf_entitlement_certification", ENTITLEMENT_CERTIFICATION_COLUMNS);
+
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                NativeSqlReportImportService svc = new NativeSqlReportImportService(
+                        () -> client.fetch("entitlementCertification"), repository);
+                NativeSqlReportImportService.Result result = svc.importAll(conn, RunLedger.currentRunId());
+                RunLedger.record("kf_entitlement_certification", result.getReturned(), result.getPersisted(), 0, 0);
+                System.out.println();
+                System.out.println("Successfully persisted " + result.getPersisted()
+                        + " result rows to " + repository.targetTable()
+                        + " (" + result.getColumnCount() + " columns)"
+                        + (result.isTruncated() ? "  [WARNING: server row cap hit — result TRUNCATED]" : ""));
+                return result.isTruncated() ? 6 : 0;
+            }
+        } catch (ConfigException e) {
+            System.err.println("Configuration error: " + e.getMessage());
+            return 3;
+        } catch (NativeImportException e) {
+            System.err.println("Native SQL-report error: " + e.getMessage());
+            return 4;
+        } catch (IiqApiException e) {
+            System.err.println("IdentityIQ plugin API error: " + e.getMessage());
+            return 4;
+        } catch (SQLException e) {
+            System.err.println("PostgreSQL error: " + e.getMessage());
+            return 5;
+        } catch (RuntimeException e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            return 1;
+        }
+    }
+
+    /** The 14 business columns of Query 4 = the entitlement-certification-status SELECT aliases, in order. */
+    private static final java.util.List<String> ENTITLEMENT_CERTIFICATION_STATUS_COLUMNS = java.util.List.of(
+            "user_id", "user_name", "manager_user_id", "manager_name", "application_name", "account_name",
+            "entitlement_attribute", "entitlement_value", "entitlement_assigned_date",
+            "last_certification_name", "last_certified_date", "certifier", "certification_decision",
+            "never_certified");
+
+    /**
+     * SQL-report extraction (Query 4): executes the business entitlement/latest-certification SELECT
+     * verbatim inside IIQ (plugin → {@code SailPointContext.getJdbcConnection()} against the IIQ DB), and
+     * replace-loads the exact result into {@code <schema>.kf_entitlement_certification_status}. Same
+     * architecture/discipline as Queries 1–3: the SQL is NOT translated; its columns are the query's
+     * SELECT aliases, stored as text. Distinct from Query 3's kf_entitlement_certification and from the
+     * native-object kf_certification* tables, which remain authoritative.
+     */
+    private static int runExtractNativeEntitlementCertificationStatusDb() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            PgConfig pgConfig = PgConfig.load();
+            String nativeSchema = NativeSchemaConfig.resolve();
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
+                    + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
+            System.out.println("Source: business SQL executed natively inside IIQ via the plugin "
+                    + "(" + NativeSqlReportClient.SQL_REPORT_PATH + "entitlementCertificationStatus) "
+                    + "-> SailPointContext.getJdbcConnection() against the IIQ database (spt_*), verbatim.");
+
+            NativeSqlReportClient client = new NativeSqlReportClient(new IiqSessionClient(iiqConfig));
+            NativeSqlReportRepository repository = new NativeSqlReportRepository(
+                    nativeSchema, "kf_entitlement_certification_status", ENTITLEMENT_CERTIFICATION_STATUS_COLUMNS);
+
+            try (Connection conn = PostgresConnection.open(pgConfig)) {
+                NativeSqlReportImportService svc = new NativeSqlReportImportService(
+                        () -> client.fetch("entitlementCertificationStatus"), repository);
+                NativeSqlReportImportService.Result result = svc.importAll(conn, RunLedger.currentRunId());
+                RunLedger.record("kf_entitlement_certification_status", result.getReturned(), result.getPersisted(), 0, 0);
                 System.out.println();
                 System.out.println("Successfully persisted " + result.getPersisted()
                         + " result rows to " + repository.targetTable()
@@ -5211,6 +5392,9 @@ public final class Main {
         System.out.println("  --- Native SailPoint Java-API workstream (via KeyForgeNativeIIQ plugin REST; separate IIQ_NATIVE_SCHEMA, default iiq_native) ---");
         System.out.println("  extract-native-db            Run the WHOLE native extraction layer [--full|--incremental]; CSS=watermark incremental, CEC=append-only, derived/config=full (reuses the per-entity commands)");
         System.out.println("  extract-native-entitlement-assignment-db  Run the business entitlement-assignment SQL verbatim inside IIQ (plugin -> getJdbcConnection, spt_*) and replace-load the result into <iiq_native>.kf_entitlement_assignment (read-only in IIQ)");
+        System.out.println("  extract-native-workgroup-members-db       Run the business workgroup-members SQL verbatim inside IIQ (plugin -> getJdbcConnection, spt_*) and replace-load the result into <iiq_native>.kf_workgroup_members (read-only in IIQ)");
+        System.out.println("  extract-native-entitlement-certification-db  Run the business entitlement/never-certified SQL verbatim inside IIQ (plugin -> getJdbcConnection, spt_*) and replace-load the result into <iiq_native>.kf_entitlement_certification (read-only in IIQ)");
+        System.out.println("  extract-native-entitlement-certification-status-db  Run the business entitlement/latest-certification SQL verbatim inside IIQ (plugin -> getJdbcConnection, spt_*) and replace-load the result into <iiq_native>.kf_entitlement_certification_status (read-only in IIQ)");
         System.out.println("  extract-native-identity-db   Pull native Identity data from the plugin endpoint and upsert into <iiq_native>.kf_identity (read-only in IIQ)");
         System.out.println("  extract-native-entitlement-db Pull native ManagedAttribute data from the plugin endpoint and upsert into <iiq_native>.kf_entitlement (read-only in IIQ)");
         System.out.println("  extract-native-application-db Pull native Application data from the plugin endpoint and upsert into <iiq_native>.kf_application (read-only in IIQ)");

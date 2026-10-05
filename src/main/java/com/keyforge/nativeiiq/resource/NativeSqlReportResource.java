@@ -72,6 +72,62 @@ public class NativeSqlReportResource extends BasePluginResource {
         // three-valued-logic NULL behaviour exactly - every `= 0` is paired with an explicit
         // `OR ... IS NULL`. No other column, join, predicate, CASE branch or alias was changed.
         REPORTS.put("entitlementAssignment", "/com/keyforge/nativeiiq/sql/entitlementAssignment.sql");
+
+        // workgroupMembers: business Query 2 (workgroups and their members' status), verbatim, with three
+        // and only three schema/type corrections authoritatively grounded in Identity.hbm.xml (inside
+        // lib/identityiq.jar): (a) the membership link table spt_identity_workgroups has physical columns
+        // identity_id (key), workgroup (many-to-many FK to the workgroup Identity) and idx -- there is NO
+        // `workgroup_id` -- so the join `wg.id = iw.workgroup_id` became `wg.id = iw.workgroup`; plus the
+        // two boolean adaptations below. NOTE two unrelated columns share the name "workgroup":
+        // spt_identity.workgroup (BOOLEAN is-workgroup flag, used by WHERE wg.workgroup = TRUE) and
+        // spt_identity_workgroups.workgroup (varchar FK, used by the corrected join) -- distinct columns.
+        // PostgreSQL type adaptation only: spt_identity.workgroup and spt_identity.inactive are
+        // BOOLEAN columns in IIQ's PostgreSQL schema (confirmed by the native layer's isWorkgroup()/
+        // isInactive() and its `is_workgroup boolean`/`inactive boolean` DDL), and PostgreSQL has no
+        // implicit boolean<->integer coercion, so the two `= 1` comparisons (WHERE wg.workgroup = 1 and
+        // the CASE `u.inactive = 1`) became `= TRUE`. `= TRUE` (not IS TRUE) preserves the original
+        // NULL behaviour exactly. No alias, LEFT JOIN, CASE ordering or ORDER BY (incl. u.inactive DESC,
+        // valid on a boolean) was otherwise changed. Not an arbitrary-SQL surface: baked, keyed by name.
+        REPORTS.put("workgroupMembers", "/com/keyforge/nativeiiq/sql/workgroupMembers.sql");
+
+        // entitlementCertification: business Query 3 (entitlement + never-certified flag), verbatim, with
+        // ONE PostgreSQL compatibility correction only, proven from identityiq.jar Hibernate mappings:
+        // spt_identity_entitlement.created/.modified map to sailpoint.persistence.DateType, which stores a
+        // java.util.Date as a BIGINT of epoch MILLISECONDS (DateType.sqlTypes()=BIGINT, get/setLong). The
+        // original MySQL `FROM_UNIXTIME(ie.created / 1000)` has no PostgreSQL equivalent, so both date
+        // expressions became `to_timestamp(ie.created / 1000.0)` / `to_timestamp(ie.modified / 1000.0)`:
+        // the `/ 1000.0` (numeric) divides epoch-ms to epoch-seconds preserving sub-second precision
+        // exactly as MySQL's non-integer `/ 1000` did (a bare `/ 1000` in PostgreSQL would be integer
+        // division and truncate milliseconds). Every other name/type/semantic was verified present and
+        // compatible (all joins text=text; CertificationItem.exception_application/exception_attribute_name/
+        // exception_attribute_value and CertificationEntity.target_id/target_name/native_identity exist;
+        // ci.certification_entity_id -> ce.id confirmed), so EXISTS, the target_id/target_name OR, the
+        // native_identity NULL fallback, THEN 'NO'/ELSE 'YES', and ORDER BY were left unchanged. Baked,
+        // keyed by name: not an arbitrary-SQL surface.
+        REPORTS.put("entitlementCertification", "/com/keyforge/nativeiiq/sql/entitlementCertification.sql");
+
+        // entitlementCertificationStatus: business Query 4 (every entitlement + its latest certification
+        // info), verbatim, with THREE PostgreSQL compatibility corrections only, all proven from
+        // identityiq.jar Hibernate mappings and none changing business meaning:
+        //   (a) spt_identity_entitlement.created and spt_certification_action.decision_date both map to
+        //       sailpoint.persistence.DateType = BIGINT epoch-MILLISECONDS (DateType.sqlTypes()=BIGINT),
+        //       so the MySQL FROM_UNIXTIME(x / 1000) became to_timestamp(x / 1000.0) in both places
+        //       (/ 1000.0 numeric preserves sub-second precision; bare / 1000 would integer-truncate ms).
+        //   (b) window ORDER BY `ca.decision_date DESC` -> `ca.decision_date DESC NULLS LAST`: MySQL sorts
+        //       NULLs last on DESC, PostgreSQL sorts them first by default, so without NULLS LAST an
+        //       undecided certification (decision_date NULL) would outrank a decided one for the same
+        //       entitlement and win rn=1 -- inverting the intended "latest DECIDED certification". NULLS
+        //       LAST makes PostgreSQL reproduce MySQL's ordering exactly. (c.created is never NULL, so its
+        //       DESC needs no NULLS clause.) This preserves, not changes, the business semantics.
+        // Everything else verified present/compatible and left unchanged: spt_certification(.name,.created),
+        // spt_certification_action(.id via ci.action, .decision_date, .actor_name=certifier,
+        // .status=CertificationAction$Status decision enum), spt_identity.manager->mgr.id,
+        // ce.certification_id->c.id, ci.certification_entity_id->ce.id, the three exception_* matches, the
+        // target_id/native_identity-NULL-fallback join, ROW_NUMBER() partition, the CTE, every LEFT JOIN
+        // (entitlements with no certification are preserved), 'YES'/'NO', and the final ORDER BY. Baked,
+        // keyed by name: not an arbitrary-SQL surface.
+        REPORTS.put("entitlementCertificationStatus",
+                "/com/keyforge/nativeiiq/sql/entitlementCertificationStatus.sql");
     }
 
     @Override
