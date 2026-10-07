@@ -3,9 +3,21 @@ package com.keyforge.iiq.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keyforge.iiq.client.IiqSessionClient;
 import com.keyforge.iiq.config.AppConfig;
+import com.keyforge.nativeload.NativeAccountRestService;
+import com.keyforge.nativeload.NativeApplicationClient;
+import com.keyforge.nativeload.NativeApplicationPageSource;
+import com.keyforge.nativeload.NativeApplicationRestService;
 import com.keyforge.nativeload.NativeEntitlementRestService;
+import com.keyforge.nativeload.NativeLinkClient;
+import com.keyforge.nativeload.NativeLinkPageSource;
+import com.keyforge.nativeload.NativeIdentityClient;
+import com.keyforge.nativeload.NativeIdentityPageSource;
+import com.keyforge.nativeload.NativeIdentityRestService;
 import com.keyforge.nativeload.NativeManagedAttributeClient;
 import com.keyforge.nativeload.NativeManagedAttributePageSource;
+import com.keyforge.nativeload.NativeWorkgroupClient;
+import com.keyforge.nativeload.NativeWorkgroupPageSource;
+import com.keyforge.nativeload.NativeWorkgroupRestService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
@@ -41,6 +53,10 @@ public final class KfAgentRestServer {
     private final ObjectMapper mapper = new ObjectMapper();
     private final IiqSessionClient session;
     private final NativeEntitlementRestService entitlementService = new NativeEntitlementRestService();
+    private final NativeIdentityRestService identityService = new NativeIdentityRestService();
+    private final NativeApplicationRestService applicationService = new NativeApplicationRestService();
+    private final NativeAccountRestService accountService = new NativeAccountRestService();
+    private final NativeWorkgroupRestService workgroupService = new NativeWorkgroupRestService();
 
     private HttpServer server;
 
@@ -57,7 +73,7 @@ public final class KfAgentRestServer {
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
-                + "/entitlements  (read-only; no PostgreSQL on this path)");
+                + "/{entitlements,identities,applications,accounts,workgroups}  (read-only; no PostgreSQL on this path)");
     }
 
     public void stop() {
@@ -81,9 +97,17 @@ public final class KfAgentRestServer {
 
             if ("entitlements".equals(sub)) {
                 handleEntitlements(ex, q);
+            } else if ("identities".equals(sub)) {
+                handleIdentities(ex, q);
+            } else if ("applications".equals(sub)) {
+                handleApplications(ex, q);
+            } else if ("accounts".equals(sub)) {
+                handleAccounts(ex, q);
+            } else if ("workgroups".equals(sub)) {
+                handleWorkgroups(ex, q);
             } else {
                 writeJson(ex, 404, error("unknown resource '" + sub
-                        + "' — only 'entitlements' is implemented so far"));
+                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups'"));
             }
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
@@ -117,6 +141,103 @@ public final class KfAgentRestServer {
 
         try {
             List<Map<String, Object>> rows = entitlementService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleIdentities(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        NativeIdentityClient client = new NativeIdentityClient(session);
+        String modifiedAfter = q.get("modifiedAfter");
+        if (modifiedAfter != null && !modifiedAfter.trim().isEmpty()) {
+            client = client.withModifiedAfter(modifiedAfter);
+        }
+        NativeIdentityPageSource source = client;
+
+        try {
+            List<Map<String, Object>> rows = identityService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleApplications(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        NativeApplicationClient client = new NativeApplicationClient(session);
+        String modifiedAfter = q.get("modifiedAfter");
+        if (modifiedAfter != null && !modifiedAfter.trim().isEmpty()) {
+            client = client.withModifiedAfter(modifiedAfter);
+        }
+        NativeApplicationPageSource source = client;
+
+        try {
+            List<Map<String, Object>> rows = applicationService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleAccounts(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        NativeLinkClient client = new NativeLinkClient(session);
+        String modifiedAfter = q.get("modifiedAfter");
+        if (modifiedAfter != null && !modifiedAfter.trim().isEmpty()) {
+            client = client.withModifiedAfter(modifiedAfter);
+        }
+        NativeLinkPageSource source = client;
+
+        try {
+            List<Map<String, Object>> rows = accountService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleWorkgroups(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // The native Workgroup client has no server-side modifiedAfter support (full-scan only);
+        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
+        NativeWorkgroupPageSource source = new NativeWorkgroupClient(session);
+
+        try {
+            List<Map<String, Object>> rows = workgroupService.fetch(source, filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
