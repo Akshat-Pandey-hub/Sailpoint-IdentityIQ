@@ -243,6 +243,10 @@ public final class Main {
             runStartRest();   // blocks until the process is stopped
             return;
         }
+        if ("start-kfagent".equals(command)) {
+            runStartKfAgent();   // blocks until the process is stopped
+            return;
+        }
         if ("inspect-entitlement-source".equals(command)) {
             System.exit(runInspectEntitlementSource(args));
             return;
@@ -4182,6 +4186,53 @@ public final class Main {
         }
     }
 
+    /**
+     * KF Agent REST service: exposes the existing native (Java-API) extraction as read-only JSON over
+     * HTTP so the Assurance Tool can pull SailPoint data without a client-side database. Reuses the
+     * native extraction/mapping verbatim and persists NOTHING on this path (the PostgreSQL write is
+     * bypassed — see {@link com.keyforge.nativeload.NativeEntitlementRestService}). First module:
+     * {@code GET /kfagent/entitlements}. Blocks until the process is stopped.
+     */
+    private static void runStartKfAgent() {
+        try {
+            AppConfig iiqConfig = AppConfig.load();
+            String host = envOrDefault("KFAGENT_HOST", "0.0.0.0");
+            int port = intEnvOrDefault("KFAGENT_PORT",
+                    intEnvOrDefault("REST_PORT", com.keyforge.iiq.rest.KfAgentRestServer.DEFAULT_PORT));
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            com.keyforge.iiq.rest.KfAgentRestServer server =
+                    new com.keyforge.iiq.rest.KfAgentRestServer(iiqConfig, host, port);
+            Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
+            server.start();
+            Thread.currentThread().join(); // keep the process running while serving requests
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            System.err.println("Failed to start KF Agent REST service: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+
+    private static String envOrDefault(String key, String def) {
+        String v = System.getenv(key);
+        if (v == null || v.trim().isEmpty()) {
+            v = System.getProperty(key);
+        }
+        return (v == null || v.trim().isEmpty()) ? def : v.trim();
+    }
+
+    private static int intEnvOrDefault(String key, int def) {
+        String v = envOrDefault(key, null);
+        if (v == null) {
+            return def;
+        }
+        try {
+            return Integer.parseInt(v.trim());
+        } catch (NumberFormatException e) {
+            return def;
+        }
+    }
+
     private static int runExtractWorkgroupMembers() {
         try {
             AppConfig config = AppConfig.load();
@@ -5438,6 +5489,7 @@ public final class Main {
         System.out.println("  extract-event-links-parquet             Write kf_event_link Parquet dataset (derived)");
         System.out.println("  extract-all-parquet                     Orchestrate: run every individual Parquet extractor");
         System.out.println("  start-rest                              Start the read-only REST query service over the Parquet datasets");
+        System.out.println("  start-kfagent                           Start the KF Agent REST service (native extraction as JSON, no DB). Env: KFAGENT_HOST (0.0.0.0), KFAGENT_PORT (8100). GET /health, /kfagent/entitlements?<any response field>=<value> (generic exact filters, AND-combined) plus &modifiedAfter=&start=&limit=");
         System.out.println("                                          (DuckDB; no IIQ/PostgreSQL). Config: REST_HOST (default 127.0.0.1),");
         System.out.println("                                          REST_PORT (default 8100), PARQUET_OUT_DIR. GET /health, " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + "/datasets,");
         System.out.println("                                          " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + "/{dataset}[?fields=&sort=&order=&limit=&offset=&filter.<f>.<op>=]");
