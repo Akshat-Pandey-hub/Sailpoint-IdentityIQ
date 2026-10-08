@@ -9,6 +9,10 @@ import com.keyforge.nativeload.NativeAccountEntitlementRestService;
 import com.keyforge.nativeload.NativeAccountRestService;
 import com.keyforge.nativeload.NativeApplicationClient;
 import com.keyforge.nativeload.NativeApplicationPageSource;
+import com.keyforge.nativeload.NativeAccessHistoryCertificationRestService;
+import com.keyforge.nativeload.NativeAccessHistoryClient;
+import com.keyforge.nativeload.NativeAccessHistoryEntitlementRestService;
+import com.keyforge.nativeload.NativeAccessHistoryIdentityEventRestService;
 import com.keyforge.nativeload.NativeApplicationRestService;
 import com.keyforge.nativeload.NativeAuditEventClient;
 import com.keyforge.nativeload.NativeAuditEventPageSource;
@@ -135,6 +139,12 @@ public final class KfAgentRestServer {
             new NativePolicyConstraintRestService();
     private final NativeTaskResultRestService taskResultService = new NativeTaskResultRestService();
     private final NativeTaskScheduleRestService taskScheduleService = new NativeTaskScheduleRestService();
+    private final NativeAccessHistoryEntitlementRestService accessHistoryService =
+            new NativeAccessHistoryEntitlementRestService();
+    private final NativeAccessHistoryIdentityEventRestService accessHistoryIdentityEventService =
+            new NativeAccessHistoryIdentityEventRestService();
+    private final NativeAccessHistoryCertificationRestService accessHistoryCertificationService =
+            new NativeAccessHistoryCertificationRestService();
 
     private HttpServer server;
 
@@ -151,7 +161,7 @@ public final class KfAgentRestServer {
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
-                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules}  (read-only; no PostgreSQL on this path)");
+                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/certifications}  (read-only; no PostgreSQL on this path)");
     }
 
     public void stop() {
@@ -223,9 +233,15 @@ public final class KfAgentRestServer {
                 handleTaskResults(ex, q);
             } else if ("task-schedules".equals(sub)) {
                 handleTaskSchedules(ex, q);
+            } else if ("access-history/identity-events".equals(sub)) {
+                handleAccessHistoryIdentityEvents(ex, q);
+            } else if ("access-history/certifications".equals(sub)) {
+                handleAccessHistoryCertifications(ex, q);
+            } else if ("access-history".equals(sub)) {
+                handleAccessHistory(ex, q);
             } else {
                 writeJson(ex, 404, error("unknown resource '" + sub
-                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules'"));
+                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules', 'access-history', 'access-history/identity-events', 'access-history/certifications'"));
             }
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
@@ -800,6 +816,80 @@ public final class KfAgentRestServer {
 
         try {
             List<Map<String, Object>> rows = taskScheduleService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleAccessHistory(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native Access-History entitlement-capture extraction (append-only, immutable). The
+        // import service is DB-coupled, so it is not used here; the client + envelope are reused directly and
+        // the service collects rows in memory (no DB). No modifiedAfter support; it stays reserved.
+        NativeAccessHistoryClient client = new NativeAccessHistoryClient(session);
+
+        try {
+            List<Map<String, Object>> rows = accessHistoryService.fetch(
+                    (s, l) -> client.fetchPage(NativeAccessHistoryClient.ENTITLEMENT_CAPTURES_PATH, s, l),
+                    filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleAccessHistoryIdentityEvents(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native Access-History identity-event extraction (append-only). DB-coupled import is not
+        // used; the client + envelope are reused directly (identity-events path, NOT entitlement-captures).
+        NativeAccessHistoryClient client = new NativeAccessHistoryClient(session);
+
+        try {
+            List<Map<String, Object>> rows = accessHistoryIdentityEventService.fetch(
+                    (s, l) -> client.fetchPage(NativeAccessHistoryClient.IDENTITY_EVENTS_PATH, s, l),
+                    filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleAccessHistoryCertifications(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native Access-History certification extraction (append-only). DB-coupled import is not
+        // used; the client + envelope are reused directly (certifications path). Table is currently empty →
+        // live response is []; it returns real rows automatically once certification history exists.
+        NativeAccessHistoryClient client = new NativeAccessHistoryClient(session);
+
+        try {
+            List<Map<String, Object>> rows = accessHistoryCertificationService.fetch(
+                    (s, l) -> client.fetchPage(NativeAccessHistoryClient.CERTIFICATIONS_PATH, s, l),
+                    filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
