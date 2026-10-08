@@ -10,6 +10,18 @@ import com.keyforge.nativeload.NativeAccountRestService;
 import com.keyforge.nativeload.NativeApplicationClient;
 import com.keyforge.nativeload.NativeApplicationPageSource;
 import com.keyforge.nativeload.NativeApplicationRestService;
+import com.keyforge.nativeload.NativeAuditEventClient;
+import com.keyforge.nativeload.NativeAuditEventPageSource;
+import com.keyforge.nativeload.NativeAuditEventRestService;
+import com.keyforge.nativeload.NativeCertificationClient;
+import com.keyforge.nativeload.NativeCertificationEntityClient;
+import com.keyforge.nativeload.NativeCertificationEntityPageSource;
+import com.keyforge.nativeload.NativeCertificationEntityRestService;
+import com.keyforge.nativeload.NativeCertificationItemClient;
+import com.keyforge.nativeload.NativeCertificationItemPageSource;
+import com.keyforge.nativeload.NativeCertificationItemRestService;
+import com.keyforge.nativeload.NativeCertificationPageSource;
+import com.keyforge.nativeload.NativeCertificationRestService;
 import com.keyforge.nativeload.NativeEntitlementRestService;
 import com.keyforge.nativeload.NativeLinkClient;
 import com.keyforge.nativeload.NativeLinkPageSource;
@@ -30,9 +42,13 @@ import com.keyforge.nativeload.NativeIdentityRoleRestService;
 import com.keyforge.nativeload.NativeManagedAttributeClient;
 import com.keyforge.nativeload.NativeManagedAttributePageSource;
 import com.keyforge.nativeload.NativePolicyClient;
+import com.keyforge.nativeload.NativePolicyConstraintClient;
+import com.keyforge.nativeload.NativePolicyConstraintPageSource;
+import com.keyforge.nativeload.NativePolicyConstraintRestService;
 import com.keyforge.nativeload.NativePolicyPageSource;
 import com.keyforge.nativeload.NativePolicyRestService;
 import com.keyforge.nativeload.NativeProvisioningItemRestService;
+import com.keyforge.nativeload.NativeProvisioningTransactionRestService;
 import com.keyforge.nativeload.NativeProvisioningTxnClient;
 import com.keyforge.nativeload.NativeProvisioningTxnPageSource;
 import com.keyforge.nativeload.NativeRoleClient;
@@ -41,6 +57,11 @@ import com.keyforge.nativeload.NativeRoleRelationshipClient;
 import com.keyforge.nativeload.NativeRoleRelationshipPageSource;
 import com.keyforge.nativeload.NativeRolePageSource;
 import com.keyforge.nativeload.NativeRoleRestService;
+import com.keyforge.nativeload.NativeWorkItemClient;
+import com.keyforge.nativeload.NativeWorkItemPageSource;
+import com.keyforge.nativeload.NativeWorkItemRestService;
+import com.keyforge.nativeload.NativeWorkflowClient;
+import com.keyforge.nativeload.NativeWorkflowDefinitionRestService;
 import com.keyforge.nativeload.NativeWorkgroupClient;
 import com.keyforge.nativeload.NativeWorkgroupPageSource;
 import com.keyforge.nativeload.NativeWorkgroupRestService;
@@ -93,6 +114,19 @@ public final class KfAgentRestServer {
     private final NativeIdentityRequestApprovalRestService identityRequestApprovalService = new NativeIdentityRequestApprovalRestService();
     private final NativePolicyRestService policyService = new NativePolicyRestService();
     private final NativeProvisioningItemRestService provisioningItemService = new NativeProvisioningItemRestService();
+    private final NativeProvisioningTransactionRestService provisioningTransactionService =
+            new NativeProvisioningTransactionRestService();
+    private final NativeWorkItemRestService workItemService = new NativeWorkItemRestService();
+    private final NativeWorkflowDefinitionRestService workflowDefinitionService =
+            new NativeWorkflowDefinitionRestService();
+    private final NativeCertificationRestService certificationService = new NativeCertificationRestService();
+    private final NativeCertificationEntityRestService certificationEntityService =
+            new NativeCertificationEntityRestService();
+    private final NativeCertificationItemRestService certificationItemService =
+            new NativeCertificationItemRestService();
+    private final NativeAuditEventRestService auditEventService = new NativeAuditEventRestService();
+    private final NativePolicyConstraintRestService policyConstraintService =
+            new NativePolicyConstraintRestService();
 
     private HttpServer server;
 
@@ -109,7 +143,7 @@ public final class KfAgentRestServer {
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
-                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items}  (read-only; no PostgreSQL on this path)");
+                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints}  (read-only; no PostgreSQL on this path)");
     }
 
     public void stop() {
@@ -161,9 +195,25 @@ public final class KfAgentRestServer {
                 handlePolicies(ex, q);
             } else if ("provisioning-items".equals(sub)) {
                 handleProvisioningItems(ex, q);
+            } else if ("provisioning-transactions".equals(sub)) {
+                handleProvisioningTransactions(ex, q);
+            } else if ("work-items".equals(sub)) {
+                handleWorkItems(ex, q);
+            } else if ("workflow-definitions".equals(sub)) {
+                handleWorkflowDefinitions(ex, q);
+            } else if ("certifications".equals(sub)) {
+                handleCertifications(ex, q);
+            } else if ("certification-entities".equals(sub)) {
+                handleCertificationEntities(ex, q);
+            } else if ("certification-items".equals(sub)) {
+                handleCertificationItems(ex, q);
+            } else if ("audit-events".equals(sub)) {
+                handleAuditEvents(ex, q);
+            } else if ("policy-constraints".equals(sub)) {
+                handlePolicyConstraints(ex, q);
             } else {
                 writeJson(ex, 404, error("unknown resource '" + sub
-                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items'"));
+                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints'"));
             }
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
@@ -517,6 +567,183 @@ public final class KfAgentRestServer {
 
         try {
             List<Map<String, Object>> rows = provisioningItemService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleProvisioningTransactions(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Same SHARED native ProvisioningTransaction extraction as the DB path; the txn service collects only the
+        // transaction rows (derived items untouched). No modifiedAfter support (full-scan); modifiedAfter stays reserved.
+        NativeProvisioningTxnPageSource source = new NativeProvisioningTxnClient(session);
+
+        try {
+            List<Map<String, Object>> rows = provisioningTransactionService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleWorkItems(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native WorkItem extraction; the service collects records in memory (no DB). No modifiedAfter
+        // support on the WorkItem client (full-scan only); modifiedAfter stays reserved.
+        NativeWorkItemPageSource source = new NativeWorkItemClient(session);
+
+        try {
+            List<Map<String, Object>> rows = workItemService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleWorkflowDefinitions(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Reuse the existing native Workflow client + parser (the import service is DB-coupled, so it is not
+        // used here); runId is a plugin lineage query param, not a DB handle. No modifiedAfter support
+        // (full-scan only); modifiedAfter stays reserved. No PostgreSQL on this path.
+        NativeWorkflowClient client = new NativeWorkflowClient(session, java.util.UUID.randomUUID().toString());
+
+        try {
+            List<Map<String, Object>> rows = workflowDefinitionService.fetch(client::fetch, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleCertifications(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native Certification extraction; the service collects records in memory (no DB). No
+        // modifiedAfter support on the certification client (full-scan only); modifiedAfter stays reserved.
+        NativeCertificationPageSource source = new NativeCertificationClient(session);
+
+        try {
+            List<Map<String, Object>> rows = certificationService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleCertificationEntities(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native CertificationEntity extraction; the service collects records in memory (no DB). No
+        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        NativeCertificationEntityPageSource source = new NativeCertificationEntityClient(session);
+
+        try {
+            List<Map<String, Object>> rows = certificationEntityService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleCertificationItems(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native CertificationItem extraction; the service collects records in memory (no DB). No
+        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        NativeCertificationItemPageSource source = new NativeCertificationItemClient(session);
+
+        try {
+            List<Map<String, Object>> rows = certificationItemService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleAuditEvents(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native AuditEvent extraction (append-only); the service collects records in memory (no DB).
+        // No modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        NativeAuditEventPageSource source = new NativeAuditEventClient(session);
+
+        try {
+            List<Map<String, Object>> rows = auditEventService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handlePolicyConstraints(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native PolicyConstraint extraction; the service collects records in memory (no DB). No
+        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        NativePolicyConstraintPageSource source = new NativePolicyConstraintClient(session);
+
+        try {
+            List<Map<String, Object>> rows = policyConstraintService.fetch(source, filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field

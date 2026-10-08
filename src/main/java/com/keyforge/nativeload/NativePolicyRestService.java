@@ -120,6 +120,10 @@ public final class NativePolicyRestService {
         m.put("executor", r.executor);
         m.put("violation_owner_id", r.violationOwnerId);
         m.put("violation_owner_name", r.violationOwnerName);
+        m.put("violation_owner_type", r.violationOwnerType);          // None/Identity/Manager/Rule
+        m.put("violation_owner_rule_id", r.violationOwnerRuleId);
+        m.put("violation_owner_rule_name", r.violationOwnerRuleName);
+        m.put("is_template", r.template);                             // boolean
         m.put("constraint_count", r.constraintCount);
         m.put("created_at", iso(r.created));
         m.put("modified_at", iso(r.modified));
@@ -141,6 +145,10 @@ public final class NativePolicyRestService {
         m.put("executor", r -> r.executor);
         m.put("violation_owner_id", r -> r.violationOwnerId);
         m.put("violation_owner_name", r -> r.violationOwnerName);
+        m.put("violation_owner_type", r -> r.violationOwnerType);
+        m.put("violation_owner_rule_id", r -> r.violationOwnerRuleId);
+        m.put("violation_owner_rule_name", r -> r.violationOwnerRuleName);
+        m.put("is_template", r -> r.template == null ? null : r.template.toString());
         m.put("constraint_count", r -> r.constraintCount == null ? null : String.valueOf(r.constraintCount));
         m.put("created_at", r -> iso(r.created));
         m.put("modified_at", r -> iso(r.modified));

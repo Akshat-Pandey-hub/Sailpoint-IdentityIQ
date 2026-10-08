@@ -54,6 +54,13 @@ public final class NativeIdentityRoleWire {
         m.put("roleName", r.getRoleName());
         m.put("relationshipType", r.getRelationshipType());
         m.put("assignmentId", r.getAssignmentId());
+        m.put("assigner", r.getAssigner());
+        m.put("assignedDate", iso(r.getAssignedDate()));
+        m.put("startDate", iso(r.getStartDate()));
+        m.put("endDate", iso(r.getEndDate()));
+        m.put("source", r.getSource());
+        m.put("negative", r.getNegative());
+        m.put("manual", r.getManual());
         m.put("detectionAssignmentIds", r.getDetectionAssignmentIds());
         m.put("comments", r.getComments());
         m.put("futureAssignment", r.getFutureAssignment());

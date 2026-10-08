@@ -20,8 +20,15 @@ final class NativeAccountEntitlementFields {
     static final String APPLICATION_NAME = "applicationName";
     static final String NATIVE_IDENTITY = "nativeIdentity";
     static final String INSTANCE = "instance";
+    static final String TYPE = "type";
     static final String ATTRIBUTE_NAME = "attributeName";
     static final String ATTRIBUTE_VALUE = "attributeValue";
+    static final String PERMISSION_TARGET = "permissionTarget";
+    static final String PERMISSION_RIGHTS = "permissionRights";
+    static final String PERMISSION_RIGHTS_LIST = "permissionRightsList";
+    static final String PERMISSION_ANNOTATION = "permissionAnnotation";
+    static final String PERMISSION_AGGREGATION_SOURCE = "permissionAggregationSource";
+    static final String PERMISSION_ATTRIBUTES = "permissionAttributes";
 
     static final String SRC_SYSTEM = "srcSystem";
     static final String SRC_INTERFACE = "srcInterface";

@@ -44,6 +44,14 @@ public final class NativePolicyMapper {
             row.setViolationOwnerId(owner.getId());
             row.setViolationOwnerName(owner.getName());
         }
+        // How the violation owner is resolved (None/Identity/Manager/Rule) + the rule when type=Rule.
+        row.setViolationOwnerType(NativeSerialize.enumName(p.getViolationOwnerType()));
+        sailpoint.object.Rule ownerRule = p.getViolationOwnerRule();
+        if (ownerRule != null) {
+            row.setViolationOwnerRuleId(ownerRule.getId());
+            row.setViolationOwnerRuleName(ownerRule.getName());
+        }
+        row.setTemplate(Boolean.valueOf(p.isTemplate()));
 
         List<?> constraints = p.getConstraints();
         row.setConstraintCount(Integer.valueOf(constraints == null ? 0 : constraints.size()));

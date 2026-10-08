@@ -44,4 +44,25 @@ class NativeIdentityRoleRepositoryTest {
         assertNotNull(h1);
         assertNotEquals(h1, h2);
     }
+
+    @Test
+    void recordHashChangesWhenAssignmentProvenanceChanges() {
+        NativeIdentityRoleRecord base = rec("id1", "role1", "ASSIGNED", "asg1");
+        String baseHash = NativeIdentityRoleRepository.recordHash(base);
+
+        NativeIdentityRoleRecord withAssigner = rec("id1", "role1", "ASSIGNED", "asg1");
+        withAssigner.assigner = "spadmin";
+        assertNotEquals(baseHash, NativeIdentityRoleRepository.recordHash(withAssigner),
+                "assigner participates in the change-detection hash");
+
+        NativeIdentityRoleRecord withSource = rec("id1", "role1", "ASSIGNED", "asg1");
+        withSource.source = "LCM";
+        assertNotEquals(baseHash, NativeIdentityRoleRepository.recordHash(withSource),
+                "source participates in the change-detection hash");
+
+        NativeIdentityRoleRecord withNegative = rec("id1", "role1", "ASSIGNED", "asg1");
+        withNegative.negative = Boolean.TRUE;
+        assertNotEquals(baseHash, NativeIdentityRoleRepository.recordHash(withNegative),
+                "negative participates in the change-detection hash");
+    }
 }

@@ -32,6 +32,9 @@ class NativePolicyRestServiceTest {
                 + "\"typeKey\":\"policy_type_sod\",\"descriptions\":{},"
                 + "\"executor\":\"sailpoint.policy.SODPolicyExecutor\",\"constraintCount\":0,"
                 + "\"state\":\"Inactive\",\"certificationActions\":\"Remediated,Mitigated,Delegated\","
+                // violation-owner resolution (type=Rule) + template flag
+                + "\"violationOwnerType\":\"Rule\",\"violationOwnerRuleId\":\"rule-1\","
+                + "\"violationOwnerRuleName\":\"SOD Owner Rule\",\"template\":true,"
                 // lineage/technical — must NOT appear in the response
                 + "\"srcSystem\":\"IdentityIQ\",\"srcInterface\":\"native_iiq_java_api\","
                 + "\"srcObjectType\":\"sailpoint.object.Policy\",\"extractionRunId\":\"run-1\"}";
@@ -41,7 +44,9 @@ class NativePolicyRestServiceTest {
         return "{\"sourceId\":\"" + ESOD + "\",\"name\":\"Entitlement SOD Template\",\"type\":\"EntitlementSOD\","
                 + "\"typeKey\":\"policy_type_entitlement_sod\",\"descriptions\":{},"
                 + "\"executor\":\"sailpoint.policy.EntitlementSODPolicyExecutor\",\"constraintCount\":0,"
-                + "\"state\":\"Inactive\",\"certificationActions\":\"Remediated,Mitigated,Delegated\"}";
+                + "\"state\":\"Inactive\",\"certificationActions\":\"Remediated,Mitigated,Delegated\","
+                // violation owner resolved by Manager (no rule), not a template
+                + "\"violationOwnerType\":\"Manager\",\"template\":false}";
     }
 
     private static NativePolicyPageSource source() {
@@ -75,7 +80,7 @@ class NativePolicyRestServiceTest {
         assertEquals("sailpoint.policy.SODPolicyExecutor", r.get("executor"));
         assertEquals("Inactive", r.get("state"));
         assertEquals(Integer.valueOf(0), r.get("constraint_count"));
-        assertEquals(17, r.size(), "exactly the 17 SailPoint-facing fields");
+        assertEquals(21, r.size(), "exactly the 21 SailPoint-facing fields (17 original + 4 new)");
 
         assertFalse(r.containsKey("policyid"));
         assertFalse(r.containsKey("record_hash"));
@@ -105,6 +110,22 @@ class NativePolicyRestServiceTest {
     }
 
     @Test
+    void violationOwnerTypeRuleAndTemplateFieldsPopulatedAndNullPreserved() {
+        List<Map<String, Object>> rows = svc.fetch(source(), null, null, null);
+        Map<String, Object> sod = rows.get(0);
+        assertEquals("Rule", sod.get("violation_owner_type"));
+        assertEquals("rule-1", sod.get("violation_owner_rule_id"));
+        assertEquals("SOD Owner Rule", sod.get("violation_owner_rule_name"));
+        assertEquals(Boolean.TRUE, sod.get("is_template"));
+
+        Map<String, Object> esod = rows.get(1);
+        assertEquals("Manager", esod.get("violation_owner_type"));
+        assertEquals(Boolean.FALSE, esod.get("is_template"));
+        assertNull(esod.get("violation_owner_rule_id"), "no rule when owner type is Manager");
+        assertNull(esod.get("violation_owner_rule_name"));
+    }
+
+    @Test
     void genericScalarAndNumericFilters() {
         assertEquals(1, svc.fetch(source(), f("name", "SOD Template"), null, null).size());
         assertEquals(1, svc.fetch(source(), f("type", "EntitlementSOD"), null, null).size());
@@ -112,6 +133,12 @@ class NativePolicyRestServiceTest {
         assertEquals(2, svc.fetch(source(), f("state", "Inactive"), null, null).size());
         assertEquals(2, svc.fetch(source(), f("constraint_count", "0"), null, null).size());
         assertEquals(2, svc.fetch(source(), f("certification_actions", "Remediated,Mitigated,Delegated"), null, null).size());
+        // new scalar/boolean filters
+        assertEquals(1, svc.fetch(source(), f("violation_owner_type", "Rule"), null, null).size());
+        assertEquals(1, svc.fetch(source(), f("violation_owner_type", "Manager"), null, null).size());
+        assertEquals(1, svc.fetch(source(), f("violation_owner_rule_name", "SOD Owner Rule"), null, null).size());
+        assertEquals(1, svc.fetch(source(), f("is_template", "true"), null, null).size());
+        assertEquals(1, svc.fetch(source(), f("is_template", "false"), null, null).size());
     }
 
     @Test

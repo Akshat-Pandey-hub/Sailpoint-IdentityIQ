@@ -60,8 +60,15 @@ public final class NativeAccountEntitlementWire {
         m.put("applicationName", r.getApplicationName());
         m.put("nativeIdentity", r.getNativeIdentity());
         m.put("instance", r.getInstance());
+        m.put("type", r.getType());
         m.put("attributeName", r.getAttributeName());
         m.put("attributeValue", r.getAttributeValue());
+        m.put("permissionTarget", r.getPermissionTarget());
+        m.put("permissionRights", r.getPermissionRights());
+        m.put("permissionRightsList", new ArrayList<String>(r.getPermissionRightsList()));
+        m.put("permissionAnnotation", r.getPermissionAnnotation());
+        m.put("permissionAggregationSource", r.getPermissionAggregationSource());
+        m.put("permissionAttributes", new LinkedHashMap<String, Object>(r.getPermissionAttributes()));
         m.put("srcSystem", r.getSrcSystem());
         m.put("srcInterface", r.getSrcInterface());
         m.put("srcObjectType", r.getSrcObjectType());

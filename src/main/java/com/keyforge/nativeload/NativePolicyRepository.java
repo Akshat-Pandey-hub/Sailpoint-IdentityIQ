@@ -46,6 +46,10 @@ public final class NativePolicyRepository {
                         + "executor text, "
                         + "violation_owner_id text, "
                         + "violation_owner_name text, "
+                        + "violation_owner_type text, "
+                        + "violation_owner_rule_id text, "
+                        + "violation_owner_rule_name text, "
+                        + "is_template boolean, "
                         + "constraint_count integer, "
                         + "state text, "
                         + "violation_rule text, "
@@ -69,21 +73,30 @@ public final class NativePolicyRepository {
                         + " ADD COLUMN IF NOT EXISTS violation_rule text,"
                         + " ADD COLUMN IF NOT EXISTS violation_workflow text,"
                         + " ADD COLUMN IF NOT EXISTS signature text,"
-                        + " ADD COLUMN IF NOT EXISTS certification_actions text";
+                        + " ADD COLUMN IF NOT EXISTS certification_actions text,"
+                        + " ADD COLUMN IF NOT EXISTS violation_owner_type text,"
+                        + " ADD COLUMN IF NOT EXISTS violation_owner_rule_id text,"
+                        + " ADD COLUMN IF NOT EXISTS violation_owner_rule_name text,"
+                        + " ADD COLUMN IF NOT EXISTS is_template boolean";
         this.upsertSql =
                 "INSERT INTO " + targetTable + " ("
                         + "policyid, source_id, name, type, type_key, description, descriptions, executor, "
-                        + "violation_owner_id, violation_owner_name, constraint_count, "
+                        + "violation_owner_id, violation_owner_name, violation_owner_type, "
+                        + "violation_owner_rule_id, violation_owner_rule_name, is_template, constraint_count, "
                         + "state, violation_rule, violation_workflow, signature, certification_actions, "
                         + "created_at, modified_at, "
                         + "record_hash, source_system, source_interface, source_object_type, extraction_run_id) "
-                        + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (policyid) DO UPDATE SET "
                         + "source_id = EXCLUDED.source_id, name = EXCLUDED.name, type = EXCLUDED.type, "
                         + "type_key = EXCLUDED.type_key, description = EXCLUDED.description, "
                         + "descriptions = EXCLUDED.descriptions, executor = EXCLUDED.executor, "
                         + "violation_owner_id = EXCLUDED.violation_owner_id, "
                         + "violation_owner_name = EXCLUDED.violation_owner_name, "
+                        + "violation_owner_type = EXCLUDED.violation_owner_type, "
+                        + "violation_owner_rule_id = EXCLUDED.violation_owner_rule_id, "
+                        + "violation_owner_rule_name = EXCLUDED.violation_owner_rule_name, "
+                        + "is_template = EXCLUDED.is_template, "
                         + "constraint_count = EXCLUDED.constraint_count, "
                         + "state = EXCLUDED.state, violation_rule = EXCLUDED.violation_rule, "
                         + "violation_workflow = EXCLUDED.violation_workflow, signature = EXCLUDED.signature, "
@@ -123,6 +136,10 @@ public final class NativePolicyRepository {
         b.put("executor", r.executor);
         b.put("violation_owner_id", r.violationOwnerId);
         b.put("violation_owner_name", r.violationOwnerName);
+        b.put("violation_owner_type", r.violationOwnerType);
+        b.put("violation_owner_rule_id", r.violationOwnerRuleId);
+        b.put("violation_owner_rule_name", r.violationOwnerRuleName);
+        b.put("is_template", r.template);
         b.put("constraint_count", r.constraintCount);
         b.put("state", r.state);
         b.put("violation_rule", r.violationRule);
@@ -155,6 +172,10 @@ public final class NativePolicyRepository {
             ps.setString(i++, r.executor);
             ps.setString(i++, r.violationOwnerId);
             ps.setString(i++, r.violationOwnerName);
+            ps.setString(i++, r.violationOwnerType);
+            ps.setString(i++, r.violationOwnerRuleId);
+            ps.setString(i++, r.violationOwnerRuleName);
+            setBool(ps, i++, r.template);
             setInt(ps, i++, r.constraintCount);
             ps.setString(i++, r.state);
             ps.setString(i++, r.violationRule);
@@ -181,6 +202,14 @@ public final class NativePolicyRepository {
             ps.setNull(index, Types.INTEGER);
         } else {
             ps.setInt(index, value);
+        }
+    }
+
+    private static void setBool(PreparedStatement ps, int index, Boolean value) throws SQLException {
+        if (value == null) {
+            ps.setNull(index, Types.BOOLEAN);
+        } else {
+            ps.setBoolean(index, value);
         }
     }
 

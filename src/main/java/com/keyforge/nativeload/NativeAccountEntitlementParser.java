@@ -78,8 +78,15 @@ final class NativeAccountEntitlementParser {
         rec.applicationName = text(r, NativeAccountEntitlementFields.APPLICATION_NAME);
         rec.nativeIdentity = text(r, NativeAccountEntitlementFields.NATIVE_IDENTITY);
         rec.instance = text(r, NativeAccountEntitlementFields.INSTANCE);
+        rec.type = text(r, NativeAccountEntitlementFields.TYPE);
         rec.attributeName = text(r, NativeAccountEntitlementFields.ATTRIBUTE_NAME);
         rec.attributeValue = text(r, NativeAccountEntitlementFields.ATTRIBUTE_VALUE);
+        rec.permissionTarget = text(r, NativeAccountEntitlementFields.PERMISSION_TARGET);
+        rec.permissionRights = text(r, NativeAccountEntitlementFields.PERMISSION_RIGHTS);
+        rec.permissionRightsListJson = json(r, NativeAccountEntitlementFields.PERMISSION_RIGHTS_LIST);
+        rec.permissionAnnotation = text(r, NativeAccountEntitlementFields.PERMISSION_ANNOTATION);
+        rec.permissionAggregationSource = text(r, NativeAccountEntitlementFields.PERMISSION_AGGREGATION_SOURCE);
+        rec.permissionAttributesJson = json(r, NativeAccountEntitlementFields.PERMISSION_ATTRIBUTES);
         rec.srcSystem = text(r, NativeAccountEntitlementFields.SRC_SYSTEM);
         rec.srcInterface = text(r, NativeAccountEntitlementFields.SRC_INTERFACE);
         rec.srcObjectType = text(r, NativeAccountEntitlementFields.SRC_OBJECT_TYPE);
@@ -91,6 +98,11 @@ final class NativeAccountEntitlementParser {
     private static String text(JsonNode r, String field) {
         JsonNode n = r.get(field);
         return (n == null || n.isNull()) ? null : n.asText();
+    }
+
+    private static String json(JsonNode r, String field) {
+        JsonNode n = r.get(field);
+        return (n == null || n.isNull()) ? null : n.toString();
     }
 
     private static Instant instant(JsonNode r, String field) {

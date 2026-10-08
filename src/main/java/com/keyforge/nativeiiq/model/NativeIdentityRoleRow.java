@@ -8,8 +8,11 @@ import java.util.Map;
 /**
  * Native-source projection of one identity&nbsp;&harr;&nbsp;role edge, derived from an {@code Identity}'s
  * {@code getRoleAssignments()} (relationship_type=ASSIGNED) and {@code getRoleDetections()} (DETECTED).
- * Assigned edges carry the stable {@code assignmentId}; detected edges carry the detection's assignment-id
- * evidence + date. Pure data holder. No assigner/date is invented for RoleAssignment (not exposed by the API).
+ * Assigned edges carry the stable {@code assignmentId} plus the assignment provenance exposed by
+ * {@code RoleAssignment}'s parent {@code sailpoint.object.Assignment} ({@code getAssigner}/{@code getDate}/
+ * {@code getStartDate}/{@code getEndDate}/{@code getSource}/{@code isNegative}/{@code isManual}); detected
+ * edges carry the detection's assignment-id evidence + date (and null assignment-provenance). Pure data
+ * holder. Nothing is invented — every value is read verbatim from the object or left {@code null}.
  */
 public final class NativeIdentityRoleRow {
 
@@ -19,6 +22,13 @@ public final class NativeIdentityRoleRow {
     private String roleName;
     private String relationshipType;   // ASSIGNED | DETECTED
     private String assignmentId;       // RoleAssignment.getId() (assigned)
+    private String assigner;           // Assignment.getAssigner() (assigned)
+    private Instant assignedDate;      // Assignment.getDate() (assigned)
+    private Instant startDate;         // Assignment.getStartDate() (assigned, sunrise)
+    private Instant endDate;           // Assignment.getEndDate() (assigned, sunset)
+    private String source;             // Assignment.getSource() (assigned)
+    private Boolean negative;          // Assignment.isNegative() (assigned)
+    private Boolean manual;            // Assignment.isManual() (assigned)
     private String detectionAssignmentIds; // RoleDetection.getAssignmentIds() (detected)
     private String comments;           // RoleAssignment.getComments()
     private Boolean futureAssignment;  // RoleAssignment.isFutureAssignment()
@@ -45,6 +55,20 @@ public final class NativeIdentityRoleRow {
     public void setRelationshipType(String v) { this.relationshipType = v; }
     public String getAssignmentId() { return assignmentId; }
     public void setAssignmentId(String v) { this.assignmentId = v; }
+    public String getAssigner() { return assigner; }
+    public void setAssigner(String v) { this.assigner = v; }
+    public Instant getAssignedDate() { return assignedDate; }
+    public void setAssignedDate(Instant v) { this.assignedDate = v; }
+    public Instant getStartDate() { return startDate; }
+    public void setStartDate(Instant v) { this.startDate = v; }
+    public Instant getEndDate() { return endDate; }
+    public void setEndDate(Instant v) { this.endDate = v; }
+    public String getSource() { return source; }
+    public void setSource(String v) { this.source = v; }
+    public Boolean getNegative() { return negative; }
+    public void setNegative(Boolean v) { this.negative = v; }
+    public Boolean getManual() { return manual; }
+    public void setManual(Boolean v) { this.manual = v; }
     public String getDetectionAssignmentIds() { return detectionAssignmentIds; }
     public void setDetectionAssignmentIds(String v) { this.detectionAssignmentIds = v; }
     public String getComments() { return comments; }

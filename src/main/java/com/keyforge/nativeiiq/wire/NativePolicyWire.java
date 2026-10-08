@@ -55,6 +55,10 @@ public final class NativePolicyWire {
         m.put("executor", r.getExecutor());
         m.put("violationOwnerId", r.getViolationOwnerId());
         m.put("violationOwnerName", r.getViolationOwnerName());
+        m.put("violationOwnerType", r.getViolationOwnerType());
+        m.put("violationOwnerRuleId", r.getViolationOwnerRuleId());
+        m.put("violationOwnerRuleName", r.getViolationOwnerRuleName());
+        m.put("template", r.getTemplate());
         m.put("constraintCount", r.getConstraintCount());
         m.put("state", r.getState());
         m.put("violationRule", r.getViolationRule());

@@ -115,12 +115,19 @@ public final class NativeIdentityRoleRestService {
         m.put("role_name", r.roleName);
         m.put("relationship_type", r.relationshipType);
         m.put("assignment_id", r.assignmentId);
+        m.put("assigner", r.assigner);                               // Assignment.getAssigner()
+        m.put("assigned_date", iso(r.assignedDate));                 // Assignment.getDate()
+        m.put("start_date", iso(r.startDate));                       // Assignment.getStartDate()
+        m.put("end_date", iso(r.endDate));                           // Assignment.getEndDate()
+        m.put("source", r.source);                                   // Assignment.getSource()
+        m.put("negative", r.negative);                               // Assignment.isNegative()
+        m.put("manual", r.manual);                                   // Assignment.isManual()
         m.put("detection_assignment_ids", r.detectionAssignmentIds); // text
         m.put("comments", r.comments);
         m.put("future_assignment", r.futureAssignment);
         m.put("promoted_soft_permit", r.promotedSoftPermit);
         m.put("detection_date", iso(r.detectionDate));
-        m.put("targets", node(r.targetsJson));                       // jsonb
+        m.put("targets", node(r.targetsJson));                       // jsonb (now incl. displayName/elevatedAccess)
         return m;
     }
 
@@ -132,6 +139,13 @@ public final class NativeIdentityRoleRestService {
         m.put("role_name", r -> r.roleName);
         m.put("relationship_type", r -> r.relationshipType);
         m.put("assignment_id", r -> r.assignmentId);
+        m.put("assigner", r -> r.assigner);
+        m.put("assigned_date", r -> iso(r.assignedDate));
+        m.put("start_date", r -> iso(r.startDate));
+        m.put("end_date", r -> iso(r.endDate));
+        m.put("source", r -> r.source);
+        m.put("negative", r -> str(r.negative));
+        m.put("manual", r -> str(r.manual));
         m.put("detection_assignment_ids", r -> r.detectionAssignmentIds);
         m.put("comments", r -> r.comments);
         m.put("future_assignment", r -> str(r.futureAssignment));

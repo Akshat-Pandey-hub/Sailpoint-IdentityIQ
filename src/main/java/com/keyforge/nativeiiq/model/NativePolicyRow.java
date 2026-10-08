@@ -16,6 +16,10 @@ public final class NativePolicyRow {
     private String executor;
     private String violationOwnerId;
     private String violationOwnerName;
+    private String violationOwnerType;      // Policy.getViolationOwnerType() — None/Identity/Manager/Rule
+    private String violationOwnerRuleId;    // Policy.getViolationOwnerRule().getId()
+    private String violationOwnerRuleName;  // Policy.getViolationOwnerRule().getName()
+    private Boolean template;               // Policy.isTemplate()
     private Integer constraintCount;
     private String state;
     private String violationRule;
@@ -48,6 +52,14 @@ public final class NativePolicyRow {
     public void setViolationOwnerId(String v) { this.violationOwnerId = v; }
     public String getViolationOwnerName() { return violationOwnerName; }
     public void setViolationOwnerName(String v) { this.violationOwnerName = v; }
+    public String getViolationOwnerType() { return violationOwnerType; }
+    public void setViolationOwnerType(String v) { this.violationOwnerType = v; }
+    public String getViolationOwnerRuleId() { return violationOwnerRuleId; }
+    public void setViolationOwnerRuleId(String v) { this.violationOwnerRuleId = v; }
+    public String getViolationOwnerRuleName() { return violationOwnerRuleName; }
+    public void setViolationOwnerRuleName(String v) { this.violationOwnerRuleName = v; }
+    public Boolean getTemplate() { return template; }
+    public void setTemplate(Boolean v) { this.template = v; }
     public Integer getConstraintCount() { return constraintCount; }
     public void setConstraintCount(Integer v) { this.constraintCount = v; }
     public String getState() { return state; }

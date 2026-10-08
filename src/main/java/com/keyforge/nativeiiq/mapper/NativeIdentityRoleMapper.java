@@ -45,6 +45,14 @@ public final class NativeIdentityRoleMapper {
                 row.setComments(ra.getComments());
                 row.setFutureAssignment(Boolean.valueOf(ra.isFutureAssignment()));
                 row.setPromotedSoftPermit(Boolean.valueOf(ra.isPromotedSoftPermit()));
+                // Assignment provenance (RoleAssignment extends sailpoint.object.Assignment) — read verbatim.
+                row.setAssigner(ra.getAssigner());
+                row.setAssignedDate(toInstant(ra.getDate()));
+                row.setStartDate(toInstant(ra.getStartDate()));
+                row.setEndDate(toInstant(ra.getEndDate()));
+                row.setSource(ra.getSource());
+                row.setNegative(Boolean.valueOf(ra.isNegative()));
+                row.setManual(Boolean.valueOf(ra.isManual()));
                 List<RoleTarget> targets = ra.getTargets();
                 if (targets != null) {
                     for (RoleTarget t : targets) {
@@ -95,6 +103,8 @@ public final class NativeIdentityRoleMapper {
         m.put("instance", t.getInstance());
         m.put("nativeIdentity", t.getNativeIdentity());
         m.put("roleName", t.getRoleName());
+        m.put("displayName", t.getDisplayName());
+        m.put("elevatedAccess", Boolean.valueOf(t.isElevatedAccess()));
         return m;
     }
 

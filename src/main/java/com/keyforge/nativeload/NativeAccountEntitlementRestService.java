@@ -1,5 +1,7 @@
 package com.keyforge.nativeload;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keyforge.iiq.deletion.SoftDeleteSweeper;
 
 import java.sql.SQLException;
@@ -22,17 +24,23 @@ import java.util.function.Function;
  * writing to PostgreSQL). No existing extraction or DB code is modified or deleted; the DB write is
  * bypassed by construction.
  *
- * <p>Per the actual native record / {@code kf_account_entitlement} schema (verified): every field is a
- * scalar string — there are no nested/jsonb fields and no timestamps. All 9 fields are filterable. The
- * KeyForge {@code accountentitlementid} PK, {@code record_hash}, {@code is_deleted}/{@code deleted_at}
- * (not in the native record) and the lineage envelope are excluded. This edge has no {@code source_hash},
- * and the native client has no server-side {@code modifiedAfter} support (full-scan only).
+ * <p>Per the actual native record / {@code kf_account_entitlement} schema (verified): 16 SailPoint-facing
+ * fields. A {@code type} marker names the edge source — {@code ATTRIBUTE} (from
+ * {@code Link.getEntitlementAttributes()}), {@code PERMISSION} ({@code Link.getPermissions()}), or
+ * {@code TARGET_PERMISSION} ({@code Link.getTargetPermissions()}). {@code permission_rights_list} and
+ * {@code permission_attributes} are {@code jsonb} (returned as JSON, not filterable); the other 14 fields are
+ * scalar text and filterable. The KeyForge {@code accountentitlementid} PK, {@code record_hash},
+ * {@code is_deleted}/{@code deleted_at} (not in the native record) and the lineage envelope are excluded.
+ * This edge has no {@code source_hash}, and the native client has no server-side {@code modifiedAfter}
+ * support (full-scan only).
  */
 public final class NativeAccountEntitlementRestService {
 
     private static final int INTERNAL_PAGE_SIZE = 500;
 
-    /** Response field name -> value extractor (all scalar, all filterable). */
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    /** Scalar response field name -> value extractor. The two jsonb permission fields are NOT filterable. */
     private static final Map<String, Function<NativeAccountEntitlementRecord, String>> SCALARS = buildScalars();
 
     public static final Set<String> FILTERABLE_FIELDS =
@@ -110,8 +118,15 @@ public final class NativeAccountEntitlementRestService {
         m.put("application_name", r.applicationName);
         m.put("native_identity", r.nativeIdentity);
         m.put("instance", r.instance);
+        m.put("type", r.type);
         m.put("attribute_name", r.attributeName);
         m.put("attribute_value", r.attributeValue);
+        m.put("permission_target", r.permissionTarget);
+        m.put("permission_rights", r.permissionRights);
+        m.put("permission_rights_list", node(r.permissionRightsListJson));   // jsonb
+        m.put("permission_annotation", r.permissionAnnotation);
+        m.put("permission_aggregation_source", r.permissionAggregationSource);
+        m.put("permission_attributes", node(r.permissionAttributesJson));     // jsonb
         return m;
     }
 
@@ -124,9 +139,27 @@ public final class NativeAccountEntitlementRestService {
         m.put("application_name", r -> r.applicationName);
         m.put("native_identity", r -> r.nativeIdentity);
         m.put("instance", r -> r.instance);
+        m.put("type", r -> r.type);
         m.put("attribute_name", r -> r.attributeName);
         m.put("attribute_value", r -> r.attributeValue);
+        m.put("permission_target", r -> r.permissionTarget);
+        m.put("permission_rights", r -> r.permissionRights);
+        m.put("permission_annotation", r -> r.permissionAnnotation);
+        m.put("permission_aggregation_source", r -> r.permissionAggregationSource);
         return m;
+    }
+
+    /** Re-hydrate a pre-serialized jsonb string into a JSON value/array/object; null/empty stays null. */
+    private Object node(String json) {
+        if (json == null || json.isEmpty()) {
+            return null;
+        }
+        try {
+            JsonNode n = mapper.readTree(json);
+            return n == null || n.isNull() ? null : n;
+        } catch (Exception e) {
+            return json;
+        }
     }
 
     /** In-memory sink: reuses the import loop but persists nothing (DB bypass for the REST path). */

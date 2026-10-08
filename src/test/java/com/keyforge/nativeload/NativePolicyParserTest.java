@@ -26,6 +26,26 @@ class NativePolicyParserTest {
     }
 
     @Test
+    void parsesViolationOwnerTypeRuleAndTemplate() {
+        List<NativePolicyRecord> rows = parser.parse(
+                "{\"rows\":[{"
+                        + "\"sourceId\":\"p1\",\"name\":\"SoD\",\"type\":\"SOD\","
+                        + "\"violationOwnerType\":\"Rule\",\"violationOwnerRuleId\":\"r-1\","
+                        + "\"violationOwnerRuleName\":\"Owner Rule\",\"template\":true},"
+                        + "{\"sourceId\":\"p2\",\"name\":\"SoD2\",\"type\":\"SOD\",\"template\":false}]}");
+        assertEquals(2, rows.size());
+        NativePolicyRecord a = rows.get(0);
+        assertEquals("Rule", a.violationOwnerType);
+        assertEquals("r-1", a.violationOwnerRuleId);
+        assertEquals("Owner Rule", a.violationOwnerRuleName);
+        assertEquals(Boolean.TRUE, a.template);
+        NativePolicyRecord b = rows.get(1);
+        assertEquals(Boolean.FALSE, b.template);
+        org.junit.jupiter.api.Assertions.assertNull(b.violationOwnerType);
+        org.junit.jupiter.api.Assertions.assertNull(b.violationOwnerRuleId);
+    }
+
+    @Test
     void genuineEmptyPageReturnsEmpty() {
         assertTrue(parser.parse("{\"entity\":\"Policy\",\"returned\":0,\"rows\":[]}").isEmpty());
     }

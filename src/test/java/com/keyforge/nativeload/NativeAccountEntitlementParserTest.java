@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -23,6 +24,33 @@ class NativeAccountEntitlementParserTest {
         assertEquals(7, parser.sourceCount(json));
         assertEquals(3, parser.returnedLinks(json));
         assertEquals("g1", rows.get(0).attributeValue);
+    }
+
+    @Test
+    void parsesPermissionEdgeWithTypeScalarsAndJsonFields() {
+        String json = "{\"rows\":["
+                + "{\"linkId\":\"l1\",\"type\":\"PERMISSION\",\"permissionTarget\":\"/finance\","
+                + "\"permissionRights\":\"read,write\",\"permissionRightsList\":[\"read\",\"write\"],"
+                + "\"permissionAnnotation\":\"Finance\",\"permissionAggregationSource\":\"agg\","
+                + "\"permissionAttributes\":{\"scope\":\"dept\"}},"
+                + "{\"linkId\":\"l1\",\"type\":\"ATTRIBUTE\",\"attributeName\":\"memberOf\",\"attributeValue\":\"g1\"}]}";
+        List<NativeAccountEntitlementRecord> rows = parser.parse(json);
+        assertEquals(2, rows.size());
+
+        NativeAccountEntitlementRecord perm = rows.get(0);
+        assertEquals("PERMISSION", perm.type);
+        assertEquals("/finance", perm.permissionTarget);
+        assertEquals("read,write", perm.permissionRights);
+        assertEquals("Finance", perm.permissionAnnotation);
+        assertEquals("agg", perm.permissionAggregationSource);
+        assertTrue(perm.permissionRightsListJson.contains("read"), "rights list stored as JSON");
+        assertTrue(perm.permissionAttributesJson.contains("scope"), "attributes stored as JSON");
+
+        NativeAccountEntitlementRecord attr = rows.get(1);
+        assertEquals("ATTRIBUTE", attr.type);
+        assertEquals("g1", attr.attributeValue);
+        assertNull(attr.permissionTarget, "attribute edge has null permission fields");
+        assertNull(attr.permissionRightsListJson);
     }
 
     @Test

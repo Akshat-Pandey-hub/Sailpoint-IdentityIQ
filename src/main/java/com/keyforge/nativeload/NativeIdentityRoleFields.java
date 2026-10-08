@@ -16,6 +16,13 @@ final class NativeIdentityRoleFields {
     static final String ROLE_NAME = "roleName";
     static final String RELATIONSHIP_TYPE = "relationshipType";
     static final String ASSIGNMENT_ID = "assignmentId";
+    static final String ASSIGNER = "assigner";
+    static final String ASSIGNED_DATE = "assignedDate";
+    static final String START_DATE = "startDate";
+    static final String END_DATE = "endDate";
+    static final String SOURCE = "source";
+    static final String NEGATIVE = "negative";
+    static final String MANUAL = "manual";
     static final String DETECTION_ASSIGNMENT_IDS = "detectionAssignmentIds";
     static final String COMMENTS = "comments";
     static final String FUTURE_ASSIGNMENT = "futureAssignment";

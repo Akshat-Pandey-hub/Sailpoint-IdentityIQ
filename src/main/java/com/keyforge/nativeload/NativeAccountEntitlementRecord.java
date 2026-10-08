@@ -15,8 +15,15 @@ public final class NativeAccountEntitlementRecord {
     String applicationName;
     String nativeIdentity;
     String instance;
+    String type;                        // ATTRIBUTE | PERMISSION | TARGET_PERMISSION
     String attributeName;
     String attributeValue;
+    String permissionTarget;
+    String permissionRights;
+    String permissionRightsListJson;    // jsonb (array)
+    String permissionAnnotation;
+    String permissionAggregationSource;
+    String permissionAttributesJson;    // jsonb (object)
 
     // lineage envelope
     String srcSystem;

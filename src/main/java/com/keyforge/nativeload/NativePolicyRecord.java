@@ -14,6 +14,10 @@ public final class NativePolicyRecord {
     String executor;
     String violationOwnerId;
     String violationOwnerName;
+    String violationOwnerType;
+    String violationOwnerRuleId;
+    String violationOwnerRuleName;
+    Boolean template;
     Integer constraintCount;
     String state;
     String violationRule;

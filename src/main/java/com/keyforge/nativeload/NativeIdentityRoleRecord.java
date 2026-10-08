@@ -11,6 +11,13 @@ public final class NativeIdentityRoleRecord {
     String roleName;
     String relationshipType;
     String assignmentId;
+    String assigner;
+    Instant assignedDate;
+    Instant startDate;
+    Instant endDate;
+    String source;
+    Boolean negative;
+    Boolean manual;
     String detectionAssignmentIds;
     String comments;
     Boolean futureAssignment;

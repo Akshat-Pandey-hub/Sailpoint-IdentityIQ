@@ -69,6 +69,13 @@ final class NativeIdentityRoleParser {
         rec.roleName = text(r, NativeIdentityRoleFields.ROLE_NAME);
         rec.relationshipType = text(r, NativeIdentityRoleFields.RELATIONSHIP_TYPE);
         rec.assignmentId = text(r, NativeIdentityRoleFields.ASSIGNMENT_ID);
+        rec.assigner = text(r, NativeIdentityRoleFields.ASSIGNER);
+        rec.assignedDate = instant(r, NativeIdentityRoleFields.ASSIGNED_DATE);
+        rec.startDate = instant(r, NativeIdentityRoleFields.START_DATE);
+        rec.endDate = instant(r, NativeIdentityRoleFields.END_DATE);
+        rec.source = text(r, NativeIdentityRoleFields.SOURCE);
+        rec.negative = bool(r, NativeIdentityRoleFields.NEGATIVE);
+        rec.manual = bool(r, NativeIdentityRoleFields.MANUAL);
         rec.detectionAssignmentIds = text(r, NativeIdentityRoleFields.DETECTION_ASSIGNMENT_IDS);
         rec.comments = text(r, NativeIdentityRoleFields.COMMENTS);
         rec.futureAssignment = bool(r, NativeIdentityRoleFields.FUTURE_ASSIGNMENT);

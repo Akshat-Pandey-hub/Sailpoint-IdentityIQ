@@ -43,4 +43,25 @@ class NativePolicyRepositoryTest {
         assertNotEquals(NativePolicyRepository.recordHash(rec(hex, "SOD")),
                 NativePolicyRepository.recordHash(rec(hex, "Activity")));
     }
+
+    @Test
+    void recordHashChangesWithViolationOwnerTypeAndTemplate() {
+        String hex = "0a1b2c3d4e5f60718293a4b5c6d7e8f9";
+        String base = NativePolicyRepository.recordHash(rec(hex, "SOD"));
+
+        NativePolicyRecord withType = rec(hex, "SOD");
+        withType.violationOwnerType = "Rule";
+        assertNotEquals(base, NativePolicyRepository.recordHash(withType),
+                "violation_owner_type participates in the hash");
+
+        NativePolicyRecord withTemplate = rec(hex, "SOD");
+        withTemplate.template = Boolean.TRUE;
+        assertNotEquals(base, NativePolicyRepository.recordHash(withTemplate),
+                "is_template participates in the hash");
+
+        NativePolicyRecord withRule = rec(hex, "SOD");
+        withRule.violationOwnerRuleName = "Owner Rule";
+        assertNotEquals(base, NativePolicyRepository.recordHash(withRule),
+                "violation_owner_rule_name participates in the hash");
+    }
 }

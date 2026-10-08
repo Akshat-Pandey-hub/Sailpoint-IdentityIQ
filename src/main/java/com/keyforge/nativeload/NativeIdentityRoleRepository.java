@@ -37,7 +37,9 @@ public final class NativeIdentityRoleRepository {
         this.createTableSql =
                 "CREATE TABLE IF NOT EXISTS " + targetTable + " ("
                         + "identityroleid uuid PRIMARY KEY, identity_id text, identity_name text, role_id text, "
-                        + "role_name text, relationship_type text, assignment_id text, detection_assignment_ids text, "
+                        + "role_name text, relationship_type text, assignment_id text, assigner text, "
+                        + "assigned_date timestamptz, start_date timestamptz, end_date timestamptz, source text, "
+                        + "negative boolean, manual boolean, detection_assignment_ids text, "
                         + "comments text, future_assignment boolean, promoted_soft_permit boolean, "
                         + "detection_date timestamptz, targets jsonb, record_hash text, source_system text, "
                         + "source_interface text, source_object_type text, extraction_run_id text, "
@@ -45,14 +47,18 @@ public final class NativeIdentityRoleRepository {
         this.upsertSql =
                 "INSERT INTO " + targetTable + " ("
                         + "identityroleid, identity_id, identity_name, role_id, role_name, relationship_type, "
-                        + "assignment_id, detection_assignment_ids, comments, future_assignment, promoted_soft_permit, "
+                        + "assignment_id, assigner, assigned_date, start_date, end_date, source, negative, manual, "
+                        + "detection_assignment_ids, comments, future_assignment, promoted_soft_permit, "
                         + "detection_date, targets, record_hash, source_system, source_interface, source_object_type, "
                         + "extraction_run_id) "
-                        + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?) "
+                        + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (identityroleid) DO UPDATE SET "
                         + "identity_id = EXCLUDED.identity_id, identity_name = EXCLUDED.identity_name, "
                         + "role_id = EXCLUDED.role_id, role_name = EXCLUDED.role_name, "
                         + "relationship_type = EXCLUDED.relationship_type, assignment_id = EXCLUDED.assignment_id, "
+                        + "assigner = EXCLUDED.assigner, assigned_date = EXCLUDED.assigned_date, "
+                        + "start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date, source = EXCLUDED.source, "
+                        + "negative = EXCLUDED.negative, manual = EXCLUDED.manual, "
                         + "detection_assignment_ids = EXCLUDED.detection_assignment_ids, comments = EXCLUDED.comments, "
                         + "future_assignment = EXCLUDED.future_assignment, "
                         + "promoted_soft_permit = EXCLUDED.promoted_soft_permit, "
@@ -84,6 +90,13 @@ public final class NativeIdentityRoleRepository {
         b.put("role_name", r.roleName);
         b.put("relationship_type", r.relationshipType);
         b.put("assignment_id", r.assignmentId);
+        b.put("assigner", r.assigner);
+        b.put("assigned_date", r.assignedDate);
+        b.put("start_date", r.startDate);
+        b.put("end_date", r.endDate);
+        b.put("source", r.source);
+        b.put("negative", r.negative);
+        b.put("manual", r.manual);
         b.put("detection_assignment_ids", r.detectionAssignmentIds);
         b.put("comments", r.comments);
         b.put("future_assignment", r.futureAssignment);
@@ -97,6 +110,14 @@ public final class NativeIdentityRoleRepository {
         try (Statement st = conn.createStatement()) {
             st.execute(createSchemaSql);
             st.execute(createTableSql);
+            // Additive columns for pre-existing tables (assignment provenance from sailpoint.object.Assignment).
+            st.execute("ALTER TABLE " + targetTable + " ADD COLUMN IF NOT EXISTS assigner text");
+            st.execute("ALTER TABLE " + targetTable + " ADD COLUMN IF NOT EXISTS assigned_date timestamptz");
+            st.execute("ALTER TABLE " + targetTable + " ADD COLUMN IF NOT EXISTS start_date timestamptz");
+            st.execute("ALTER TABLE " + targetTable + " ADD COLUMN IF NOT EXISTS end_date timestamptz");
+            st.execute("ALTER TABLE " + targetTable + " ADD COLUMN IF NOT EXISTS source text");
+            st.execute("ALTER TABLE " + targetTable + " ADD COLUMN IF NOT EXISTS negative boolean");
+            st.execute("ALTER TABLE " + targetTable + " ADD COLUMN IF NOT EXISTS manual boolean");
         }
     }
 
@@ -110,6 +131,13 @@ public final class NativeIdentityRoleRepository {
             ps.setString(i++, r.roleName);
             ps.setString(i++, r.relationshipType);
             ps.setString(i++, r.assignmentId);
+            ps.setString(i++, r.assigner);
+            setTs(ps, i++, r.assignedDate);
+            setTs(ps, i++, r.startDate);
+            setTs(ps, i++, r.endDate);
+            ps.setString(i++, r.source);
+            setBool(ps, i++, r.negative);
+            setBool(ps, i++, r.manual);
             ps.setString(i++, r.detectionAssignmentIds);
             ps.setString(i++, r.comments);
             setBool(ps, i++, r.futureAssignment);

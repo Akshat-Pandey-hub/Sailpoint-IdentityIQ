@@ -52,6 +52,39 @@ class NativeAccountEntitlementWireTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void envelopeSerializesPermissionEdgeFields() {
+        NativeAccountEntitlementRow r = new NativeAccountEntitlementRow();
+        r.setLinkId("l1");
+        r.setApplicationName("UnixApp");
+        r.setType("PERMISSION");
+        r.setPermissionTarget("/finance");
+        r.setPermissionRights("read,write");
+        r.getPermissionRightsList().add("read");
+        r.getPermissionRightsList().add("write");
+        r.setPermissionAnnotation("Finance");
+        r.setPermissionAggregationSource("agg");
+        r.getPermissionAttributes().put("scope", "dept");
+        r.setSrcObjectType("sailpoint.object.Link.permissions");
+
+        NativeAccountEntitlementExtractionResult result =
+                new NativeAccountEntitlementExtractionResult("IdentityIQ", "run-1", "AccountEntitlement", Instant.EPOCH);
+        result.getRows().add(r);
+
+        Map<String, Object> env = NativeAccountEntitlementWire.envelope(result, 0, 200);
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) env.get("rows");
+        Map<String, Object> row = rows.get(0);
+        assertEquals("PERMISSION", row.get("type"));
+        assertEquals("/finance", row.get("permissionTarget"));
+        assertEquals("read,write", row.get("permissionRights"));
+        assertEquals("Finance", row.get("permissionAnnotation"));
+        assertEquals("agg", row.get("permissionAggregationSource"));
+        assertEquals(java.util.Arrays.asList("read", "write"), row.get("permissionRightsList"));
+        assertEquals("dept", ((Map<String, Object>) row.get("permissionAttributes")).get("scope"));
+        assertEquals("sailpoint.object.Link.permissions", row.get("srcObjectType"));
+    }
+
+    @Test
     void envelopeIsAJsonObject() throws Exception {
         NativeAccountEntitlementExtractionResult result =
                 new NativeAccountEntitlementExtractionResult("IdentityIQ", "run-1", "AccountEntitlement", Instant.EPOCH);

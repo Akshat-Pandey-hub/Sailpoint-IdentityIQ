@@ -59,6 +59,10 @@ final class NativePolicyParser {
         rec.executor = text(r, NativePolicyFields.EXECUTOR);
         rec.violationOwnerId = text(r, NativePolicyFields.VIOLATION_OWNER_ID);
         rec.violationOwnerName = text(r, NativePolicyFields.VIOLATION_OWNER_NAME);
+        rec.violationOwnerType = text(r, NativePolicyFields.VIOLATION_OWNER_TYPE);
+        rec.violationOwnerRuleId = text(r, NativePolicyFields.VIOLATION_OWNER_RULE_ID);
+        rec.violationOwnerRuleName = text(r, NativePolicyFields.VIOLATION_OWNER_RULE_NAME);
+        rec.template = bool(r, NativePolicyFields.TEMPLATE);
         rec.constraintCount = intOrNull(r, NativePolicyFields.CONSTRAINT_COUNT);
         rec.state = text(r, NativePolicyFields.STATE);
         rec.violationRule = text(r, NativePolicyFields.VIOLATION_RULE);
@@ -83,6 +87,11 @@ final class NativePolicyParser {
     private static Integer intOrNull(JsonNode r, String field) {
         JsonNode n = r.get(field);
         return (n == null || n.isNull()) ? null : Integer.valueOf(n.asInt());
+    }
+
+    private static Boolean bool(JsonNode r, String field) {
+        JsonNode n = r.get(field);
+        return (n == null || n.isNull()) ? null : Boolean.valueOf(n.asBoolean());
     }
 
     private static String json(JsonNode r, String field) {
