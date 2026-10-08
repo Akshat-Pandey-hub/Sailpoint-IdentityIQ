@@ -29,6 +29,12 @@ import com.keyforge.nativeload.NativeIdentityRolePageSource;
 import com.keyforge.nativeload.NativeIdentityRoleRestService;
 import com.keyforge.nativeload.NativeManagedAttributeClient;
 import com.keyforge.nativeload.NativeManagedAttributePageSource;
+import com.keyforge.nativeload.NativePolicyClient;
+import com.keyforge.nativeload.NativePolicyPageSource;
+import com.keyforge.nativeload.NativePolicyRestService;
+import com.keyforge.nativeload.NativeProvisioningItemRestService;
+import com.keyforge.nativeload.NativeProvisioningTxnClient;
+import com.keyforge.nativeload.NativeProvisioningTxnPageSource;
 import com.keyforge.nativeload.NativeRoleClient;
 import com.keyforge.nativeload.NativeRoleEntitlementRestService;
 import com.keyforge.nativeload.NativeRoleRelationshipClient;
@@ -85,6 +91,8 @@ public final class KfAgentRestServer {
     private final NativeIdentityRequestRestService identityRequestService = new NativeIdentityRequestRestService();
     private final NativeIdentityRequestItemRestService identityRequestItemService = new NativeIdentityRequestItemRestService();
     private final NativeIdentityRequestApprovalRestService identityRequestApprovalService = new NativeIdentityRequestApprovalRestService();
+    private final NativePolicyRestService policyService = new NativePolicyRestService();
+    private final NativeProvisioningItemRestService provisioningItemService = new NativeProvisioningItemRestService();
 
     private HttpServer server;
 
@@ -101,7 +109,7 @@ public final class KfAgentRestServer {
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
-                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals}  (read-only; no PostgreSQL on this path)");
+                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items}  (read-only; no PostgreSQL on this path)");
     }
 
     public void stop() {
@@ -149,9 +157,13 @@ public final class KfAgentRestServer {
                 handleIdentityRequestItems(ex, q);
             } else if ("identity-request-approvals".equals(sub)) {
                 handleIdentityRequestApprovals(ex, q);
+            } else if ("policies".equals(sub)) {
+                handlePolicies(ex, q);
+            } else if ("provisioning-items".equals(sub)) {
+                handleProvisioningItems(ex, q);
             } else {
                 writeJson(ex, 404, error("unknown resource '" + sub
-                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals'"));
+                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items'"));
             }
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
@@ -461,6 +473,50 @@ public final class KfAgentRestServer {
 
         try {
             List<Map<String, Object>> rows = identityRequestApprovalService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handlePolicies(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // The native Policy client has no server-side modifiedAfter support (full-scan only);
+        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
+        NativePolicyPageSource source = new NativePolicyClient(session);
+
+        try {
+            List<Map<String, Object>> rows = policyService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleProvisioningItems(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Items are derived by the SHARED ProvisioningTransaction native import; the item service collects
+        // only the item rows. No modifiedAfter support (full-scan only); modifiedAfter stays reserved.
+        NativeProvisioningTxnPageSource source = new NativeProvisioningTxnClient(session);
+
+        try {
+            List<Map<String, Object>> rows = provisioningItemService.fetch(source, filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
