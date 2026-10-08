@@ -17,6 +17,9 @@ import com.keyforge.nativeload.NativeApplicationRestService;
 import com.keyforge.nativeload.NativeAuditEventClient;
 import com.keyforge.nativeload.NativeAuditEventPageSource;
 import com.keyforge.nativeload.NativeAuditEventRestService;
+import com.keyforge.nativeload.NativeCertificationArchiveClient;
+import com.keyforge.nativeload.NativeCertificationArchivePageSource;
+import com.keyforge.nativeload.NativeCertificationArchiveRestService;
 import com.keyforge.nativeload.NativeCertificationClient;
 import com.keyforge.nativeload.NativeCertificationEntityClient;
 import com.keyforge.nativeload.NativeCertificationEntityPageSource;
@@ -27,6 +30,9 @@ import com.keyforge.nativeload.NativeCertificationItemRestService;
 import com.keyforge.nativeload.NativeCertificationPageSource;
 import com.keyforge.nativeload.NativeCertificationRestService;
 import com.keyforge.nativeload.NativeEntitlementRestService;
+import com.keyforge.nativeload.NativeGroupDefinitionClient;
+import com.keyforge.nativeload.NativeGroupDefinitionPageSource;
+import com.keyforge.nativeload.NativeGroupDefinitionRestService;
 import com.keyforge.nativeload.NativeLinkClient;
 import com.keyforge.nativeload.NativeLinkPageSource;
 import com.keyforge.nativeload.NativeIdentityClient;
@@ -57,6 +63,7 @@ import com.keyforge.nativeload.NativeProvisioningTxnClient;
 import com.keyforge.nativeload.NativeProvisioningTxnPageSource;
 import com.keyforge.nativeload.NativeRoleClient;
 import com.keyforge.nativeload.NativeRoleEntitlementRestService;
+import com.keyforge.nativeload.NativeRoleHierarchyRestService;
 import com.keyforge.nativeload.NativeRoleRelationshipClient;
 import com.keyforge.nativeload.NativeRoleRelationshipPageSource;
 import com.keyforge.nativeload.NativeRolePageSource;
@@ -67,6 +74,14 @@ import com.keyforge.nativeload.NativeTaskResultRestService;
 import com.keyforge.nativeload.NativeTaskScheduleClient;
 import com.keyforge.nativeload.NativeTaskSchedulePageSource;
 import com.keyforge.nativeload.NativeTaskScheduleRestService;
+import com.keyforge.nativeload.NativeViolationClient;
+import com.keyforge.nativeload.NativeViolationPageSource;
+import com.keyforge.nativeload.NativeViolationRestService;
+import com.keyforge.nativeload.NativeWorkItemArchiveClient;
+import com.keyforge.nativeload.NativeWorkItemArchivePageSource;
+import com.keyforge.nativeload.NativeWorkItemArchiveRestService;
+import com.keyforge.nativeload.NativeWorkgroupMemberRestService;
+import com.keyforge.nativeload.NativeWorkgroupMembershipClient;
 import com.keyforge.nativeload.NativeWorkItemClient;
 import com.keyforge.nativeload.NativeWorkItemPageSource;
 import com.keyforge.nativeload.NativeWorkItemRestService;
@@ -119,6 +134,13 @@ public final class KfAgentRestServer {
     private final NativeIdentityEntitlementRestService identityEntitlementService = new NativeIdentityEntitlementRestService();
     private final NativeAccountEntitlementRestService accountEntitlementService = new NativeAccountEntitlementRestService();
     private final NativeRoleEntitlementRestService roleEntitlementService = new NativeRoleEntitlementRestService();
+    private final NativeRoleHierarchyRestService roleHierarchyService = new NativeRoleHierarchyRestService();
+    private final NativeGroupDefinitionRestService groupDefinitionService = new NativeGroupDefinitionRestService();
+    private final NativeWorkItemArchiveRestService workItemArchiveService = new NativeWorkItemArchiveRestService();
+    private final NativeCertificationArchiveRestService certificationArchiveService =
+            new NativeCertificationArchiveRestService();
+    private final NativeViolationRestService violationService = new NativeViolationRestService();
+    private final NativeWorkgroupMemberRestService workgroupMemberService = new NativeWorkgroupMemberRestService();
     private final NativeIdentityRequestRestService identityRequestService = new NativeIdentityRequestRestService();
     private final NativeIdentityRequestItemRestService identityRequestItemService = new NativeIdentityRequestItemRestService();
     private final NativeIdentityRequestApprovalRestService identityRequestApprovalService = new NativeIdentityRequestApprovalRestService();
@@ -161,7 +183,7 @@ public final class KfAgentRestServer {
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
-                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/certifications}  (read-only; no PostgreSQL on this path)");
+                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroup-members}  (read-only; no PostgreSQL on this path)");
     }
 
     public void stop() {
@@ -203,6 +225,18 @@ public final class KfAgentRestServer {
                 handleAccountEntitlements(ex, q);
             } else if ("role-entitlements".equals(sub)) {
                 handleRoleEntitlements(ex, q);
+            } else if ("role-hierarchy".equals(sub)) {
+                handleRoleHierarchy(ex, q);
+            } else if ("group-definitions".equals(sub)) {
+                handleGroupDefinitions(ex, q);
+            } else if ("workitem-archives".equals(sub)) {
+                handleWorkItemArchives(ex, q);
+            } else if ("certification-archives".equals(sub)) {
+                handleCertificationArchives(ex, q);
+            } else if ("policy-violations".equals(sub)) {
+                handlePolicyViolations(ex, q);
+            } else if ("workgroup-members".equals(sub)) {
+                handleWorkgroupMembers(ex, q);
             } else if ("identity-requests".equals(sub)) {
                 handleIdentityRequests(ex, q);
             } else if ("identity-request-items".equals(sub)) {
@@ -241,7 +275,7 @@ public final class KfAgentRestServer {
                 handleAccessHistory(ex, q);
             } else {
                 writeJson(ex, 404, error("unknown resource '" + sub
-                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules', 'access-history', 'access-history/identity-events', 'access-history/certifications'"));
+                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules', 'access-history', 'access-history/identity-events', 'access-history/certifications', 'role-hierarchy', 'group-definitions', 'workitem-archives', 'certification-archives', 'policy-violations', 'workgroup-members'"));
             }
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
@@ -485,6 +519,141 @@ public final class KfAgentRestServer {
 
         try {
             List<Map<String, Object>> rows = roleEntitlementService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleRoleHierarchy(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Same shared Bundle-relationship extraction as role-entitlements; this endpoint collects only the
+        // hierarchy edges. No server-side modifiedAfter support (full-scan only); modifiedAfter stays reserved.
+        NativeRoleRelationshipPageSource source = new NativeRoleRelationshipClient(session);
+
+        try {
+            List<Map<String, Object>> rows = roleHierarchyService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleGroupDefinitions(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native GroupDefinition extraction; the service collects records in memory (no DB). No
+        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        NativeGroupDefinitionPageSource source = new NativeGroupDefinitionClient(session);
+
+        try {
+            List<Map<String, Object>> rows = groupDefinitionService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleWorkItemArchives(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native WorkItemArchive extraction (append-only CEC history). The service collects records
+        // in memory (no DB). No modifiedAfter support on the client (full-scan only); modifiedAfter reserved.
+        NativeWorkItemArchivePageSource source = new NativeWorkItemArchiveClient(session);
+
+        try {
+            List<Map<String, Object>> rows = workItemArchiveService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleCertificationArchives(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native CertificationArchive extraction (append-only CEC history). The service collects
+        // records in memory (no DB). No modifiedAfter support (full-scan only); modifiedAfter reserved.
+        NativeCertificationArchivePageSource source = new NativeCertificationArchiveClient(session);
+
+        try {
+            List<Map<String, Object>> rows = certificationArchiveService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handlePolicyViolations(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native PolicyViolation extraction; the service collects records in memory (no DB). No
+        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        NativeViolationPageSource source = new NativeViolationClient(session);
+
+        try {
+            List<Map<String, Object>> rows = violationService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleWorkgroupMembers(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Reuse the existing native Workgroup-Membership client + parser (the import service is DB-coupled, so
+        // it is not used here); runId is a plugin lineage query param, not a DB handle. No modifiedAfter
+        // support (full-scan only); modifiedAfter stays reserved. No PostgreSQL on this path.
+        NativeWorkgroupMembershipClient client =
+                new NativeWorkgroupMembershipClient(session, java.util.UUID.randomUUID().toString());
+
+        try {
+            List<Map<String, Object>> rows =
+                    workgroupMemberService.fetch(client::fetch, filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
