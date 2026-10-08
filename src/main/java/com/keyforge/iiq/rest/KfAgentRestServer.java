@@ -3,6 +3,9 @@ package com.keyforge.iiq.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keyforge.iiq.client.IiqSessionClient;
 import com.keyforge.iiq.config.AppConfig;
+import com.keyforge.nativeload.NativeAccountEntitlementClient;
+import com.keyforge.nativeload.NativeAccountEntitlementPageSource;
+import com.keyforge.nativeload.NativeAccountEntitlementRestService;
 import com.keyforge.nativeload.NativeAccountRestService;
 import com.keyforge.nativeload.NativeApplicationClient;
 import com.keyforge.nativeload.NativeApplicationPageSource;
@@ -12,9 +15,26 @@ import com.keyforge.nativeload.NativeLinkClient;
 import com.keyforge.nativeload.NativeLinkPageSource;
 import com.keyforge.nativeload.NativeIdentityClient;
 import com.keyforge.nativeload.NativeIdentityPageSource;
+import com.keyforge.nativeload.NativeIdentityEntitlementClient;
+import com.keyforge.nativeload.NativeIdentityEntitlementPageSource;
+import com.keyforge.nativeload.NativeIdentityEntitlementRestService;
+import com.keyforge.nativeload.NativeIdentityRequestApprovalRestService;
+import com.keyforge.nativeload.NativeIdentityRequestClient;
+import com.keyforge.nativeload.NativeIdentityRequestItemRestService;
+import com.keyforge.nativeload.NativeIdentityRequestPageSource;
+import com.keyforge.nativeload.NativeIdentityRequestRestService;
 import com.keyforge.nativeload.NativeIdentityRestService;
+import com.keyforge.nativeload.NativeIdentityRoleClient;
+import com.keyforge.nativeload.NativeIdentityRolePageSource;
+import com.keyforge.nativeload.NativeIdentityRoleRestService;
 import com.keyforge.nativeload.NativeManagedAttributeClient;
 import com.keyforge.nativeload.NativeManagedAttributePageSource;
+import com.keyforge.nativeload.NativeRoleClient;
+import com.keyforge.nativeload.NativeRoleEntitlementRestService;
+import com.keyforge.nativeload.NativeRoleRelationshipClient;
+import com.keyforge.nativeload.NativeRoleRelationshipPageSource;
+import com.keyforge.nativeload.NativeRolePageSource;
+import com.keyforge.nativeload.NativeRoleRestService;
 import com.keyforge.nativeload.NativeWorkgroupClient;
 import com.keyforge.nativeload.NativeWorkgroupPageSource;
 import com.keyforge.nativeload.NativeWorkgroupRestService;
@@ -57,6 +77,14 @@ public final class KfAgentRestServer {
     private final NativeApplicationRestService applicationService = new NativeApplicationRestService();
     private final NativeAccountRestService accountService = new NativeAccountRestService();
     private final NativeWorkgroupRestService workgroupService = new NativeWorkgroupRestService();
+    private final NativeRoleRestService roleService = new NativeRoleRestService();
+    private final NativeIdentityRoleRestService identityRoleService = new NativeIdentityRoleRestService();
+    private final NativeIdentityEntitlementRestService identityEntitlementService = new NativeIdentityEntitlementRestService();
+    private final NativeAccountEntitlementRestService accountEntitlementService = new NativeAccountEntitlementRestService();
+    private final NativeRoleEntitlementRestService roleEntitlementService = new NativeRoleEntitlementRestService();
+    private final NativeIdentityRequestRestService identityRequestService = new NativeIdentityRequestRestService();
+    private final NativeIdentityRequestItemRestService identityRequestItemService = new NativeIdentityRequestItemRestService();
+    private final NativeIdentityRequestApprovalRestService identityRequestApprovalService = new NativeIdentityRequestApprovalRestService();
 
     private HttpServer server;
 
@@ -73,7 +101,7 @@ public final class KfAgentRestServer {
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
-                + "/{entitlements,identities,applications,accounts,workgroups}  (read-only; no PostgreSQL on this path)");
+                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals}  (read-only; no PostgreSQL on this path)");
     }
 
     public void stop() {
@@ -105,9 +133,25 @@ public final class KfAgentRestServer {
                 handleAccounts(ex, q);
             } else if ("workgroups".equals(sub)) {
                 handleWorkgroups(ex, q);
+            } else if ("roles".equals(sub)) {
+                handleRoles(ex, q);
+            } else if ("identity-roles".equals(sub)) {
+                handleIdentityRoles(ex, q);
+            } else if ("identity-entitlements".equals(sub)) {
+                handleIdentityEntitlements(ex, q);
+            } else if ("account-entitlements".equals(sub)) {
+                handleAccountEntitlements(ex, q);
+            } else if ("role-entitlements".equals(sub)) {
+                handleRoleEntitlements(ex, q);
+            } else if ("identity-requests".equals(sub)) {
+                handleIdentityRequests(ex, q);
+            } else if ("identity-request-items".equals(sub)) {
+                handleIdentityRequestItems(ex, q);
+            } else if ("identity-request-approvals".equals(sub)) {
+                handleIdentityRequestApprovals(ex, q);
             } else {
                 writeJson(ex, 404, error("unknown resource '" + sub
-                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups'"));
+                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals'"));
             }
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
@@ -238,6 +282,185 @@ public final class KfAgentRestServer {
 
         try {
             List<Map<String, Object>> rows = workgroupService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleRoles(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        NativeRoleClient client = new NativeRoleClient(session);
+        String modifiedAfter = q.get("modifiedAfter");
+        if (modifiedAfter != null && !modifiedAfter.trim().isEmpty()) {
+            client = client.withModifiedAfter(modifiedAfter);
+        }
+        NativeRolePageSource source = client;
+
+        try {
+            List<Map<String, Object>> rows = roleService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleIdentityRoles(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // The native identity-role client has no server-side modifiedAfter support (full-scan only);
+        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
+        NativeIdentityRolePageSource source = new NativeIdentityRoleClient(session);
+
+        try {
+            List<Map<String, Object>> rows = identityRoleService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleIdentityEntitlements(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // The native identity-entitlement client has no server-side modifiedAfter support (full-scan only);
+        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
+        NativeIdentityEntitlementPageSource source = new NativeIdentityEntitlementClient(session);
+
+        try {
+            List<Map<String, Object>> rows = identityEntitlementService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleAccountEntitlements(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // The native account-entitlement client has no server-side modifiedAfter support (full-scan only);
+        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
+        NativeAccountEntitlementPageSource source = new NativeAccountEntitlementClient(session);
+
+        try {
+            List<Map<String, Object>> rows = accountEntitlementService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleRoleEntitlements(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // The native Bundle-relationship client has no server-side modifiedAfter support (full-scan only);
+        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
+        NativeRoleRelationshipPageSource source = new NativeRoleRelationshipClient(session);
+
+        try {
+            List<Map<String, Object>> rows = roleEntitlementService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleIdentityRequests(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // The native identity-request client has no server-side modifiedAfter support (full-scan only);
+        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
+        NativeIdentityRequestPageSource source = new NativeIdentityRequestClient(session);
+
+        try {
+            List<Map<String, Object>> rows = identityRequestService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleIdentityRequestItems(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Items are extracted by the SHARED IdentityRequest native import; the item service collects only
+        // the item rows. No modifiedAfter support (full-scan only); modifiedAfter stays reserved/ignored.
+        NativeIdentityRequestPageSource source = new NativeIdentityRequestClient(session);
+
+        try {
+            List<Map<String, Object>> rows = identityRequestItemService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleIdentityRequestApprovals(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Approvals are extracted by the SHARED IdentityRequest native import; the approval service collects
+        // only the approval rows. No modifiedAfter support (full-scan only); modifiedAfter stays reserved.
+        NativeIdentityRequestPageSource source = new NativeIdentityRequestClient(session);
+
+        try {
+            List<Map<String, Object>> rows = identityRequestApprovalService.fetch(source, filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
