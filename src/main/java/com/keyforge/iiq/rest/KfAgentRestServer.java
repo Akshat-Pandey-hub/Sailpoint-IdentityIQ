@@ -57,6 +57,12 @@ import com.keyforge.nativeload.NativeRoleRelationshipClient;
 import com.keyforge.nativeload.NativeRoleRelationshipPageSource;
 import com.keyforge.nativeload.NativeRolePageSource;
 import com.keyforge.nativeload.NativeRoleRestService;
+import com.keyforge.nativeload.NativeTaskResultClient;
+import com.keyforge.nativeload.NativeTaskResultPageSource;
+import com.keyforge.nativeload.NativeTaskResultRestService;
+import com.keyforge.nativeload.NativeTaskScheduleClient;
+import com.keyforge.nativeload.NativeTaskSchedulePageSource;
+import com.keyforge.nativeload.NativeTaskScheduleRestService;
 import com.keyforge.nativeload.NativeWorkItemClient;
 import com.keyforge.nativeload.NativeWorkItemPageSource;
 import com.keyforge.nativeload.NativeWorkItemRestService;
@@ -127,6 +133,8 @@ public final class KfAgentRestServer {
     private final NativeAuditEventRestService auditEventService = new NativeAuditEventRestService();
     private final NativePolicyConstraintRestService policyConstraintService =
             new NativePolicyConstraintRestService();
+    private final NativeTaskResultRestService taskResultService = new NativeTaskResultRestService();
+    private final NativeTaskScheduleRestService taskScheduleService = new NativeTaskScheduleRestService();
 
     private HttpServer server;
 
@@ -143,7 +151,7 @@ public final class KfAgentRestServer {
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
-                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints}  (read-only; no PostgreSQL on this path)");
+                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules}  (read-only; no PostgreSQL on this path)");
     }
 
     public void stop() {
@@ -211,9 +219,13 @@ public final class KfAgentRestServer {
                 handleAuditEvents(ex, q);
             } else if ("policy-constraints".equals(sub)) {
                 handlePolicyConstraints(ex, q);
+            } else if ("task-results".equals(sub)) {
+                handleTaskResults(ex, q);
+            } else if ("task-schedules".equals(sub)) {
+                handleTaskSchedules(ex, q);
             } else {
                 writeJson(ex, 404, error("unknown resource '" + sub
-                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints'"));
+                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules'"));
             }
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
@@ -744,6 +756,50 @@ public final class KfAgentRestServer {
 
         try {
             List<Map<String, Object>> rows = policyConstraintService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleTaskResults(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native TaskResult extraction; the service collects records in memory (no DB). No
+        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        NativeTaskResultPageSource source = new NativeTaskResultClient(session);
+
+        try {
+            List<Map<String, Object>> rows = taskResultService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    private void handleTaskSchedules(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        // Existing native TaskSchedule extraction; the service collects records in memory (no DB). No
+        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        NativeTaskSchedulePageSource source = new NativeTaskScheduleClient(session);
+
+        try {
+            List<Map<String, Object>> rows = taskScheduleService.fetch(source, filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
