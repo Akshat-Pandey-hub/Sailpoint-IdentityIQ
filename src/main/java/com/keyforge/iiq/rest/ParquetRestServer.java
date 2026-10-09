@@ -80,11 +80,24 @@ public final class ParquetRestServer {
                 new QueryParser(nativeCatalog, RestConfig.DEFAULT_LIMIT, RestConfig.MAX_LIMIT));
     }
 
+    /**
+     * Registers this service's Parquet-query contexts ({@code /iiq_parquet/*}, {@code /native_parquet/*},
+     * and optionally {@code /health}) onto a caller-owned {@link HttpServer}. Lets the Parquet query service
+     * be co-hosted with KF Agent on a SINGLE port. {@code includeHealth=false} when another co-hosted service
+     * already owns {@code /health} (two contexts on the same path are illegal). The caller owns the server
+     * lifecycle (create/executor/start/stop).
+     */
+    public void registerInto(HttpServer target, boolean includeHealth) {
+        if (includeHealth) {
+            target.createContext("/health", this::handleHealth);
+        }
+        target.createContext(PREFIX, rest::handle);
+        target.createContext(NATIVE_PREFIX, nativeEndpoint::handle);
+    }
+
     public void start() throws IOException {
         server = HttpServer.create(new InetSocketAddress(restConfig.host(), restConfig.port()), 0);
-        server.createContext("/health", this::handleHealth);
-        server.createContext(PREFIX, rest::handle);
-        server.createContext(NATIVE_PREFIX, nativeEndpoint::handle);
+        registerInto(server, true);
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.start();
         System.out.println("REST query service listening on http://" + restConfig.host() + ":" + restConfig.port());

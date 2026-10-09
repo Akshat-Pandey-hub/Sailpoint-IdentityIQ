@@ -4203,16 +4203,69 @@ public final class Main {
             int port = intEnvOrDefault("KFAGENT_PORT",
                     intEnvOrDefault("REST_PORT", com.keyforge.iiq.rest.KfAgentRestServer.DEFAULT_PORT));
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
-            com.keyforge.iiq.rest.KfAgentRestServer server =
+
+            // ONE HTTP server, ONE port: KF Agent (/health, /kfagent/*) and the Parquet query service
+            // (/iiq_parquet/*, /native_parquet/*) are mounted as separate path contexts on the SAME port.
+            // KF Agent is primary; a bind/startup failure here is fatal (handled by the catch below).
+            com.sun.net.httpserver.HttpServer http =
+                    com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress(host, port), 0);
+            http.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(8));
+
+            com.keyforge.iiq.rest.KfAgentRestServer kfAgent =
                     new com.keyforge.iiq.rest.KfAgentRestServer(iiqConfig, host, port);
-            Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
-            server.start();
+            kfAgent.registerInto(http); // /health + /kfagent/*
+
+            // Best-effort: mount the Parquet query endpoints on the SAME port. A failure (invalid config,
+            // DuckDB native issue) is logged and NON-fatal — KF Agent still serves. No datasets are generated
+            // here; the endpoints mount regardless of whether Parquet files exist (queries return empty/404
+            // until data is extracted separately). KF Agent owns /health, so Parquet is mounted without it.
+            ParquetRestServer parquet = buildParquetQuietly();
+            if (parquet != null) {
+                parquet.registerInto(http, false);
+            }
+
+            http.start();
+            System.out.println("KF Agent REST listening on http://" + host + ":" + port
+                    + "  (GET /health, /kfagent/*"
+                    + (parquet != null ? ", /iiq_parquet/*, /native_parquet/*" : "") + ")");
+            if (parquet == null) {
+                System.out.println("Parquet query endpoints are NOT mounted (see the [WARN] above); "
+                        + "run 'start-rest' separately or fix the Parquet configuration to enable them.");
+            }
+
+            final com.sun.net.httpserver.HttpServer httpFinal = http;
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> httpFinal.stop(0)));
             Thread.currentThread().join(); // keep the process running while serving requests
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (Exception e) {
             System.err.println("Failed to start KF Agent REST service: " + e.getMessage());
             System.exit(1);
+        }
+    }
+
+    /**
+     * Best-effort construction of the Parquet query server for co-hosting on the shared KF Agent HTTP
+     * server (its contexts are mounted by the caller via {@code registerInto}; it is NOT started standalone,
+     * so its {@link RestConfig} host/port are unused placeholders). Never throws: on invalid config or a
+     * DuckDB native issue it prints a clear {@code [WARN]} and returns {@code null} so KF Agent runs without
+     * Parquet. Steers DuckDB's native temp dir to a writable location, as standalone {@code start-rest} does.
+     */
+    private static ParquetRestServer buildParquetQuietly() {
+        try {
+            ParquetConfig pq = ParquetConfig.load();
+            try {
+                java.nio.file.Path duckTmp = pq.outputDir().toAbsolutePath().resolve(".duckdb-tmp");
+                java.nio.file.Files.createDirectories(duckTmp);
+                System.setProperty("java.io.tmpdir", duckTmp.toString());
+            } catch (Exception ignore) {
+                // fall back to the default temp dir
+            }
+            return new ParquetRestServer(new RestConfig("0.0.0.0", 0), pq); // host/port unused when co-mounted
+        } catch (Throwable t) {
+            System.err.println("[WARN] Parquet query endpoints not mounted (" + t.getClass().getSimpleName()
+                    + ": " + t.getMessage() + "). KF Agent continues; run 'start-rest' separately to serve them.");
+            return null;
         }
     }
 
@@ -5492,7 +5545,7 @@ public final class Main {
         System.out.println("  extract-event-links-parquet             Write kf_event_link Parquet dataset (derived)");
         System.out.println("  extract-all-parquet                     Orchestrate: run every individual Parquet extractor");
         System.out.println("  start-rest                              Start the read-only REST query service over the Parquet datasets");
-        System.out.println("  start-kfagent                           Start the KF Agent REST service (native extraction as JSON, no DB). Env: KFAGENT_HOST (0.0.0.0), KFAGENT_PORT (8100). GET /health, /kfagent/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/role-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status,syslog-events}?<any response field>=<value> (generic exact filters, AND-combined) plus &modifiedAfter=&start=&limit=");
+        System.out.println("  start-kfagent                           Start the KF Agent REST service (native extraction as JSON, no DB) AND, best-effort, the Parquet query service on the SAME port (one process, one port). Env: KFAGENT_HOST (0.0.0.0), KFAGENT_PORT (8100; falls back to REST_PORT), PARQUET_OUT_DIR (Parquet datasets; mount is non-fatal if it fails). GET /health, /kfagent/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/role-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status,syslog-events}?<any response field>=<value> (generic exact filters, AND-combined) plus &modifiedAfter=&start=&limit= ; PLUS /iiq_parquet/* and /native_parquet/* (Parquet query API) on the same port");
         System.out.println("                                          (DuckDB; no IIQ/PostgreSQL). Config: REST_HOST (default 127.0.0.1),");
         System.out.println("                                          REST_PORT (default 8100), PARQUET_OUT_DIR. GET /health, " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + "/datasets,");
         System.out.println("                                          " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + "/{dataset}[?fields=&sort=&order=&limit=&offset=&filter.<f>.<op>=]");

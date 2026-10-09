@@ -192,10 +192,21 @@ public final class KfAgentRestServer {
         this.session = new IiqSessionClient(iiqConfig); // authenticates lazily, session reused across requests
     }
 
+    /**
+     * Registers this service's routes ({@code /health} and {@code /kfagent/*}) onto a caller-owned
+     * {@link HttpServer}. Lets KF Agent be co-hosted with another service on a SINGLE port (one server,
+     * many contexts) — the combined {@code start-kfagent} flow uses this to serve KF Agent and the Parquet
+     * query service on the same port. Does not create, configure the executor of, start or stop the server;
+     * the caller owns its lifecycle.
+     */
+    public void registerInto(HttpServer target) {
+        target.createContext("/health", this::handleHealth);
+        target.createContext(PREFIX, this::route);
+    }
+
     public void start() throws IOException {
         server = HttpServer.create(new InetSocketAddress(host, port), 0);
-        server.createContext("/health", this::handleHealth);
-        server.createContext(PREFIX, this::route);
+        registerInto(server);
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
