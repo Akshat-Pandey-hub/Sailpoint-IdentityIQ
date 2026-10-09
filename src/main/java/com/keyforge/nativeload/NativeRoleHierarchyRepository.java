@@ -43,7 +43,7 @@ public final class NativeRoleHierarchyRepository {
     }
     public Outcome upsert(Connection c,NativeRoleHierarchyRecord r) throws SQLException {
         String sql="INSERT INTO "+table+" (rolehierarchyid,source_role_id,role_id,role_name,related_role_source_id,related_role_id,related_role_name,relationship_type,source_system,source_interface,source_object_type,src_object_id,src_natural_key,extraction_run_id,record_hash) "
-                +"VALUES (?::uuid,?,?,?, ?,?::uuid,?,?,?,?,?,?,?,?,?) ON CONFLICT(rolehierarchyid) DO UPDATE SET "
+                +"VALUES (?::uuid,?,?::uuid,?, ?,?::uuid,?,?,?,?,?,?,?,?,?) ON CONFLICT(rolehierarchyid) DO UPDATE SET "
                 +"source_role_id=excluded.source_role_id,role_id=excluded.role_id,role_name=excluded.role_name,related_role_source_id=excluded.related_role_source_id,related_role_id=excluded.related_role_id,related_role_name=excluded.related_role_name,relationship_type=excluded.relationship_type,source_system=excluded.source_system,source_interface=excluded.source_interface,source_object_type=excluded.source_object_type,src_object_id=excluded.src_object_id,src_natural_key=excluded.src_natural_key,extraction_run_id=excluded.extraction_run_id,record_hash=excluded.record_hash,extracted_at=now(),is_deleted=false,deleted_at=null RETURNING (xmax=0)";
         try(PreparedStatement p=c.prepareStatement(sql)) {
             int i=1; p.setString(i++,id(r)); p.setString(i++,r.sourceRoleId); p.setString(i++,uuid(r.sourceRoleId));

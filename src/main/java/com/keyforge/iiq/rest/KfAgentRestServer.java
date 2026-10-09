@@ -68,6 +68,8 @@ import com.keyforge.nativeload.NativeRoleRelationshipClient;
 import com.keyforge.nativeload.NativeRoleRelationshipPageSource;
 import com.keyforge.nativeload.NativeRolePageSource;
 import com.keyforge.nativeload.NativeRoleRestService;
+import com.keyforge.nativeload.NativeSqlReportClient;
+import com.keyforge.nativeload.NativeSqlReportRestService;
 import com.keyforge.nativeload.NativeTaskResultClient;
 import com.keyforge.nativeload.NativeTaskResultPageSource;
 import com.keyforge.nativeload.NativeTaskResultRestService;
@@ -167,6 +169,13 @@ public final class KfAgentRestServer {
             new NativeAccessHistoryIdentityEventRestService();
     private final NativeAccessHistoryCertificationRestService accessHistoryCertificationService =
             new NativeAccessHistoryCertificationRestService();
+    // Shared SQL-report read service. All four reports are registered for KF Agent REST: Query 1
+    // (entitlementAssignment), Query 2 (workgroupMembers), Query 3 (entitlementCertification) and Query 4
+    // (entitlementCertificationStatus). The SQL-report group is now complete.
+    private final NativeSqlReportRestService sqlReportService =
+            new NativeSqlReportRestService(java.util.Set.of(
+                    "entitlementAssignment", "workgroupMembers", "entitlementCertification",
+                    "entitlementCertificationStatus"));
 
     private HttpServer server;
 
@@ -183,7 +192,7 @@ public final class KfAgentRestServer {
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
-                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroup-members}  (read-only; no PostgreSQL on this path)");
+                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status}  (read-only; no PostgreSQL on this path)");
     }
 
     public void stop() {
@@ -235,8 +244,16 @@ public final class KfAgentRestServer {
                 handleCertificationArchives(ex, q);
             } else if ("policy-violations".equals(sub)) {
                 handlePolicyViolations(ex, q);
+            } else if ("workgroupmember".equals(sub)) {
+                handleWorkgroupMembers(ex, q); // native Workgroup Member entity (Identity.getWorkgroups() edges)
+            } else if ("entitlement-assignment".equals(sub)) {
+                handleEntitlementAssignment(ex, q);
             } else if ("workgroup-members".equals(sub)) {
-                handleWorkgroupMembers(ex, q);
+                handleWorkgroupMembersReport(ex, q); // SQL-report Query 2 (membership roster + user attrs/status)
+            } else if ("entitlement-certification".equals(sub)) {
+                handleEntitlementCertification(ex, q); // SQL-report Query 3 (entitlement + never-certified flag)
+            } else if ("entitlement-certification-status".equals(sub)) {
+                handleEntitlementCertificationStatus(ex, q); // SQL-report Query 4 (entitlement + latest cert status)
             } else if ("identity-requests".equals(sub)) {
                 handleIdentityRequests(ex, q);
             } else if ("identity-request-items".equals(sub)) {
@@ -275,7 +292,7 @@ public final class KfAgentRestServer {
                 handleAccessHistory(ex, q);
             } else {
                 writeJson(ex, 404, error("unknown resource '" + sub
-                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules', 'access-history', 'access-history/identity-events', 'access-history/certifications', 'role-hierarchy', 'group-definitions', 'workitem-archives', 'certification-archives', 'policy-violations', 'workgroup-members'"));
+                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules', 'access-history', 'access-history/identity-events', 'access-history/certifications', 'role-hierarchy', 'group-definitions', 'workitem-archives', 'certification-archives', 'policy-violations', 'workgroupmember', 'entitlement-assignment', 'workgroup-members', 'entitlement-certification', 'entitlement-certification-status'"));
             }
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
@@ -657,6 +674,118 @@ public final class KfAgentRestServer {
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    /**
+     * SQL-report Query 1 (Entitlement Assignment). Reuses the existing {@link NativeSqlReportClient} to
+     * pull the baked server-side report envelope from the IIQ plugin over the authenticated session, and
+     * the shared {@link NativeSqlReportRestService} to filter/page/serialize it. The report id is fixed
+     * ("entitlementAssignment") — never caller-supplied — so this is not an arbitrary-SQL surface. No
+     * PostgreSQL on this path; the existing extract-native-entitlement-assignment-db command is untouched.
+     * No modifiedAfter (the report client runs the whole SELECT); it stays reserved.
+     */
+    private void handleEntitlementAssignment(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        NativeSqlReportClient client = new NativeSqlReportClient(session);
+        try {
+            List<Map<String, Object>> rows =
+                    sqlReportService.fetch(client::fetch, "entitlementAssignment", filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field / unregistered report
+        }
+    }
+
+    /**
+     * SQL-report Query 2 (Workgroup Members). A membership <i>roster</i> with user display/profile
+     * attributes and a CASE-derived status — distinct from the native Workgroup Member entity (served at
+     * {@code /kfagent/workgroupmember}), which is the {@code Identity.getWorkgroups()} edge topology.
+     * Reuses the same shared {@link NativeSqlReportRestService} + {@link NativeSqlReportClient}; report id
+     * is fixed ("workgroupMembers"), never caller-supplied. No PostgreSQL on this path; the existing
+     * extract-native-workgroup-members-db command is untouched. No modifiedAfter (whole SELECT), reserved.
+     */
+    private void handleWorkgroupMembersReport(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        NativeSqlReportClient client = new NativeSqlReportClient(session);
+        try {
+            List<Map<String, Object>> rows =
+                    sqlReportService.fetch(client::fetch, "workgroupMembers", filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field / unregistered report
+        }
+    }
+
+    /**
+     * SQL-report Query 3 (Entitlement Certification): every identity entitlement plus a
+     * {@code never_certified} flag ('YES'/'NO'). Reuses the same shared {@link NativeSqlReportRestService}
+     * + {@link NativeSqlReportClient}; report id is fixed ("entitlementCertification"), never
+     * caller-supplied. No PostgreSQL on this path; the existing extract-native-entitlement-certification-db
+     * command is untouched. No modifiedAfter (whole SELECT), reserved.
+     */
+    private void handleEntitlementCertification(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        NativeSqlReportClient client = new NativeSqlReportClient(session);
+        try {
+            List<Map<String, Object>> rows =
+                    sqlReportService.fetch(client::fetch, "entitlementCertification", filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field / unregistered report
+        }
+    }
+
+    /**
+     * SQL-report Query 4 (Entitlement Certification Status): every identity entitlement plus its latest
+     * certification info (name/decision/certifier/decision-date from the {@code certification_history} CTE)
+     * and a {@code never_certified} flag. Only the 14 outer-SELECT columns are returned; the CTE-internal
+     * {@code rn}/{@code certification_id} are not projected. Reuses the same shared
+     * {@link NativeSqlReportRestService} + {@link NativeSqlReportClient}; report id is fixed
+     * ("entitlementCertificationStatus"), never caller-supplied. No PostgreSQL on this path; the existing
+     * extract-native-entitlement-certification-status-db command is untouched. No modifiedAfter, reserved.
+     */
+    private void handleEntitlementCertificationStatus(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        NativeSqlReportClient client = new NativeSqlReportClient(session);
+        try {
+            List<Map<String, Object>> rows =
+                    sqlReportService.fetch(client::fetch, "entitlementCertificationStatus", filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field / unregistered report
         }
     }
 

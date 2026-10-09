@@ -68,7 +68,7 @@ public final class NativeRoleEntitlementRepository {
                 + "entitlement_type,application_id,application_name,profile_ordinal,constraint_path,filter_expression,"
                 + "filter_value,filter_operation,attribute_name,attribute_value,permission_target,permission_rights,"
                 + "permission_rights_list,permission_annotation,source_system,source_interface,source_object_type,"
-                + "src_object_id,src_natural_key,extraction_run_id,record_hash) VALUES (?::uuid,?,?,?,?::uuid,?,?,?,?,?,?,?::jsonb,?,?,?,?,?,?::jsonb,?,?,?,?,?,?,?,?) "
+                + "src_object_id,src_natural_key,extraction_run_id,record_hash) VALUES (?::uuid,?,?::uuid,?,?::uuid,?,?,?,?,?,?,?::jsonb,?,?,?,?,?,?::jsonb,?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT(roleentitlementid) DO UPDATE SET source_role_id=excluded.source_role_id,role_id=excluded.role_id,"
                 + "role_name=excluded.role_name,entitlement_id=excluded.entitlement_id,entitlement_type=excluded.entitlement_type,"
                 + "application_id=excluded.application_id,application_name=excluded.application_name,profile_ordinal=excluded.profile_ordinal,"
