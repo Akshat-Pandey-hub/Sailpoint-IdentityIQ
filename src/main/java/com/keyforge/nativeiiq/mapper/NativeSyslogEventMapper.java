@@ -26,6 +26,7 @@ public final class NativeSyslogEventMapper {
         row.setServer(s.getServer());
         row.setUsername(s.getUsername());
         row.setThread(s.getThread());
+        row.setClassname(s.getClassname());
         row.setLineNumber(s.getLineNumber());
         row.setMessage(s.getMessage());
         row.setStacktrace(s.getStacktrace());

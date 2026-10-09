@@ -43,6 +43,7 @@ public final class NativeSyslogEventRepository {
                         + "server text, "
                         + "username text, "
                         + "thread text, "
+                        + "classname text, "
                         + "line_number text, "
                         + "message text, "
                         + "stacktrace text, "
@@ -56,10 +57,10 @@ public final class NativeSyslogEventRepository {
                         + ")";
         this.appendSql =
                 "INSERT INTO " + targetTable + " ("
-                        + "syslogid, source_id, quick_key, event_level, server, username, thread, line_number, "
-                        + "message, stacktrace, created_at, record_hash, source_system, source_interface, "
-                        + "source_object_type, extraction_run_id) "
-                        + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "syslogid, source_id, quick_key, event_level, server, username, thread, classname, "
+                        + "line_number, message, stacktrace, created_at, record_hash, source_system, "
+                        + "source_interface, source_object_type, extraction_run_id) "
+                        + "VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                         + "ON CONFLICT (syslogid) DO NOTHING RETURNING syslogid";
     }
 
@@ -87,6 +88,7 @@ public final class NativeSyslogEventRepository {
         b.put("server", r.server);
         b.put("username", r.username);
         b.put("thread", r.thread);
+        b.put("classname", r.classname);
         b.put("line_number", r.lineNumber);
         b.put("message", r.message);
         b.put("stacktrace", r.stacktrace);
@@ -98,6 +100,8 @@ public final class NativeSyslogEventRepository {
         try (Statement st = conn.createStatement()) {
             st.execute(createSchemaSql);
             st.execute(createTableSql);
+            // Additive: give pre-existing kf_syslog_event tables the classname column (SyslogEvent.getClassname()).
+            st.execute("ALTER TABLE " + targetTable + " ADD COLUMN IF NOT EXISTS classname text");
         }
     }
 
@@ -112,6 +116,7 @@ public final class NativeSyslogEventRepository {
             ps.setString(i++, r.server);
             ps.setString(i++, r.username);
             ps.setString(i++, r.thread);
+            ps.setString(i++, r.classname);
             ps.setString(i++, r.lineNumber);
             ps.setString(i++, r.message);
             ps.setString(i++, r.stacktrace);

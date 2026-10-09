@@ -70,6 +70,9 @@ import com.keyforge.nativeload.NativeRolePageSource;
 import com.keyforge.nativeload.NativeRoleRestService;
 import com.keyforge.nativeload.NativeSqlReportClient;
 import com.keyforge.nativeload.NativeSqlReportRestService;
+import com.keyforge.nativeload.NativeSyslogEventClient;
+import com.keyforge.nativeload.NativeSyslogEventPageSource;
+import com.keyforge.nativeload.NativeSyslogEventRestService;
 import com.keyforge.nativeload.NativeTaskResultClient;
 import com.keyforge.nativeload.NativeTaskResultPageSource;
 import com.keyforge.nativeload.NativeTaskResultRestService;
@@ -176,6 +179,7 @@ public final class KfAgentRestServer {
             new NativeSqlReportRestService(java.util.Set.of(
                     "entitlementAssignment", "workgroupMembers", "entitlementCertification",
                     "entitlementCertificationStatus"));
+    private final NativeSyslogEventRestService syslogEventService = new NativeSyslogEventRestService();
 
     private HttpServer server;
 
@@ -192,7 +196,7 @@ public final class KfAgentRestServer {
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
-                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status}  (read-only; no PostgreSQL on this path)");
+                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status,syslog-events}  (read-only; no PostgreSQL on this path)");
     }
 
     public void stop() {
@@ -254,6 +258,8 @@ public final class KfAgentRestServer {
                 handleEntitlementCertification(ex, q); // SQL-report Query 3 (entitlement + never-certified flag)
             } else if ("entitlement-certification-status".equals(sub)) {
                 handleEntitlementCertificationStatus(ex, q); // SQL-report Query 4 (entitlement + latest cert status)
+            } else if ("syslog-events".equals(sub)) {
+                handleSyslogEvents(ex, q); // native SyslogEvent (IIQ operational/diagnostic log)
             } else if ("identity-requests".equals(sub)) {
                 handleIdentityRequests(ex, q);
             } else if ("identity-request-items".equals(sub)) {
@@ -292,7 +298,7 @@ public final class KfAgentRestServer {
                 handleAccessHistory(ex, q);
             } else {
                 writeJson(ex, 404, error("unknown resource '" + sub
-                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules', 'access-history', 'access-history/identity-events', 'access-history/certifications', 'role-hierarchy', 'group-definitions', 'workitem-archives', 'certification-archives', 'policy-violations', 'workgroupmember', 'entitlement-assignment', 'workgroup-members', 'entitlement-certification', 'entitlement-certification-status'"));
+                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules', 'access-history', 'access-history/identity-events', 'access-history/certifications', 'role-hierarchy', 'group-definitions', 'workitem-archives', 'certification-archives', 'policy-violations', 'workgroupmember', 'entitlement-assignment', 'workgroup-members', 'entitlement-certification', 'entitlement-certification-status', 'syslog-events'"));
             }
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
@@ -786,6 +792,31 @@ public final class KfAgentRestServer {
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field / unregistered report
+        }
+    }
+
+    /**
+     * Native SyslogEvent (IIQ's own immutable operational/diagnostic log — server-side logging events,
+     * distinct from AuditEvent). Reuses the EXISTING native {@link NativeSyslogEventClient} page source +
+     * import (append-only); the service collects records in memory (no DB). No modifiedAfter support on the
+     * client (full-scan only); modifiedAfter stays reserved. No PostgreSQL on this path.
+     */
+    private void handleSyslogEvents(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        NativeSyslogEventPageSource source = new NativeSyslogEventClient(session);
+        try {
+            List<Map<String, Object>> rows = syslogEventService.fetch(source, filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
         }
     }
 

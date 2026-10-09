@@ -67,6 +67,7 @@ final class NativeSyslogEventParser {
         rec.server = text(r, NativeSyslogEventFields.SERVER);
         rec.username = text(r, NativeSyslogEventFields.USERNAME);
         rec.thread = text(r, NativeSyslogEventFields.THREAD);
+        rec.classname = text(r, NativeSyslogEventFields.CLASSNAME);
         rec.lineNumber = text(r, NativeSyslogEventFields.LINE_NUMBER);
         rec.message = text(r, NativeSyslogEventFields.MESSAGE);
         rec.stacktrace = text(r, NativeSyslogEventFields.STACKTRACE);

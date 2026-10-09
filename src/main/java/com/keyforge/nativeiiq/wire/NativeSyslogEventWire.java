@@ -53,6 +53,7 @@ public final class NativeSyslogEventWire {
         m.put("server", r.getServer());
         m.put("username", r.getUsername());
         m.put("thread", r.getThread());
+        m.put("classname", r.getClassname());
         m.put("lineNumber", r.getLineNumber());
         m.put("message", r.getMessage());
         m.put("stacktrace", r.getStacktrace());

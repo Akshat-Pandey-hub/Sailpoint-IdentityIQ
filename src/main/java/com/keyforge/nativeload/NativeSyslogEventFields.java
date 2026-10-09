@@ -14,6 +14,7 @@ final class NativeSyslogEventFields {
     static final String SERVER = "server";
     static final String USERNAME = "username";
     static final String THREAD = "thread";
+    static final String CLASSNAME = "classname";
     static final String LINE_NUMBER = "lineNumber";
     static final String MESSAGE = "message";
     static final String STACKTRACE = "stacktrace";

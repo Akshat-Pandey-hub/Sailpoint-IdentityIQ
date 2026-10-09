@@ -11,6 +11,7 @@ public final class NativeSyslogEventRecord {
     String server;
     String username;
     String thread;
+    String classname;
     String lineNumber;
     String message;
     String stacktrace;

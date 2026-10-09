@@ -15,6 +15,7 @@ public final class NativeSyslogEventRow {
     private String server;
     private String username;
     private String thread;
+    private String classname;
     private String lineNumber;
     private String message;
     private String stacktrace;
@@ -38,6 +39,8 @@ public final class NativeSyslogEventRow {
     public void setUsername(String v) { this.username = v; }
     public String getThread() { return thread; }
     public void setThread(String v) { this.thread = v; }
+    public String getClassname() { return classname; }
+    public void setClassname(String v) { this.classname = v; }
     public String getLineNumber() { return lineNumber; }
     public void setLineNumber(String v) { this.lineNumber = v; }
     public String getMessage() { return message; }
