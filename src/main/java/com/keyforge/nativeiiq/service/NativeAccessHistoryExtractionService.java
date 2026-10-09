@@ -6,9 +6,11 @@ import com.keyforge.nativeiiq.model.NativeAccessHistoryPage;
 import com.keyforge.nativeiiq.model.NativeHistCertificationRow;
 import com.keyforge.nativeiiq.model.NativeHistEntitlementCaptureRow;
 import com.keyforge.nativeiiq.model.NativeHistIdentityEventRow;
+import com.keyforge.nativeiiq.model.NativeHistRoleEventRow;
 import com.keyforge.nativeiiq.source.NativeHistCertificationExtractor;
 import com.keyforge.nativeiiq.source.NativeHistEntitlementCaptureExtractor;
 import com.keyforge.nativeiiq.source.NativeHistIdentityEventExtractor;
+import com.keyforge.nativeiiq.source.NativeHistRoleEventExtractor;
 
 import sailpoint.api.DatabaseInstance;
 import sailpoint.api.SailPointContext;
@@ -20,9 +22,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Native (Java-API) Access-History extraction service. STRICTLY READ-ONLY. Extracts the three immutable
+ * Native (Java-API) Access-History extraction service. STRICTLY READ-ONLY. Extracts the immutable
  * Access-History object types — {@code HistoricalEntitlementCapture}, {@code HistoricalIdentityEvent},
- * {@code HistoricalCertification} — in one run under one {@code extraction_run_id}.
+ * {@code HistoricalRoleEvent}, {@code HistoricalCertification} — in one run under one
+ * {@code extraction_run_id}.
  *
  * <p><b>Context:</b> Access-History objects do NOT live in the main IIQ datasource; they are stored in the
  * dedicated {@link DatabaseInstance#ACCESS_HISTORY} database with its own Hibernate SessionFactory. The
@@ -72,6 +75,9 @@ public final class NativeAccessHistoryExtractionService {
             result.setIdentityEventSourceCount(
                     new NativeHistIdentityEventExtractor(ah.context, config)
                             .extract(safeStart, limit, result.getIdentityEvents()));
+            result.setRoleEventSourceCount(
+                    new NativeHistRoleEventExtractor(ah.context, config)
+                            .extract(safeStart, limit, result.getRoleEvents()));
             result.setCertificationSourceCount(
                     new NativeHistCertificationExtractor(ah.context, config)
                             .extract(safeStart, limit, result.getCertifications()));
@@ -97,6 +103,13 @@ public final class NativeAccessHistoryExtractionService {
             SailPointContext runtimeContext, int start, int limit) throws GeneralException {
         return runOne(runtimeContext,
                 (ah, cfg, out) -> new NativeHistIdentityEventExtractor(ah, cfg).extract(start, limit, out));
+    }
+
+    /** One page of {@code HistoricalRoleEvent} rows + the live source count. */
+    public NativeAccessHistoryPage<NativeHistRoleEventRow> extractRoleEvents(
+            SailPointContext runtimeContext, int start, int limit) throws GeneralException {
+        return runOne(runtimeContext,
+                (ah, cfg, out) -> new NativeHistRoleEventExtractor(ah, cfg).extract(start, limit, out));
     }
 
     /** One page of {@code HistoricalCertification} rows + the live source count. */

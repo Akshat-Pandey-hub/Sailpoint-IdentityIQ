@@ -19,12 +19,15 @@ public final class NativeAccessHistoryExtractionResult {
 
     private int entitlementCaptureSourceCount = -1;
     private int identityEventSourceCount = -1;
+    private int roleEventSourceCount = -1;
     private int certificationSourceCount = -1;
 
     private final List<NativeHistEntitlementCaptureRow> entitlementCaptures =
             new ArrayList<NativeHistEntitlementCaptureRow>();
     private final List<NativeHistIdentityEventRow> identityEvents =
             new ArrayList<NativeHistIdentityEventRow>();
+    private final List<NativeHistRoleEventRow> roleEvents =
+            new ArrayList<NativeHistRoleEventRow>();
     private final List<NativeHistCertificationRow> certifications =
             new ArrayList<NativeHistCertificationRow>();
 
@@ -44,17 +47,21 @@ public final class NativeAccessHistoryExtractionResult {
     public void setEntitlementCaptureSourceCount(int v) { this.entitlementCaptureSourceCount = v; }
     public int getIdentityEventSourceCount() { return identityEventSourceCount; }
     public void setIdentityEventSourceCount(int v) { this.identityEventSourceCount = v; }
+    public int getRoleEventSourceCount() { return roleEventSourceCount; }
+    public void setRoleEventSourceCount(int v) { this.roleEventSourceCount = v; }
     public int getCertificationSourceCount() { return certificationSourceCount; }
     public void setCertificationSourceCount(int v) { this.certificationSourceCount = v; }
 
     public List<NativeHistEntitlementCaptureRow> getEntitlementCaptures() { return entitlementCaptures; }
     public List<NativeHistIdentityEventRow> getIdentityEvents() { return identityEvents; }
+    public List<NativeHistRoleEventRow> getRoleEvents() { return roleEvents; }
     public List<NativeHistCertificationRow> getCertifications() { return certifications; }
 
     public int getEntitlementCaptureCount() { return entitlementCaptures.size(); }
     public int getIdentityEventCount() { return identityEvents.size(); }
+    public int getRoleEventCount() { return roleEvents.size(); }
     public int getCertificationCount() { return certifications.size(); }
     public int getTotalCount() {
-        return entitlementCaptures.size() + identityEvents.size() + certifications.size();
+        return entitlementCaptures.size() + identityEvents.size() + roleEvents.size() + certifications.size();
     }
 }

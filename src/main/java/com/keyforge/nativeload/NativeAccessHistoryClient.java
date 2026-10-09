@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * Pulls the native Access-History payloads from the KeyForge plugin over the same authenticated IIQ web
  * session the rest of this tool uses ({@link IiqSessionClient}). No new credentials or DB access — the
- * plugin runs the native SailPoint Java API inside IIQ and returns the rows as JSON. One client, three
+ * plugin runs the native SailPoint Java API inside IIQ and returns the rows as JSON. One client, four
  * read-only endpoints under {@code plugin/rest/keyForgeNativeIIQ/access-history/*}.
  */
 public final class NativeAccessHistoryClient {
@@ -17,6 +17,8 @@ public final class NativeAccessHistoryClient {
             "plugin/rest/keyForgeNativeIIQ/access-history/entitlement-captures";
     public static final String IDENTITY_EVENTS_PATH =
             "plugin/rest/keyForgeNativeIIQ/access-history/identity-events";
+    public static final String ROLE_EVENTS_PATH =
+            "plugin/rest/keyForgeNativeIIQ/access-history/role-events";
     public static final String CERTIFICATIONS_PATH =
             "plugin/rest/keyForgeNativeIIQ/access-history/certifications";
 

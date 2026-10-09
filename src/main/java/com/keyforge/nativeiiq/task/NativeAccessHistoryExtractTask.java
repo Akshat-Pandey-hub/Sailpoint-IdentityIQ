@@ -48,6 +48,10 @@ public class NativeAccessHistoryExtractTask extends AbstractTaskExecutor {
                     Integer.valueOf(r.getIdentityEventSourceCount()));
             result.setAttribute("identity_events_extracted",
                     Integer.valueOf(r.getIdentityEventCount()));
+            result.setAttribute("role_events_source_count",
+                    Integer.valueOf(r.getRoleEventSourceCount()));
+            result.setAttribute("role_events_extracted",
+                    Integer.valueOf(r.getRoleEventCount()));
             result.setAttribute("certifications_source_count",
                     Integer.valueOf(r.getCertificationSourceCount()));
             result.setAttribute("certifications_extracted",

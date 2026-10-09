@@ -13,6 +13,7 @@ import com.keyforge.nativeload.NativeAccessHistoryCertificationRestService;
 import com.keyforge.nativeload.NativeAccessHistoryClient;
 import com.keyforge.nativeload.NativeAccessHistoryEntitlementRestService;
 import com.keyforge.nativeload.NativeAccessHistoryIdentityEventRestService;
+import com.keyforge.nativeload.NativeAccessHistoryRoleEventRestService;
 import com.keyforge.nativeload.NativeApplicationRestService;
 import com.keyforge.nativeload.NativeAuditEventClient;
 import com.keyforge.nativeload.NativeAuditEventPageSource;
@@ -170,6 +171,8 @@ public final class KfAgentRestServer {
             new NativeAccessHistoryEntitlementRestService();
     private final NativeAccessHistoryIdentityEventRestService accessHistoryIdentityEventService =
             new NativeAccessHistoryIdentityEventRestService();
+    private final NativeAccessHistoryRoleEventRestService accessHistoryRoleEventService =
+            new NativeAccessHistoryRoleEventRestService();
     private final NativeAccessHistoryCertificationRestService accessHistoryCertificationService =
             new NativeAccessHistoryCertificationRestService();
     // Shared SQL-report read service. All four reports are registered for KF Agent REST: Query 1
@@ -196,7 +199,7 @@ public final class KfAgentRestServer {
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
-                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status,syslog-events}  (read-only; no PostgreSQL on this path)");
+                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/role-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status,syslog-events}  (read-only; no PostgreSQL on this path)");
     }
 
     public void stop() {
@@ -292,13 +295,15 @@ public final class KfAgentRestServer {
                 handleTaskSchedules(ex, q);
             } else if ("access-history/identity-events".equals(sub)) {
                 handleAccessHistoryIdentityEvents(ex, q);
+            } else if ("access-history/role-events".equals(sub)) {
+                handleAccessHistoryRoleEvents(ex, q);
             } else if ("access-history/certifications".equals(sub)) {
                 handleAccessHistoryCertifications(ex, q);
             } else if ("access-history".equals(sub)) {
                 handleAccessHistory(ex, q);
             } else {
                 writeJson(ex, 404, error("unknown resource '" + sub
-                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules', 'access-history', 'access-history/identity-events', 'access-history/certifications', 'role-hierarchy', 'group-definitions', 'workitem-archives', 'certification-archives', 'policy-violations', 'workgroupmember', 'entitlement-assignment', 'workgroup-members', 'entitlement-certification', 'entitlement-certification-status', 'syslog-events'"));
+                        + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules', 'access-history', 'access-history/identity-events', 'access-history/role-events', 'access-history/certifications', 'role-hierarchy', 'group-definitions', 'workitem-archives', 'certification-archives', 'policy-violations', 'workgroupmember', 'entitlement-assignment', 'workgroup-members', 'entitlement-certification', 'entitlement-certification-status', 'syslog-events'"));
             }
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
@@ -1193,6 +1198,32 @@ public final class KfAgentRestServer {
         try {
             List<Map<String, Object>> rows = accessHistoryIdentityEventService.fetch(
                     (s, l) -> client.fetchPage(NativeAccessHistoryClient.IDENTITY_EVENTS_PATH, s, l),
+                    filters, start, limit);
+            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+        } catch (IllegalArgumentException bad) {
+            writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
+        }
+    }
+
+    /**
+     * Native Access-History role events ({@code sailpoint.object.accesshistory.HistoricalRoleEvent}) — the
+     * role-centric change history. Same architecture as the identity-event route: reuses the DB-free
+     * {@link NativeAccessHistoryClient} + envelope (role-events path), no DB-coupled import, no PostgreSQL.
+     */
+    private void handleAccessHistoryRoleEvents(HttpExchange ex, Map<String, String> q) throws IOException {
+        Map<String, String> filters = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : q.entrySet()) {
+            if (!RESERVED.contains(e.getKey())) {
+                filters.put(e.getKey(), e.getValue());
+            }
+        }
+        Integer start = intOrNull(q.get("start"));
+        Integer limit = intOrNull(q.get("limit"));
+
+        NativeAccessHistoryClient client = new NativeAccessHistoryClient(session);
+        try {
+            List<Map<String, Object>> rows = accessHistoryRoleEventService.fetch(
+                    (s, l) -> client.fetchPage(NativeAccessHistoryClient.ROLE_EVENTS_PATH, s, l),
                     filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {

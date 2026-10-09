@@ -71,6 +71,17 @@ class NativeAccessHistoryRepositoryTest {
     }
 
     @Test
+    void roleEventInsertIsAlignedAndTargetsRoleTable() throws Exception {
+        NativeHistRoleEventRepository repo = new NativeHistRoleEventRepository("iiq_native", "run-1");
+        assertAligned(repo);
+        assertTrue(repo.targetTable().equals("iiq_native.kf_access_hist_role_event"));
+        assertEquals("HistoricalRoleEvent", repo.entity());
+        // role-event PK salt differs from identity-event -> no cross-table PK collision for the same source id
+        assertNotEquals(NativeHistRoleEventRepository.canonicalId("not-a-uuid"),
+                NativeHistIdentityEventRepository.canonicalId("not-a-uuid"));
+    }
+
+    @Test
     void canonicalIdIsDeterministicAndFallsBack() {
         String a = NativeHistEntitlementCaptureRepository.canonicalId(HEX);
         assertNotNull(a);

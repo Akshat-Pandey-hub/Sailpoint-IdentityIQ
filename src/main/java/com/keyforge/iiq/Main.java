@@ -130,6 +130,7 @@ import com.keyforge.nativeload.NativeAccessHistoryImportService;
 import com.keyforge.nativeload.NativeAccessHistoryRepo;
 import com.keyforge.nativeload.NativeHistEntitlementCaptureRepository;
 import com.keyforge.nativeload.NativeHistIdentityEventRepository;
+import com.keyforge.nativeload.NativeHistRoleEventRepository;
 import com.keyforge.nativeload.NativeHistCertificationRepository;
 import com.keyforge.nativeload.JdbcNativePolicyConstraintSink;
 import com.keyforge.nativeload.NativePolicyConstraintClient;
@@ -1808,6 +1809,8 @@ public final class Main {
                         new NativeHistEntitlementCaptureRepository(nativeSchema, runId));
                 targets.put(NativeAccessHistoryClient.IDENTITY_EVENTS_PATH,
                         new NativeHistIdentityEventRepository(nativeSchema, runId));
+                targets.put(NativeAccessHistoryClient.ROLE_EVENTS_PATH,
+                        new NativeHistRoleEventRepository(nativeSchema, runId));
                 targets.put(NativeAccessHistoryClient.CERTIFICATIONS_PATH,
                         new NativeHistCertificationRepository(nativeSchema, runId));
 
@@ -5489,7 +5492,7 @@ public final class Main {
         System.out.println("  extract-event-links-parquet             Write kf_event_link Parquet dataset (derived)");
         System.out.println("  extract-all-parquet                     Orchestrate: run every individual Parquet extractor");
         System.out.println("  start-rest                              Start the read-only REST query service over the Parquet datasets");
-        System.out.println("  start-kfagent                           Start the KF Agent REST service (native extraction as JSON, no DB). Env: KFAGENT_HOST (0.0.0.0), KFAGENT_PORT (8100). GET /health, /kfagent/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status,syslog-events}?<any response field>=<value> (generic exact filters, AND-combined) plus &modifiedAfter=&start=&limit=");
+        System.out.println("  start-kfagent                           Start the KF Agent REST service (native extraction as JSON, no DB). Env: KFAGENT_HOST (0.0.0.0), KFAGENT_PORT (8100). GET /health, /kfagent/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/role-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status,syslog-events}?<any response field>=<value> (generic exact filters, AND-combined) plus &modifiedAfter=&start=&limit=");
         System.out.println("                                          (DuckDB; no IIQ/PostgreSQL). Config: REST_HOST (default 127.0.0.1),");
         System.out.println("                                          REST_PORT (default 8100), PARQUET_OUT_DIR. GET /health, " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + "/datasets,");
         System.out.println("                                          " + com.keyforge.iiq.rest.ParquetRestServer.PREFIX + "/{dataset}[?fields=&sort=&order=&limit=&offset=&filter.<f>.<op>=]");

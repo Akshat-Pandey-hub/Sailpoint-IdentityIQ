@@ -4,6 +4,7 @@ import com.keyforge.nativeiiq.model.NativeAccessHistoryPage;
 import com.keyforge.nativeiiq.model.NativeHistCertificationRow;
 import com.keyforge.nativeiiq.model.NativeHistEntitlementCaptureRow;
 import com.keyforge.nativeiiq.model.NativeHistIdentityEventRow;
+import com.keyforge.nativeiiq.model.NativeHistRoleEventRow;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -54,6 +55,17 @@ public final class NativeAccessHistoryWire {
             }
         }
         return envelope("HistoricalIdentityEvent", page, start, limit, rows);
+    }
+
+    public static Map<String, Object> roleEventEnvelope(
+            NativeAccessHistoryPage<NativeHistRoleEventRow> page, int start, int limit) {
+        List<Map<String, Object>> rows = new ArrayList<Map<String, Object>>();
+        if (page != null) {
+            for (NativeHistRoleEventRow r : page.getRows()) {
+                rows.add(roleEventRow(r));
+            }
+        }
+        return envelope("HistoricalRoleEvent", page, start, limit, rows);
     }
 
     public static Map<String, Object> certificationEnvelope(
@@ -130,6 +142,51 @@ public final class NativeAccessHistoryWire {
     }
 
     static Map<String, Object> identityEventRow(NativeHistIdentityEventRow r) {
+        Map<String, Object> m = new LinkedHashMap<String, Object>();
+        m.put("sourceId", r.getSourceId());
+        m.put("name", r.getName());
+        m.put("entityId", r.getEntityId());
+        m.put("entityName", r.getEntityName());
+        m.put("definedEntityName", r.getDefinedEntityName());
+        m.put("eventType", r.getEventType());
+        m.put("eventCategory", r.getEventCategory());
+        m.put("eventSourceType", r.getEventSourceType());
+        m.put("eventDate", iso(r.getEventDate()));
+        m.put("eventDetailJson", r.getEventDetailJson());
+        m.put("prevCaptureId", r.getPrevCaptureId());
+        m.put("captureId", r.getCaptureId());
+        m.put("auditEventId", r.getAuditEventId());
+        m.put("propertyName", r.getPropertyName());
+        m.put("oldValue", r.getOldValue());
+        m.put("newValue", r.getNewValue());
+        m.put("accountId", r.getAccountId());
+        m.put("acctAppId", r.getAcctAppId());
+        m.put("acctAppName", r.getAcctAppName());
+        m.put("acctAppInstance", r.getAcctAppInstance());
+        m.put("acctDisplayName", r.getAcctDisplayName());
+        m.put("acctNativeId", r.getAcctNativeId());
+        m.put("pendingRequestItemId", r.getPendingRequestItemId());
+        m.put("requestItemId", r.getRequestItemId());
+        m.put("identityRequestId", r.getIdentityRequestId());
+        m.put("identityEntitlementId", r.getIdentityEntitlementId());
+        m.put("qryProperty1", r.getQryProperty1());
+        m.put("qryProperty2", r.getQryProperty2());
+        m.put("qryProperty3", r.getQryProperty3());
+        m.put("qryProperty4", r.getQryProperty4());
+        m.put("qryProperty5", r.getQryProperty5());
+        m.put("qryProperty6", r.getQryProperty6());
+        m.put("qryProperty7", r.getQryProperty7());
+        m.put("qryProperty8", r.getQryProperty8());
+        m.put("qryProperty9", r.getQryProperty9());
+        m.put("qryProperty10", r.getQryProperty10());
+        m.put("created", iso(r.getCreated()));
+        m.put("modified", iso(r.getModified()));
+        putLineage(m, r.getSrcSystem(), r.getSrcInterface(), r.getSrcObjectType(),
+                r.getExtractionRunId(), r.getExtractedAt());
+        return m;
+    }
+
+    static Map<String, Object> roleEventRow(NativeHistRoleEventRow r) {
         Map<String, Object> m = new LinkedHashMap<String, Object>();
         m.put("sourceId", r.getSourceId());
         m.put("name", r.getName());

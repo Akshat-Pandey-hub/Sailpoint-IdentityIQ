@@ -4,6 +4,7 @@ import com.keyforge.nativeiiq.model.NativeAccessHistoryPage;
 import com.keyforge.nativeiiq.model.NativeHistCertificationRow;
 import com.keyforge.nativeiiq.model.NativeHistEntitlementCaptureRow;
 import com.keyforge.nativeiiq.model.NativeHistIdentityEventRow;
+import com.keyforge.nativeiiq.model.NativeHistRoleEventRow;
 import com.keyforge.nativeiiq.service.NativeAccessHistoryExtractionService;
 import com.keyforge.nativeiiq.wire.NativeAccessHistoryWire;
 
@@ -37,6 +38,7 @@ import java.util.logging.Logger;
  * <ul>
  *   <li>{@code plugin/rest/keyForgeNativeIIQ/access-history/entitlement-captures}</li>
  *   <li>{@code plugin/rest/keyForgeNativeIIQ/access-history/identity-events}</li>
+ *   <li>{@code plugin/rest/keyForgeNativeIIQ/access-history/role-events}</li>
  *   <li>{@code plugin/rest/keyForgeNativeIIQ/access-history/certifications}</li>
  * </ul>
  *
@@ -103,6 +105,31 @@ public class NativeAccessHistoryResource extends BasePluginResource {
             return denied("HistoricalIdentityEvent", stage, e);
         } catch (Throwable t) {
             return failed("HistoricalIdentityEvent", stage, t);
+        }
+    }
+
+    @GET
+    @Path("access-history/role-events")
+    @SystemAdmin
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getRoleEvents(@QueryParam("start") @DefaultValue("0") int start,
+                                  @QueryParam("limit") @DefaultValue("100") int limit) {
+        int safeStart = Math.max(0, start);
+        int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        String stage = "start";
+        try {
+            stage = "getContext";
+            SailPointContext context = getContext();
+            stage = "extract";
+            NativeAccessHistoryPage<NativeHistRoleEventRow> page =
+                    new NativeAccessHistoryExtractionService().extractRoleEvents(context, safeStart, safeLimit);
+            stage = "buildEnvelope";
+            Map<String, Object> env = NativeAccessHistoryWire.roleEventEnvelope(page, safeStart, safeLimit);
+            return Response.ok(env).build();
+        } catch (UnauthorizedAccessException e) {
+            return denied("HistoricalRoleEvent", stage, e);
+        } catch (Throwable t) {
+            return failed("HistoricalRoleEvent", stage, t);
         }
     }
 
