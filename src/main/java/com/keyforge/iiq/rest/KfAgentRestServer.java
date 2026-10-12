@@ -550,9 +550,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // The native identity-entitlement client has no server-side modifiedAfter support (full-scan only);
-        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
-        NativeIdentityEntitlementPageSource source = new NativeIdentityEntitlementClient(session);
+        // optional incremental bound (changed after); absent = full population
+        NativeIdentityEntitlementPageSource source = new NativeIdentityEntitlementClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = identityEntitlementService.fetch(source, filters, start, limit);
@@ -572,9 +571,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // The native account-entitlement client has no server-side modifiedAfter support (full-scan only);
-        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
-        NativeAccountEntitlementPageSource source = new NativeAccountEntitlementClient(session);
+        // optional incremental bound on the ACCOUNT's (Link's) change time: edges of accounts changed after it
+        NativeAccountEntitlementPageSource source = new NativeAccountEntitlementClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = accountEntitlementService.fetch(source, filters, start, limit);
@@ -920,7 +918,8 @@ public final class KfAgentRestServer {
 
         // Items are extracted by the SHARED IdentityRequest native import; the item service collects only
         // the item rows. No modifiedAfter support (full-scan only); modifiedAfter stays reserved/ignored.
-        NativeIdentityRequestPageSource source = new NativeIdentityRequestClient(session);
+        // optional incremental bound on the PARENT's change time (children of parents changed after it)
+        NativeIdentityRequestPageSource source = new NativeIdentityRequestClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = identityRequestItemService.fetch(source, filters, start, limit);
@@ -942,7 +941,8 @@ public final class KfAgentRestServer {
 
         // Approvals are extracted by the SHARED IdentityRequest native import; the approval service collects
         // only the approval rows. No modifiedAfter support (full-scan only); modifiedAfter stays reserved.
-        NativeIdentityRequestPageSource source = new NativeIdentityRequestClient(session);
+        // optional incremental bound on the PARENT's change time (children of parents changed after it)
+        NativeIdentityRequestPageSource source = new NativeIdentityRequestClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = identityRequestApprovalService.fetch(source, filters, start, limit);
@@ -986,7 +986,8 @@ public final class KfAgentRestServer {
 
         // Items are derived by the SHARED ProvisioningTransaction native import; the item service collects
         // only the item rows. No modifiedAfter support (full-scan only); modifiedAfter stays reserved.
-        NativeProvisioningTxnPageSource source = new NativeProvisioningTxnClient(session);
+        // optional incremental bound on the PARENT's change time (children of parents changed after it)
+        NativeProvisioningTxnPageSource source = new NativeProvisioningTxnClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = provisioningItemService.fetch(source, filters, start, limit);

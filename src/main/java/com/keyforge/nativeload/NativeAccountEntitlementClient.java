@@ -16,9 +16,20 @@ public final class NativeAccountEntitlementClient implements NativeAccountEntitl
     public static final String ACCOUNT_ENTITLEMENTS_PATH = "plugin/rest/keyForgeNativeIIQ/account-entitlements";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativeAccountEntitlementClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    /**
+     * Sets the optional incremental bound (ISO-8601 instant). When set, every page request carries
+     * {@code &modifiedAfter=}, so the IIQ plugin returns only objects changed after it (server-side: modified after
+     * it, or never modified and created after it). {@code null}/blank clears it (full scan). Returns {@code this}.
+     */
+    public NativeAccountEntitlementClient withModifiedAfter(String modifiedAfter) {
+        this.modifiedAfter = (modifiedAfter == null || modifiedAfter.isBlank()) ? null : modifiedAfter.trim();
+        return this;
     }
 
     @Override
@@ -27,6 +38,9 @@ public final class NativeAccountEntitlementClient implements NativeAccountEntitl
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) {
+            params.put("modifiedAfter", modifiedAfter); // server-side incremental bound
+        }
         return session.get(ACCOUNT_ENTITLEMENTS_PATH, params);
     }
 }

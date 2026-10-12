@@ -30,7 +30,17 @@ public final class NativeAccountEntitlementExtractor {
     }
 
     public NativeAccountEntitlementExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    /**
+     * One page of accounts (Links), each expanded into its entitlement edges, optionally bounded to those changed after {@code modifiedAfter} (server-side: modified
+     * after it, or never modified and created after it; {@code null} = the full population, unchanged behaviour).
+     * The source count uses the same bound, so the caller's complete-scan guard compares like with like.
+     */
+    public NativeAccountEntitlementExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
+        NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         qo.addOrdering("id", true);
         if (start > 0) {
             qo.setFirstRow(start);
@@ -38,14 +48,15 @@ public final class NativeAccountEntitlementExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
-        return extract(qo);
+        return extract(qo, modifiedAfter);
     }
 
-    private NativeAccountEntitlementExtractionResult extract(QueryOptions qo) throws GeneralException {
+    private NativeAccountEntitlementExtractionResult extract(QueryOptions qo, java.util.Date modifiedAfter) throws GeneralException {
         NativeAccountEntitlementExtractionResult result = new NativeAccountEntitlementExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "AccountEntitlement", Instant.now());
 
-        result.setSourceCount(context.countObjects(Link.class, new QueryOptions()));
+        result.setSourceCount(context.countObjects(Link.class,
+                NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
 
         int links = 0;
         Iterator<Object[]> ids = context.search(Link.class, qo, "id");

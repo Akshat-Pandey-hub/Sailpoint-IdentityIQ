@@ -1,41 +1,46 @@
-# KeyForge Native IIQ Extractor — IdentityIQ Plugin (Stage 1: Identity)
+# KeyForge Native IIQ Extractor — IdentityIQ Plugin
 
-An installable IdentityIQ plugin that runs the native (Java-API) Identity extraction **inside** the
-live IIQ runtime. It is built from the same repository (`com.keyforge.nativeiiq.*`); the existing
-REST/SCIM tool is untouched.
+A read-only IdentityIQ plugin that exposes IdentityIQ objects through the native Java API as REST endpoints under
+`/identityiq/plugin/rest/keyForgeNativeIIQ/`. The KeyForge KF Agent (`iiq-migration-tool.jar start-kfagent`) calls
+these endpoints and serves the data as `/kfagent/*`.
 
-## What's in the ZIP (`target/dist/KeyForgeNativeIIQ-1.0.zip`)
+- **Read-only:** never creates, modifies or deletes anything in IdentityIQ.
+- **Secured:** every endpoint requires an IdentityIQ **System Administrator**.
+- **Requires** IdentityIQ 8.4 or later.
+
+## Contents of the ZIP (`KeyForgeNativeIIQ-1.0.zip`)
+
 ```
-manifest.xml                                  (plugin descriptor)
-lib/KeyForgeNativeIIQ.jar                      (our com.keyforge.nativeiiq.* classes only)
-import/install/KeyForgeNativeIdentityExtractTask.xml   (TaskDefinition, imported on install)
+manifest.xml                 plugin descriptor (registers the REST resources)
+lib/KeyForgeNativeIIQ.jar    the plugin classes (com.keyforge.nativeiiq.* only)
+README.md                    this file
 ```
-`sailpoint.*` is NOT bundled — the IIQ plugin runtime supplies it. The jar holds only our classes:
-`model.NativeIdentityRow`/`NativeAccountRef`/`NativeExtractionResult`, `config.NativeExtractionConfig`,
-`mapper.NativeIdentityMapper`, `source.NativeIdentityExtractor`, `task.NativeIdentityExtractTask`.
 
-## Build the ZIP
-Requires `lib/identityiq.jar` (from your IIQ install media / whoever deployed preview.keyforge.ai —
-**not** the server filesystem) placed in the repo `lib/` folder, and `iiq.java.release` set to the
-IIQ server's Java version. Then:
+`sailpoint.*` and `javax.ws.rs.*` are supplied by the IdentityIQ plugin runtime and are not bundled.
+
+## Install or upgrade
+
+1. Log in to IdentityIQ as a System Administrator.
+2. Open the gear menu → **Plugins**.
+3. Click **Install** (or **Import**) and upload `KeyForgeNativeIIQ-1.0.zip`.
+4. Confirm **KeyForge Native IIQ Extractor** appears in the plugin list and is enabled.
+
+No IdentityIQ restart and no server file access is required. Installing a newer ZIP the same way replaces the
+previous version.
+
+## Incremental reads
+
+Most endpoints accept an optional `modifiedAfter` (ISO-8601, e.g. `2026-10-12T10:00:00Z`) and then return only the
+objects changed after it (modified after it, or never modified and created after it; for append-only event objects,
+created after it). Without the parameter the full population is returned.
+
+## Build
+
+Requires `lib/identityiq.jar` (from the IdentityIQ installation) in the repository's `lib/` folder:
+
 ```
-mvn -Pnative -Dmaven.repo.local=D:/m2/repository clean package
+mvn -Pnative clean package
 ```
-Output: `target/dist/KeyForgeNativeIIQ-1.0.zip`. The default REST build (`mvn clean package`) is
-unaffected and never needs the jar.
 
-## Install into IdentityIQ (web UI only — no server filesystem access needed)
-1. Log in to `https://preview.keyforge.ai/identityiq/` as an admin (spadmin).
-2. Go to the gear/Setup menu → **Plugins**.
-3. **Install / Import** the `KeyForgeNativeIIQ-1.0.zip` (drag-and-drop).
-4. IIQ imports `manifest.xml` (creates the Plugin) and the TaskDefinition from `import/install/`.
-
-## Run (read-only)
-Setup → **Tasks** → **"KeyForge Native Identity Extract"** → **Run**. It reads up to `identityLimit`
-Identities via the native API and reports counts on the Task Result. Set `identityLimit=0` for all.
-It performs no writes to IIQ.
-
-## Before install, confirm against the live version
-- `manifest.xml` `minSystemVersion` → set to the preview.keyforge.ai IIQ version.
-- The `TaskDefinition` and `sailpoint.*` getter/`TaskExecutor` signatures compile against the real
-  `identityiq.jar`; the compiler flags any version-specific differences on the first `-Pnative` build.
+Output: `target/dist/KeyForgeNativeIIQ-1.0.zip`. The normal build (`mvn clean package`) produces the KF Agent jar and
+does not need `identityiq.jar`.

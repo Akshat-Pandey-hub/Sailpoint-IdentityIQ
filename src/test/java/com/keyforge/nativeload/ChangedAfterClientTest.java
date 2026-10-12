@@ -81,4 +81,14 @@ class ChangedAfterClientTest {
     void certificationEntityClient() {
         check((s, b) -> new NativeCertificationEntityClient(s).withModifiedAfter(b).fetchPage(0, 50));
     }
+
+    @Test
+    void identityEntitlementClient() {
+        check((s, b) -> new NativeIdentityEntitlementClient(s).withModifiedAfter(b).fetchPage(0, 50));
+    }
+
+    @Test
+    void accountEntitlementClient() {
+        check((s, b) -> new NativeAccountEntitlementClient(s).withModifiedAfter(b).fetchPage(0, 50));
+    }
 }

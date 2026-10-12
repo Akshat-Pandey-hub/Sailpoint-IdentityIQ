@@ -32,7 +32,17 @@ public final class NativeIdentityEntitlementExtractor {
     }
 
     public NativeIdentityEntitlementExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    /**
+     * One page of identity entitlements, optionally bounded to those changed after {@code modifiedAfter} (server-side: modified
+     * after it, or never modified and created after it; {@code null} = the full population, unchanged behaviour).
+     * The source count uses the same bound, so the caller's complete-scan guard compares like with like.
+     */
+    public NativeIdentityEntitlementExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
+        NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         qo.addOrdering("id", true);
         if (start > 0) {
             qo.setFirstRow(start);
@@ -40,14 +50,15 @@ public final class NativeIdentityEntitlementExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
-        return extract(qo);
+        return extract(qo, modifiedAfter);
     }
 
-    private NativeIdentityEntitlementExtractionResult extract(QueryOptions qo) throws GeneralException {
+    private NativeIdentityEntitlementExtractionResult extract(QueryOptions qo, java.util.Date modifiedAfter) throws GeneralException {
         NativeIdentityEntitlementExtractionResult result = new NativeIdentityEntitlementExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "IdentityEntitlement", Instant.now());
 
-        result.setSourceCount(context.countObjects(IdentityEntitlement.class, new QueryOptions()));
+        result.setSourceCount(context.countObjects(IdentityEntitlement.class,
+                NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
 
         Iterator<Object[]> ids = context.search(IdentityEntitlement.class, qo, "id");
         while (ids != null && ids.hasNext()) {
