@@ -101,7 +101,8 @@ public final class NativeCertificationItemRestService {
         CollectingSink sink = new CollectingSink();
         try {
             // sweepDeletions=false -> the sink's sweep() is never invoked; no PostgreSQL is touched.
-            new NativeCertificationItemImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            var scan = new NativeCertificationItemImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            KfAgentScanEvidence.verified(scan.getSourceCount(), scan.getExtracted()); // complete-scan guard passed (else it threw)
         } catch (SQLException e) {
             throw new NativeImportException("native certification-item extraction failed: " + e.getMessage(), e);
         }

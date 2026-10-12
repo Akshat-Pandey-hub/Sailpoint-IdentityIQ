@@ -100,7 +100,8 @@ public final class NativeProvisioningItemRestService {
         CollectingSink sink = new CollectingSink();
         try {
             // sweepDeletions=false -> the sink's sweep* methods are never invoked; no PostgreSQL is touched.
-            new NativeProvisioningTxnImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            var scan = new NativeProvisioningTxnImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            KfAgentScanEvidence.verified(scan.getSourceCount(), scan.getTxns()); // complete-scan guard passed (else it threw)
         } catch (SQLException e) {
             throw new NativeImportException("native provisioning-item extraction failed: " + e.getMessage(), e);
         }

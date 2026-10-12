@@ -101,7 +101,8 @@ public final class NativeAccountEntitlementRestService {
         CollectingSink sink = new CollectingSink();
         try {
             // sweepDeletions=false -> the sink's sweep() is never invoked; no PostgreSQL is touched.
-            new NativeAccountEntitlementImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            var scan = new NativeAccountEntitlementImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            KfAgentScanEvidence.verified(scan.getSourceLinkCount(), scan.getScannedLinks()); // complete-scan guard passed (else it threw)
         } catch (SQLException e) {
             throw new NativeImportException("native account-entitlement extraction failed: " + e.getMessage(), e);
         }

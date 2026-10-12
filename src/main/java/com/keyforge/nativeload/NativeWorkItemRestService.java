@@ -103,7 +103,8 @@ public final class NativeWorkItemRestService {
         CollectingSink sink = new CollectingSink();
         try {
             // sweepDeletions=false -> the sink's sweep method is never invoked; no PostgreSQL is touched.
-            new NativeWorkItemImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            var scan = new NativeWorkItemImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            KfAgentScanEvidence.verified(scan.getSourceCount(), scan.getExtracted()); // complete-scan guard passed (else it threw)
         } catch (SQLException e) {
             throw new NativeImportException("native work-item extraction failed: " + e.getMessage(), e);
         }

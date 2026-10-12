@@ -100,7 +100,8 @@ public final class NativeIdentityEntitlementRestService {
         CollectingSink sink = new CollectingSink();
         try {
             // sweepDeletions=false -> the sink's sweep() is never invoked; no PostgreSQL is touched.
-            new NativeIdentityEntitlementImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            var scan = new NativeIdentityEntitlementImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            KfAgentScanEvidence.verified(scan.getSourceCount(), scan.getExtracted()); // complete-scan guard passed (else it threw)
         } catch (SQLException e) {
             throw new NativeImportException("native identity-entitlement extraction failed: " + e.getMessage(), e);
         }

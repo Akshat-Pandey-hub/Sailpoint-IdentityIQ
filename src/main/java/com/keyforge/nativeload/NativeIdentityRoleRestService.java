@@ -99,7 +99,8 @@ public final class NativeIdentityRoleRestService {
         CollectingSink sink = new CollectingSink();
         try {
             // sweepDeletions=false -> the sink's sweep() is never invoked; no PostgreSQL is touched.
-            new NativeIdentityRoleImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            var scan = new NativeIdentityRoleImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            KfAgentScanEvidence.verified(scan.getSourceIdentityCount(), scan.getScannedIdentities()); // complete-scan guard passed (else it threw)
         } catch (SQLException e) {
             throw new NativeImportException("native identity-role extraction failed: " + e.getMessage(), e);
         }

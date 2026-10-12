@@ -102,7 +102,8 @@ public final class NativeIdentityRequestApprovalRestService {
         CollectingSink sink = new CollectingSink();
         try {
             // sweepDeletions=false -> the sink's sweep* methods are never invoked; no PostgreSQL is touched.
-            new NativeIdentityRequestImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            var scan = new NativeIdentityRequestImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
+            KfAgentScanEvidence.verified(scan.getSourceCount(), scan.getRequests()); // complete-scan guard passed (else it threw)
         } catch (SQLException e) {
             throw new NativeImportException("native identity-request-approval extraction failed: " + e.getMessage(), e);
         }

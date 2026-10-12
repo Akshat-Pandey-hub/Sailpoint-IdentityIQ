@@ -100,7 +100,8 @@ public final class NativeRoleEntitlementRestService {
         try {
             // run() owns its own runId + complete-scan validation; the collecting sink persists nothing
             // and its sweeps are skipped no-ops, so no PostgreSQL is touched.
-            new NativeRoleRelationshipImportService(source, sink, INTERNAL_PAGE_SIZE).run();
+            var scan = new NativeRoleRelationshipImportService(source, sink, INTERNAL_PAGE_SIZE).run();
+            KfAgentScanEvidence.verified(scan.sourceCount, scan.bundles); // complete-scan guard passed (else it threw)
         } catch (SQLException e) {
             throw new NativeImportException("native role-entitlement extraction failed: " + e.getMessage(), e);
         }

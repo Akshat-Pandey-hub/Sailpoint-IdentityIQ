@@ -71,6 +71,7 @@ import com.keyforge.nativeload.NativeRolePageSource;
 import com.keyforge.nativeload.NativeRoleRestService;
 import com.keyforge.nativeload.NativeSqlReportClient;
 import com.keyforge.nativeload.NativeSqlReportRestService;
+import com.keyforge.nativeload.KfAgentScanEvidence;
 import com.keyforge.nativeload.NativeSyslogEventClient;
 import com.keyforge.nativeload.NativeSyslogEventPageSource;
 import com.keyforge.nativeload.NativeSyslogEventRestService;
@@ -220,6 +221,7 @@ public final class KfAgentRestServer {
     }
 
     private void route(HttpExchange ex) throws IOException {
+        KfAgentScanEvidence.clear(); // request-scoped completeness evidence (see writeJson)
         try {
             if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) {
                 writeJson(ex, 405, error("method not allowed; use GET"));
@@ -319,6 +321,8 @@ public final class KfAgentRestServer {
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
                     + (e.getMessage() == null ? "" : ": " + e.getMessage())));
+        } finally {
+            KfAgentScanEvidence.clear();
         }
     }
 
@@ -1325,6 +1329,11 @@ public final class KfAgentRestServer {
 
     private void writeJson(HttpExchange ex, int status, byte[] body) throws IOException {
         ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+        Integer verified = KfAgentScanEvidence.current();
+        if (status == 200 && verified != null) {
+            // this body came from ONE full internal scan whose complete-scan guard passed against this IIQ count
+            ex.getResponseHeaders().set(KfAgentScanEvidence.HEADER, Integer.toString(verified));
+        }
         ex.sendResponseHeaders(status, body.length);
         try (OutputStream os = ex.getResponseBody()) {
             os.write(body);
