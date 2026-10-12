@@ -232,7 +232,18 @@ public final class KfAgentRestServer {
             while (sub.startsWith("/")) {
                 sub = sub.substring(1);
             }
-            Map<String, String> q = parseQuery(ex.getRequestURI().getRawQuery());
+            Map<String, String> q;
+            try {
+                q = parseQuery(ex.getRequestURI().getRawQuery());
+            } catch (IllegalArgumentException badEncoding) {
+                writeJson(ex, 400, error("malformed query string: " + badEncoding.getMessage()));
+                return;
+            }
+            String invalid = invalidReservedParam(q);
+            if (invalid != null) {
+                writeJson(ex, 400, error(invalid));
+                return;
+            }
 
             if ("entitlements".equals(sub)) {
                 handleEntitlements(ex, q);
@@ -321,6 +332,15 @@ public final class KfAgentRestServer {
         } catch (Exception e) {
             writeJson(ex, 500, error(e.getClass().getSimpleName()
                     + (e.getMessage() == null ? "" : ": " + e.getMessage())));
+        } catch (Error fatal) {
+            // e.g. OutOfMemoryError on an oversized request: answer this caller with a JSON 500 (best effort)
+            // instead of dropping the connection; the worker pool and the server keep serving other requests.
+            try {
+                writeJson(ex, 500, error(fatal.getClass().getSimpleName()
+                        + (fatal.getMessage() == null ? "" : ": " + fatal.getMessage())));
+            } catch (Throwable ignored) {
+                // the response could not be written (e.g. headers already sent); nothing more to do
+            }
         } finally {
             KfAgentScanEvidence.clear();
         }
@@ -1285,6 +1305,42 @@ public final class KfAgentRestServer {
     }
 
     // --- helpers ------------------------------------------------------------
+
+    /**
+     * Validates the reserved params before any extraction: a present {@code start}/{@code limit} must be an
+     * integer, and a present {@code modifiedAfter} must be an ISO-8601 instant or offset date-time (exactly the
+     * formats the plugin's {@code NativeIncrementalQuery.parseIsoToDate} accepts). Without this a typo was
+     * silently ignored: a bad limit returned everything, and a bad modifiedAfter collapsed to a full scan.
+     *
+     * @return a client-facing error message, or {@code null} when the params are valid (or absent)
+     */
+    static String invalidReservedParam(Map<String, String> q) {
+        for (String key : new String[]{"start", "limit"}) {
+            String v = q.get(key);
+            if (v != null && !v.trim().isEmpty()) {
+                try {
+                    Integer.parseInt(v.trim());
+                } catch (NumberFormatException e) {
+                    return "invalid '" + key + "': '" + v + "' is not an integer";
+                }
+            }
+        }
+        String modifiedAfter = q.get("modifiedAfter");
+        if (modifiedAfter != null && !modifiedAfter.trim().isEmpty()) {
+            String s = modifiedAfter.trim();
+            try {
+                java.time.Instant.parse(s);
+            } catch (java.time.format.DateTimeParseException notInstant) {
+                try {
+                    java.time.OffsetDateTime.parse(s);
+                } catch (java.time.format.DateTimeParseException notOffset) {
+                    return "invalid 'modifiedAfter': '" + modifiedAfter
+                            + "' is not an ISO-8601 instant (e.g. 2026-10-12T10:00:00Z, or 2026-10-12T15:30:00%2B05:30 with '+' URL-encoded)";
+                }
+            }
+        }
+        return null;
+    }
 
     private static Integer intOrNull(String s) {
         if (s == null || s.trim().isEmpty()) {
