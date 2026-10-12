@@ -20,6 +20,10 @@ import java.util.Map;
  * {@code COPY ... TO '<file>' (FORMAT PARQUET)} produces the file. An empty row list still writes a
  * valid Parquet file carrying the full schema (zero rows). Timestamps are written as UTC wall-clock
  * {@code TIMESTAMP} values, consistent with the rest of the project.
+ *
+ * <p>The file is replaced safely: DuckDB writes a temporary file in the same directory, which is then moved over the
+ * target in one step (atomically where the filesystem supports it). A failure at any point leaves the previous
+ * file untouched and removes the temporary file, so a crash mid-write can never leave a truncated dataset behind.
  */
 public final class DuckDbParquetWriter {
 
@@ -42,11 +46,38 @@ public final class DuckDbParquetWriter {
             throw new SQLException("Cannot create output directory for " + outFile, e);
         }
         List<Column> cols = spec.allColumns();
-        try (Connection conn = DriverManager.getConnection("jdbc:duckdb:")) {
-            createStage(conn, cols);
-            long written = insertRows(conn, cols, rows == null ? List.of() : rows);
-            copyToParquet(conn, outFile);
+        Path target = outFile.toAbsolutePath();
+        Path temp = target.resolveSibling("." + target.getFileName() + "." + java.util.UUID.randomUUID() + ".tmp");
+        try {
+            long written;
+            try (Connection conn = DriverManager.getConnection("jdbc:duckdb:")) {
+                createStage(conn, cols);
+                written = insertRows(conn, cols, rows == null ? List.of() : rows);
+                copyToParquet(conn, temp);
+            }
+            replace(temp, target);
             return written;
+        } finally {
+            try {
+                Files.deleteIfExists(temp); // no-op after a successful move
+            } catch (java.io.IOException ignored) {
+                // best effort: a leftover hidden .tmp file never affects readers of the target
+            }
+        }
+    }
+
+    /** Moves {@code temp} over {@code target}: atomically when supported, otherwise a plain replace. */
+    private static void replace(Path temp, Path target) throws SQLException {
+        try {
+            try {
+                Files.move(temp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                Files.move(temp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (java.io.IOException e) {
+            throw new SQLException("Cannot replace Parquet file " + target + " (previous file kept): "
+                    + e.getMessage(), e);
         }
     }
 

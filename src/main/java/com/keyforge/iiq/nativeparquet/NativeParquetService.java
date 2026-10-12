@@ -13,6 +13,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -26,6 +28,12 @@ import java.util.Map;
  * stable Parquet file by PK, and rewrites ONE stable file (no per-run versioning, no SCD2). Because the
  * native tables are already one-row-per-PK current-state, the Parquet is inherently deduplicated: a rerun
  * with no source change reproduces the same content hashes and the same row count.
+ *
+ * <p>Lineage on rerun: an UNCHANGED record keeps the {@code extracted_at} / {@code extraction_run_id} of the run that
+ * first captured its current content, so those fields mean "when this version was captured"; NEW and CHANGED records
+ * get the current run's values. {@code src_created} / {@code src_modified} carry the source table's
+ * {@code created_at} / {@code modified_at} (when it has them) and {@code src_event_ts} the occurrence time of event
+ * datasets, so date-range queries work on these TIMESTAMP columns. None of these are part of the content hash.
  */
 public final class NativeParquetService {
 
@@ -61,6 +69,26 @@ public final class NativeParquetService {
         return priorHash.equals(contentHash) ? Change.UNCHANGED : Change.CHANGED;
     }
 
+    /** What the previous stable file holds for one record: its content hash and when that version was captured. */
+    record Prior(String hash, Object extractedAt, String runId) {
+    }
+
+    /**
+     * The {@code extracted_at} to write: an UNCHANGED record keeps the time its current content was first captured;
+     * NEW / CHANGED records (or a prior file without the value) get the current run's time.
+     */
+    static Object extractedAtFor(Change change, Prior prior, Instant now) {
+        return change == Change.UNCHANGED && prior != null && prior.extractedAt() != null ? prior.extractedAt() : now;
+    }
+
+    /** The {@code extraction_run_id} to write, with the same rule as {@link #extractedAtFor}. */
+    static String runIdFor(Change change, Prior prior, String runId) {
+        return change == Change.UNCHANGED && prior != null && prior.runId() != null ? prior.runId() : runId;
+    }
+
+    /** Source tables whose rows ARE events: their {@code created_at} is the event's occurrence time. */
+    static final java.util.Set<String> EVENT_SOURCE_TABLES = java.util.Set.of("kf_audit_event");
+
     private final String schema;
 
     public NativeParquetService(String schema) {
@@ -85,16 +113,22 @@ public final class NativeParquetService {
                           Instant extractedAt) throws SQLException {
         Path file = outputDir.resolve(d.parquetName()).resolve("current.parquet");
 
-        // 1) prior content hashes (by PK), for change classification.
-        Map<String, String> prior = readPriorHashes(file);
+        // 1) prior content hashes + capture times (by PK), for change classification and lineage carry-over.
+        Map<String, Prior> prior = readPrior(file);
 
         // 2) read native current-state rows and build content-hashed dataset rows.
         List<Map<String, Object>> rows = new ArrayList<>();
         int inserted = 0, changed = 0, unchanged = 0;
         boolean hasSoftDelete = columnExists(pg, d.sourceTable(), "is_deleted");
+        boolean hasCreated = columnExists(pg, d.sourceTable(), "created_at");
+        boolean hasModified = columnExists(pg, d.sourceTable(), "modified_at");
         String cols = String.join(", ", d.businessColumns());
-        String sql = "SELECT " + d.pkColumn() + " AS __pk, " + cols + " FROM " + schema + "." + d.sourceTable()
+        String sql = "SELECT " + d.pkColumn() + " AS __pk, " + cols
+                + (hasCreated ? ", created_at AS __src_created" : "")
+                + (hasModified ? ", modified_at AS __src_modified" : "")
+                + " FROM " + schema + "." + d.sourceTable()
                 + (hasSoftDelete ? " WHERE is_deleted = false" : "");
+        boolean isEvent = EVENT_SOURCE_TABLES.contains(d.sourceTable());
         try (Statement st = pg.createStatement(); ResultSet rs = st.executeQuery(sql)) {
             while (rs.next()) {
                 String pk = rs.getString("__pk");
@@ -108,13 +142,18 @@ public final class NativeParquetService {
                 }
                 String contentHash = EventFingerprint.fingerprint(parts);   // business-only; no timestamp
 
-                switch (classify(prior.get(pk), contentHash)) {
+                Prior before = prior.get(pk);
+                Change change = classify(before == null ? null : before.hash(), contentHash);
+                switch (change) {
                     case NEW -> inserted++;
                     case CHANGED -> changed++;
                     case UNCHANGED -> unchanged++;
                 }
 
-                stampLineage(row, d, pk, contentHash, runId, extractedAt);
+                Instant created = hasCreated ? instant(rs, "__src_created") : null;
+                Instant modified = hasModified ? instant(rs, "__src_modified") : null;
+                stampLineage(row, d, pk, contentHash, runIdFor(change, before, runId),
+                        extractedAtFor(change, before, extractedAt), created, modified, isEvent ? created : null);
                 rows.add(row);
             }
         }
@@ -125,9 +164,13 @@ public final class NativeParquetService {
                 file.toAbsolutePath().toString(), null);
     }
 
-    /** Reads {pk → record_hash} from a prior stable Parquet file (empty if the file does not exist). */
-    private Map<String, String> readPriorHashes(Path file) throws SQLException {
-        Map<String, String> map = new HashMap<>();
+    /**
+     * Reads {pk → (record_hash, extracted_at, extraction_run_id)} from the prior stable Parquet file (empty if it
+     * does not exist). A prior file that cannot be read (e.g. damaged before writes became atomic) is reported and
+     * treated as absent: every record is then classified NEW and the file is rebuilt from the source.
+     */
+    static Map<String, Prior> readPrior(Path file) {
+        Map<String, Prior> map = new HashMap<>();
         if (!Files.exists(file)) {
             return map;
         }
@@ -136,13 +179,25 @@ public final class NativeParquetService {
         // src_object_id which a dataset (kf_event_link) may legitimately use for its own endpoint.
         try (Connection duck = DriverManager.getConnection("jdbc:duckdb:");
              Statement st = duck.createStatement();
-             ResultSet rs = st.executeQuery(
-                     "SELECT " + SRC_NATURAL_KEY + ", " + RECORD_HASH + " FROM read_parquet('" + path + "')")) {
+             ResultSet rs = st.executeQuery("SELECT " + SRC_NATURAL_KEY + ", " + RECORD_HASH + ", " + EXTRACTED_AT
+                     + ", " + EXTRACTION_RUN_ID + " FROM read_parquet('" + path + "')")) {
             while (rs.next()) {
-                map.put(rs.getString(1), rs.getString(2));
+                java.sql.Timestamp ts = rs.getTimestamp(3);
+                LocalDateTime capturedAt = ts == null ? null : ts.toLocalDateTime(); // UTC wall clock, as written
+                map.put(rs.getString(1), new Prior(rs.getString(2), capturedAt, rs.getString(4)));
             }
+        } catch (SQLException unreadable) {
+            System.err.println("[native-parquet] prior file " + file.toAbsolutePath() + " is unreadable ("
+                    + unreadable.getMessage() + "); rebuilding it from the source");
+            map.clear();
         }
         return map;
+    }
+
+    /** A timestamptz source column as an instant (null-safe). */
+    private static Instant instant(ResultSet rs, String column) throws SQLException {
+        OffsetDateTime v = rs.getObject(column, OffsetDateTime.class);
+        return v == null ? null : v.toInstant();
     }
 
     /**
@@ -151,15 +206,16 @@ public final class NativeParquetService {
      * NOT overwritten — the business value wins, matching the deduped physical schema.
      */
     private void stampLineage(Map<String, Object> row, NativeParquetDatasets.Def d, String pk,
-                              String contentHash, String runId, Instant extractedAt) {
+                              String contentHash, String runId, Object extractedAt, Instant srcCreated,
+                              Instant srcModified, Instant srcEventTs) {
         java.util.Set<String> biz = new java.util.HashSet<>(d.businessColumns());
         putUnlessBusiness(row, biz, SRC_SYSTEM, "IdentityIQ");
         putUnlessBusiness(row, biz, SRC_OBJECT_TYPE, d.srcObjectType());
         putUnlessBusiness(row, biz, SRC_OBJECT_ID, pk);
         row.put(SRC_NATURAL_KEY, pk);            // dedup key — guaranteed non-business
-        putUnlessBusiness(row, biz, SRC_CREATED, null);
-        putUnlessBusiness(row, biz, SRC_MODIFIED, null);
-        putUnlessBusiness(row, biz, SRC_EVENT_TS, null);
+        putUnlessBusiness(row, biz, SRC_CREATED, srcCreated);
+        putUnlessBusiness(row, biz, SRC_MODIFIED, srcModified);
+        putUnlessBusiness(row, biz, SRC_EVENT_TS, srcEventTs);
         putUnlessBusiness(row, biz, EXTRACTED_AT, extractedAt);
         putUnlessBusiness(row, biz, EXTRACTION_RUN_ID, runId);
         putUnlessBusiness(row, biz, SRC_INTERFACE, "native_iiq_java_api");

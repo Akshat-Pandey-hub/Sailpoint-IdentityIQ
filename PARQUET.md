@@ -38,7 +38,15 @@ Writes all 10 datasets, one stable file each, at `<PARQUET_OUT_DIR>/<dataset>/cu
 | `kf_event_link` | `kf_event_link` |
 
 Each file is current-state (active rows only) and deduplicated by primary key using a content hash of the
-business columns. Re-running with unchanged source data reproduces the same rows. No per-run versions are kept.
+business columns. Re-running never duplicates a record. No per-run versions are kept.
+
+- **Lineage on rerun:** an unchanged record keeps the `extracted_at` and `extraction_run_id` of the run that first
+  captured its current content; new and changed records get the current run's values.
+- **Source times:** `src_created` / `src_modified` carry the source record's created / modified time, and
+  `src_event_ts` the occurrence time of audit events. These are TIMESTAMP columns, so they support date-range
+  filters (e.g. `filter.src_created.gte=2026-10-01T00:00:00Z`).
+- **Safe writes:** each file is written to a temporary file and then moved into place, so an interrupted run never
+  leaves a damaged dataset; an unreadable previous file is rebuilt from the source.
 
 **Configuration:**
 

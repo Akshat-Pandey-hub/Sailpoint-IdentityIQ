@@ -66,8 +66,8 @@ These need the `PG_*` variables (already in `kfagent.env`).
 
 - `start-kfagent` → needs only `IIQ_BASE_URL/USERNAME/PASSWORD` (+ optional `KFAGENT_*`, `PARQUET_OUT_DIR`). **No PostgreSQL.** The IIQ username/password are also the REST Basic Auth credentials.
 - `extract-*-db` / `derive-*-db` / `reconcile-*-db` → need `IIQ_*` **and** `PG_*`.
-- `extract-native-parquet` → needs `PG_*` (+ optional `IIQ_NATIVE_SCHEMA`) and `PARQUET_OUT_DIR`; see `PARQUET.md`.
-- `start-rest` (standalone Parquet, optional) → needs `PARQUET_OUT_DIR` and `IIQ_USERNAME/IIQ_PASSWORD` (Basic Auth) (+ optional `REST_HOST/REST_PORT`). It also needs IIQ_BASE_URL; without it every request gets a 401.
+- `extract-native-parquet` → needs `PG_*` (+ optional `IIQ_NATIVE_SCHEMA`, e.g. `iiq_native_part2` to read Part 2's tables) and `PARQUET_OUT_DIR`; see `PARQUET.md`. Use a `PARQUET_OUT_DIR` outside any code folder, restricted to the service account (the files hold identity data).
+- `start-rest` (standalone Parquet, optional) → needs `PARQUET_OUT_DIR` and `IIQ_BASE_URL/IIQ_USERNAME/IIQ_PASSWORD` (the Basic Auth credentials; without all three every request is rejected with 401) (+ optional `REST_HOST/REST_PORT`). It also needs IIQ_BASE_URL; without it every request gets a 401.
 
 ## 6. Keeping it running (admin decides)
 
