@@ -22,8 +22,14 @@ public final class NativeIdentityRequestExtractionService {
 
     public NativeIdentityRequestExtractionResult extract(SailPointContext context, int start, int limit)
             throws GeneralException {
+        return extract(context, start, limit, null);
+    }
+
+    /** One page, bounded to objects changed after {@code modifiedAfter} ({@code null} = full population). */
+    public NativeIdentityRequestExtractionResult extract(SailPointContext context, int start, int limit,
+                      java.util.Date modifiedAfter) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeIdentityRequestExtractor(context, config).extract(Math.max(0, start), limit);
+        return new NativeIdentityRequestExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
     }
 
     public NativeIdentityRequestExtractionResult extractAll(SailPointContext context) throws GeneralException {

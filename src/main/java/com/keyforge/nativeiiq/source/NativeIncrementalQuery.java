@@ -30,6 +30,13 @@ public final class NativeIncrementalQuery {
     /** The native source change-time property name — the watermark cursor for CSS incremental. */
     public static final String MODIFIED_PROPERTY = "modified";
 
+    /**
+     * The native creation-time property — the watermark cursor for event-shaped, append-only objects
+     * (AuditEvent, SyslogEvent, WorkItemArchive, CertificationArchive, Access History records), which are
+     * written once and never modified, so "new since" is exactly {@code created > bound}.
+     */
+    public static final String CREATED_PROPERTY = "created";
+
     private NativeIncrementalQuery() {
     }
 
@@ -41,7 +48,33 @@ public final class NativeIncrementalQuery {
      */
     public static QueryOptions applyModifiedAfter(QueryOptions qo, Date modifiedAfter) {
         if (qo != null && modifiedAfter != null) {
-            qo.addFilter(Filter.gt(MODIFIED_PROPERTY, modifiedAfter));
+            qo.addFilter(changedAfter(modifiedAfter));
+        }
+        return qo;
+    }
+
+    /**
+     * "Changed after {@code bound}": {@code modified > bound}, OR never modified and {@code created > bound}.
+     * IdentityIQ leaves {@code modified} NULL until an object is first updated (in the reference data 29 of 37
+     * ManagedAttributes and 101 of 208 TaskResults), so a bare {@code modified >} predicate would silently miss
+     * newly created, never-edited objects. Built only from {@code Filter.gt/isnull/and/or} (verified in the 8.4
+     * {@code identityiq.jar}).
+     */
+    static Filter changedAfter(Date bound) {
+        return Filter.or(Filter.gt(MODIFIED_PROPERTY, bound),
+                Filter.and(Filter.isnull(MODIFIED_PROPERTY), Filter.gt(CREATED_PROPERTY, bound)));
+    }
+
+    /**
+     * Adds a server-side {@code created > createdAfter} filter to {@code qo} when a bound is supplied (same
+     * strict {@code >} and overlap convention as {@link #applyModifiedAfter}). A {@code null} {@code qo} or
+     * {@code null} {@code createdAfter} is a no-op (full scan).
+     *
+     * @return the same {@link QueryOptions} instance, for fluent use
+     */
+    public static QueryOptions applyCreatedAfter(QueryOptions qo, Date createdAfter) {
+        if (qo != null && createdAfter != null) {
+            qo.addFilter(Filter.gt(CREATED_PROPERTY, createdAfter));
         }
         return qo;
     }

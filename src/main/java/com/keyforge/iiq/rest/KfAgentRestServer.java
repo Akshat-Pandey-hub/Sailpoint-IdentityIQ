@@ -662,7 +662,8 @@ public final class KfAgentRestServer {
 
         // Existing native WorkItemArchive extraction (append-only CEC history). The service collects records
         // in memory (no DB). No modifiedAfter support on the client (full-scan only); modifiedAfter reserved.
-        NativeWorkItemArchivePageSource source = new NativeWorkItemArchiveClient(session);
+        // optional incremental bound (created after); absent = full population
+        NativeWorkItemArchivePageSource source = new NativeWorkItemArchiveClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = workItemArchiveService.fetch(source, filters, start, limit);
@@ -684,7 +685,8 @@ public final class KfAgentRestServer {
 
         // Existing native CertificationArchive extraction (append-only CEC history). The service collects
         // records in memory (no DB). No modifiedAfter support (full-scan only); modifiedAfter reserved.
-        NativeCertificationArchivePageSource source = new NativeCertificationArchiveClient(session);
+        // optional incremental bound (created after); absent = full population
+        NativeCertificationArchivePageSource source = new NativeCertificationArchiveClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = certificationArchiveService.fetch(source, filters, start, limit);
@@ -871,7 +873,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        NativeSyslogEventPageSource source = new NativeSyslogEventClient(session);
+        // optional incremental bound (created after); absent = full population
+        NativeSyslogEventPageSource source = new NativeSyslogEventClient(session).withModifiedAfter(q.get("modifiedAfter"));
         try {
             NativeSyslogEventRestService.Page page = syslogEventService.fetchPage(source, filters, start, limit);
             if (page.sourceCount() >= 0) {
@@ -894,9 +897,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // The native identity-request client has no server-side modifiedAfter support (full-scan only);
-        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
-        NativeIdentityRequestPageSource source = new NativeIdentityRequestClient(session);
+        // optional incremental bound (changed after); absent = full population
+        NativeIdentityRequestPageSource source = new NativeIdentityRequestClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = identityRequestService.fetch(source, filters, start, limit);
@@ -1006,7 +1008,8 @@ public final class KfAgentRestServer {
 
         // Same SHARED native ProvisioningTransaction extraction as the DB path; the txn service collects only the
         // transaction rows (derived items untouched). No modifiedAfter support (full-scan); modifiedAfter stays reserved.
-        NativeProvisioningTxnPageSource source = new NativeProvisioningTxnClient(session);
+        // optional incremental bound (changed after); absent = full population
+        NativeProvisioningTxnPageSource source = new NativeProvisioningTxnClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = provisioningTransactionService.fetch(source, filters, start, limit);
@@ -1028,7 +1031,8 @@ public final class KfAgentRestServer {
 
         // Existing native WorkItem extraction; the service collects records in memory (no DB). No modifiedAfter
         // support on the WorkItem client (full-scan only); modifiedAfter stays reserved.
-        NativeWorkItemPageSource source = new NativeWorkItemClient(session);
+        // optional incremental bound (changed after); absent = full population
+        NativeWorkItemPageSource source = new NativeWorkItemClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = workItemService.fetch(source, filters, start, limit);
@@ -1095,7 +1099,8 @@ public final class KfAgentRestServer {
 
         // Existing native CertificationEntity extraction; the service collects records in memory (no DB). No
         // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
-        NativeCertificationEntityPageSource source = new NativeCertificationEntityClient(session);
+        // optional incremental bound (changed after); absent = full population
+        NativeCertificationEntityPageSource source = new NativeCertificationEntityClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = certificationEntityService.fetch(source, filters, start, limit);
@@ -1117,7 +1122,8 @@ public final class KfAgentRestServer {
 
         // Existing native CertificationItem extraction; the service collects records in memory (no DB). No
         // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
-        NativeCertificationItemPageSource source = new NativeCertificationItemClient(session);
+        // optional incremental bound (changed after); absent = full population
+        NativeCertificationItemPageSource source = new NativeCertificationItemClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = certificationItemService.fetch(source, filters, start, limit);
@@ -1139,7 +1145,8 @@ public final class KfAgentRestServer {
 
         // Existing native AuditEvent extraction (append-only); the service collects records in memory (no DB).
         // No modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
-        NativeAuditEventPageSource source = new NativeAuditEventClient(session);
+        // optional incremental bound (created after); absent = full population
+        NativeAuditEventPageSource source = new NativeAuditEventClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = auditEventService.fetch(source, filters, start, limit);
@@ -1183,7 +1190,8 @@ public final class KfAgentRestServer {
 
         // Existing native TaskResult extraction; the service collects records in memory (no DB). No
         // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
-        NativeTaskResultPageSource source = new NativeTaskResultClient(session);
+        // optional incremental bound (changed after); absent = full population
+        NativeTaskResultPageSource source = new NativeTaskResultClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = taskResultService.fetch(source, filters, start, limit);
@@ -1228,7 +1236,9 @@ public final class KfAgentRestServer {
         // Existing native Access-History entitlement-capture extraction (append-only, immutable). The
         // import service is DB-coupled, so it is not used here; the client + envelope are reused directly and
         // the service collects rows in memory (no DB). No modifiedAfter support; it stays reserved.
-        NativeAccessHistoryClient client = new NativeAccessHistoryClient(session);
+        // optional incremental bound (created after); absent = full population
+        NativeAccessHistoryClient client =
+                new NativeAccessHistoryClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = accessHistoryService.fetch(
@@ -1252,7 +1262,9 @@ public final class KfAgentRestServer {
 
         // Existing native Access-History identity-event extraction (append-only). DB-coupled import is not
         // used; the client + envelope are reused directly (identity-events path, NOT entitlement-captures).
-        NativeAccessHistoryClient client = new NativeAccessHistoryClient(session);
+        // optional incremental bound (created after); absent = full population
+        NativeAccessHistoryClient client =
+                new NativeAccessHistoryClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = accessHistoryIdentityEventService.fetch(
@@ -1279,7 +1291,9 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        NativeAccessHistoryClient client = new NativeAccessHistoryClient(session);
+        // optional incremental bound (created after); absent = full population
+        NativeAccessHistoryClient client =
+                new NativeAccessHistoryClient(session).withModifiedAfter(q.get("modifiedAfter"));
         try {
             List<Map<String, Object>> rows = accessHistoryRoleEventService.fetch(
                     (s, l) -> client.fetchPage(NativeAccessHistoryClient.ROLE_EVENTS_PATH, s, l),
@@ -1303,7 +1317,9 @@ public final class KfAgentRestServer {
         // Existing native Access-History certification extraction (append-only). DB-coupled import is not
         // used; the client + envelope are reused directly (certifications path). Table is currently empty →
         // live response is []; it returns real rows automatically once certification history exists.
-        NativeAccessHistoryClient client = new NativeAccessHistoryClient(session);
+        // optional incremental bound (created after); absent = full population
+        NativeAccessHistoryClient client =
+                new NativeAccessHistoryClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = accessHistoryCertificationService.fetch(

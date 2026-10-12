@@ -31,9 +31,21 @@ final class NativeAccessHistoryScan {
      */
     static <T extends SailPointObject, R> int scan(SailPointContext ah, Class<T> cls, int start, int limit,
                                                    RowMapper<T, R> mapper, List<R> out) throws GeneralException {
-        int sourceCount = ah.countObjects(cls, new QueryOptions());
+        return scan(ah, cls, start, limit, null, mapper, out);
+    }
+
+    /**
+     * Same, optionally bounded to records created after {@code createdAfter} (server-side {@code created >};
+     * {@code null} = all records, unchanged behaviour). The returned source count uses the same bound.
+     */
+    static <T extends SailPointObject, R> int scan(SailPointContext ah, Class<T> cls, int start, int limit,
+                                                   java.util.Date createdAfter, RowMapper<T, R> mapper,
+                                                   List<R> out) throws GeneralException {
+        int sourceCount = ah.countObjects(cls,
+                NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter));
 
         QueryOptions qo = new QueryOptions();
+        NativeIncrementalQuery.applyCreatedAfter(qo, createdAfter);
         qo.addOrdering("id", true);
         if (start > 0) {
             qo.setFirstRow(start);

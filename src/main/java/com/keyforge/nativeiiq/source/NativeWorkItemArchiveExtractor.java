@@ -30,7 +30,17 @@ public final class NativeWorkItemArchiveExtractor {
     }
 
     public NativeWorkItemArchiveExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    /**
+     * One page, optionally bounded to objects created after {@code createdAfter} (server-side
+     * {@code created >} filter; {@code null} = the full population, unchanged behaviour). The source count
+     * uses the same bound, so the caller's complete-scan guard compares like with like.
+     */
+    public NativeWorkItemArchiveExtractionResult extract(int start, int limit, java.util.Date createdAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
+        NativeIncrementalQuery.applyCreatedAfter(qo, createdAfter);
         qo.addOrdering("id", true);
         if (start > 0) {
             qo.setFirstRow(start);
@@ -38,15 +48,16 @@ public final class NativeWorkItemArchiveExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
-        return extract(qo);
+        return extract(qo, createdAfter);
     }
 
-    private NativeWorkItemArchiveExtractionResult extract(QueryOptions qo) throws GeneralException {
+    private NativeWorkItemArchiveExtractionResult extract(QueryOptions qo, java.util.Date createdAfter) throws GeneralException {
         NativeWorkItemArchiveExtractionResult result = new NativeWorkItemArchiveExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "WorkItemArchive", Instant.now());
 
         // Count independently of the requested page for full-scan reconciliation by the client.
-        result.setSourceCount(context.countObjects(WorkItemArchive.class, new QueryOptions()));
+        result.setSourceCount(context.countObjects(WorkItemArchive.class,
+                NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter)));
 
         Iterator<Object[]> ids = context.search(WorkItemArchive.class, qo, "id");
         while (ids != null && ids.hasNext()) {

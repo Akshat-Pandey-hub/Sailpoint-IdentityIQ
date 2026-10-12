@@ -30,7 +30,17 @@ public final class NativeTaskResultExtractor {
     }
 
     public NativeTaskResultExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    /**
+     * One page, optionally bounded to task results changed after {@code modifiedAfter} (modified after it, or
+     * never modified and created after it; {@code null} = the full population, unchanged behaviour).
+     */
+    public NativeTaskResultExtractionResult extract(int start, int limit, java.util.Date modifiedAfter)
+            throws GeneralException {
         QueryOptions qo = new QueryOptions();
+        NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         qo.addOrdering("created", true);
         qo.addOrdering("id", true);
         if (start > 0) {

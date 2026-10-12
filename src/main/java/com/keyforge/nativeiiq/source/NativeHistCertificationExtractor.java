@@ -27,8 +27,14 @@ public final class NativeHistCertificationExtractor {
 
     /** Appends one mapped row per source object in the requested page; returns the total source count. */
     public int extract(int start, int limit, List<NativeHistCertificationRow> out) throws GeneralException {
+        return extract(start, limit, null, out);
+    }
+
+    /** Same, bounded to records created after {@code createdAfter} ({@code null} = all records). */
+    public int extract(int start, int limit, java.util.Date createdAfter, List<NativeHistCertificationRow> out)
+            throws GeneralException {
         return NativeAccessHistoryScan.scan(
-                ahContext, HistoricalCertification.class, start, limit,
+                ahContext, HistoricalCertification.class, start, limit, createdAfter,
                 o -> NativeHistCertificationMapper.map(o, config.getSourceSystem(), config.getExtractionRunId()),
                 out);
     }

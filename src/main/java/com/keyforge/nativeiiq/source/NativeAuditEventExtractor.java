@@ -30,7 +30,17 @@ public final class NativeAuditEventExtractor {
     }
 
     public NativeAuditEventExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    /**
+     * One page, optionally bounded to objects created after {@code createdAfter} (server-side
+     * {@code created >} filter; {@code null} = the full population, unchanged behaviour). The source count
+     * uses the same bound, so the caller's complete-scan guard compares like with like.
+     */
+    public NativeAuditEventExtractionResult extract(int start, int limit, java.util.Date createdAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
+        NativeIncrementalQuery.applyCreatedAfter(qo, createdAfter);
         qo.addOrdering("created", true);
         qo.addOrdering("id", true);
         if (start > 0) {
@@ -39,14 +49,15 @@ public final class NativeAuditEventExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
-        return extract(qo);
+        return extract(qo, createdAfter);
     }
 
-    private NativeAuditEventExtractionResult extract(QueryOptions qo) throws GeneralException {
+    private NativeAuditEventExtractionResult extract(QueryOptions qo, java.util.Date createdAfter) throws GeneralException {
         NativeAuditEventExtractionResult result = new NativeAuditEventExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "AuditEvent", Instant.now());
 
-        result.setSourceCount(context.countObjects(AuditEvent.class, new QueryOptions()));
+        result.setSourceCount(context.countObjects(AuditEvent.class,
+                NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter)));
 
         Iterator<Object[]> ids = context.search(AuditEvent.class, qo, "id");
         while (ids != null && ids.hasNext()) {

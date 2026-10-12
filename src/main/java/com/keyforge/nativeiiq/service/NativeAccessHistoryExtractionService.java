@@ -94,29 +94,57 @@ public final class NativeAccessHistoryExtractionService {
     /** One page of {@code HistoricalEntitlementCapture} rows + the live source count. */
     public NativeAccessHistoryPage<NativeHistEntitlementCaptureRow> extractEntitlementCaptures(
             SailPointContext runtimeContext, int start, int limit) throws GeneralException {
+        return extractEntitlementCaptures(runtimeContext, start, limit, null);
+    }
+
+    /** Same, bounded to records created after {@code createdAfter} ({@code null} = all records). */
+    public NativeAccessHistoryPage<NativeHistEntitlementCaptureRow> extractEntitlementCaptures(
+            SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter)
+            throws GeneralException {
         return runOne(runtimeContext,
-                (ah, cfg, out) -> new NativeHistEntitlementCaptureExtractor(ah, cfg).extract(start, limit, out));
+                (ah, cfg, out) -> new NativeHistEntitlementCaptureExtractor(ah, cfg).extract(start, limit, createdAfter, out));
     }
 
     /** One page of {@code HistoricalIdentityEvent} rows + the live source count. */
     public NativeAccessHistoryPage<NativeHistIdentityEventRow> extractIdentityEvents(
             SailPointContext runtimeContext, int start, int limit) throws GeneralException {
+        return extractIdentityEvents(runtimeContext, start, limit, null);
+    }
+
+    /** Same, bounded to records created after {@code createdAfter} ({@code null} = all records). */
+    public NativeAccessHistoryPage<NativeHistIdentityEventRow> extractIdentityEvents(
+            SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter)
+            throws GeneralException {
         return runOne(runtimeContext,
-                (ah, cfg, out) -> new NativeHistIdentityEventExtractor(ah, cfg).extract(start, limit, out));
+                (ah, cfg, out) -> new NativeHistIdentityEventExtractor(ah, cfg).extract(start, limit, createdAfter, out));
     }
 
     /** One page of {@code HistoricalRoleEvent} rows + the live source count. */
     public NativeAccessHistoryPage<NativeHistRoleEventRow> extractRoleEvents(
             SailPointContext runtimeContext, int start, int limit) throws GeneralException {
+        return extractRoleEvents(runtimeContext, start, limit, null);
+    }
+
+    /** Same, bounded to records created after {@code createdAfter} ({@code null} = all records). */
+    public NativeAccessHistoryPage<NativeHistRoleEventRow> extractRoleEvents(
+            SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter)
+            throws GeneralException {
         return runOne(runtimeContext,
-                (ah, cfg, out) -> new NativeHistRoleEventExtractor(ah, cfg).extract(start, limit, out));
+                (ah, cfg, out) -> new NativeHistRoleEventExtractor(ah, cfg).extract(start, limit, createdAfter, out));
     }
 
     /** One page of {@code HistoricalCertification} rows + the live source count. */
     public NativeAccessHistoryPage<NativeHistCertificationRow> extractCertifications(
             SailPointContext runtimeContext, int start, int limit) throws GeneralException {
+        return extractCertifications(runtimeContext, start, limit, null);
+    }
+
+    /** Same, bounded to records created after {@code createdAfter} ({@code null} = all records). */
+    public NativeAccessHistoryPage<NativeHistCertificationRow> extractCertifications(
+            SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter)
+            throws GeneralException {
         return runOne(runtimeContext,
-                (ah, cfg, out) -> new NativeHistCertificationExtractor(ah, cfg).extract(start, limit, out));
+                (ah, cfg, out) -> new NativeHistCertificationExtractor(ah, cfg).extract(start, limit, createdAfter, out));
     }
 
     /** Runs one extractor against a freshly-opened ACCESS_HISTORY context, releasing it afterwards. */

@@ -63,16 +63,21 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getEntitlementCaptures(@QueryParam("start") @DefaultValue("0") int start,
-                                           @QueryParam("limit") @DefaultValue("100") int limit) {
+                                           @QueryParam("limit") @DefaultValue("100") int limit,
+                                           @QueryParam("modifiedAfter") String modifiedAfter) {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
+        // Absent or unparseable -> null -> the full population (unchanged behaviour).
+        java.util.Date createdAfter =
+                com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         String stage = "start";
         try {
             stage = "getContext";
             SailPointContext context = getContext();
             stage = "extract";
             NativeAccessHistoryPage<NativeHistEntitlementCaptureRow> page =
-                    new NativeAccessHistoryExtractionService().extractEntitlementCaptures(context, safeStart, safeLimit);
+                    new NativeAccessHistoryExtractionService().extractEntitlementCaptures(context, safeStart, safeLimit, createdAfter);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.entitlementCaptureEnvelope(page, safeStart, safeLimit);
             return Response.ok(env).build();
@@ -88,16 +93,21 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getIdentityEvents(@QueryParam("start") @DefaultValue("0") int start,
-                                      @QueryParam("limit") @DefaultValue("100") int limit) {
+                                      @QueryParam("limit") @DefaultValue("100") int limit,
+                                      @QueryParam("modifiedAfter") String modifiedAfter) {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
+        // Absent or unparseable -> null -> the full population (unchanged behaviour).
+        java.util.Date createdAfter =
+                com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         String stage = "start";
         try {
             stage = "getContext";
             SailPointContext context = getContext();
             stage = "extract";
             NativeAccessHistoryPage<NativeHistIdentityEventRow> page =
-                    new NativeAccessHistoryExtractionService().extractIdentityEvents(context, safeStart, safeLimit);
+                    new NativeAccessHistoryExtractionService().extractIdentityEvents(context, safeStart, safeLimit, createdAfter);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.identityEventEnvelope(page, safeStart, safeLimit);
             return Response.ok(env).build();
@@ -113,16 +123,21 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRoleEvents(@QueryParam("start") @DefaultValue("0") int start,
-                                  @QueryParam("limit") @DefaultValue("100") int limit) {
+                                  @QueryParam("limit") @DefaultValue("100") int limit,
+                                  @QueryParam("modifiedAfter") String modifiedAfter) {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
+        // Absent or unparseable -> null -> the full population (unchanged behaviour).
+        java.util.Date createdAfter =
+                com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         String stage = "start";
         try {
             stage = "getContext";
             SailPointContext context = getContext();
             stage = "extract";
             NativeAccessHistoryPage<NativeHistRoleEventRow> page =
-                    new NativeAccessHistoryExtractionService().extractRoleEvents(context, safeStart, safeLimit);
+                    new NativeAccessHistoryExtractionService().extractRoleEvents(context, safeStart, safeLimit, createdAfter);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.roleEventEnvelope(page, safeStart, safeLimit);
             return Response.ok(env).build();
@@ -138,16 +153,21 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getCertifications(@QueryParam("start") @DefaultValue("0") int start,
-                                      @QueryParam("limit") @DefaultValue("100") int limit) {
+                                      @QueryParam("limit") @DefaultValue("100") int limit,
+                                      @QueryParam("modifiedAfter") String modifiedAfter) {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
+        // Absent or unparseable -> null -> the full population (unchanged behaviour).
+        java.util.Date createdAfter =
+                com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         String stage = "start";
         try {
             stage = "getContext";
             SailPointContext context = getContext();
             stage = "extract";
             NativeAccessHistoryPage<NativeHistCertificationRow> page =
-                    new NativeAccessHistoryExtractionService().extractCertifications(context, safeStart, safeLimit);
+                    new NativeAccessHistoryExtractionService().extractCertifications(context, safeStart, safeLimit, createdAfter);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.certificationEnvelope(page, safeStart, safeLimit);
             return Response.ok(env).build();

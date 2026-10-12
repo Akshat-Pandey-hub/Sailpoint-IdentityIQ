@@ -27,8 +27,14 @@ public final class NativeHistIdentityEventExtractor {
 
     /** Appends one mapped row per source object in the requested page; returns the total source count. */
     public int extract(int start, int limit, List<NativeHistIdentityEventRow> out) throws GeneralException {
+        return extract(start, limit, null, out);
+    }
+
+    /** Same, bounded to records created after {@code createdAfter} ({@code null} = all records). */
+    public int extract(int start, int limit, java.util.Date createdAfter, List<NativeHistIdentityEventRow> out)
+            throws GeneralException {
         return NativeAccessHistoryScan.scan(
-                ahContext, HistoricalIdentityEvent.class, start, limit,
+                ahContext, HistoricalIdentityEvent.class, start, limit, createdAfter,
                 o -> NativeHistIdentityEventMapper.map(o, config.getSourceSystem(), config.getExtractionRunId()),
                 out);
     }

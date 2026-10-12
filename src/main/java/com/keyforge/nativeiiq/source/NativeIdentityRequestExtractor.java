@@ -29,7 +29,17 @@ public final class NativeIdentityRequestExtractor {
     }
 
     public NativeIdentityRequestExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    /**
+     * One page, optionally bounded to objects changed after {@code modifiedAfter} (server-side: modified after it,
+     * or never modified and created after it; {@code null} = the full population, unchanged behaviour). The
+     * source count uses the same bound, so the caller's complete-scan guard compares like with like.
+     */
+    public NativeIdentityRequestExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
+        NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         qo.addOrdering("id", true);
         if (start > 0) {
             qo.setFirstRow(start);
@@ -39,7 +49,8 @@ public final class NativeIdentityRequestExtractor {
         }
         NativeIdentityRequestExtractionResult result = new NativeIdentityRequestExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "IdentityRequest", Instant.now());
-        result.setSourceCount(context.countObjects(IdentityRequest.class, new QueryOptions()));
+        result.setSourceCount(context.countObjects(IdentityRequest.class,
+                NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
 
         Iterator<Object[]> ids = context.search(IdentityRequest.class, qo, "id");
         while (ids != null && ids.hasNext()) {

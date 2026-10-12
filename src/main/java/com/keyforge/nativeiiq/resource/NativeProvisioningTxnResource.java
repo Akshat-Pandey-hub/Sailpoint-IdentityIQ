@@ -44,16 +44,21 @@ public class NativeProvisioningTxnResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getProvisioningTransactions(@QueryParam("start") @DefaultValue("0") int start,
-                                                @QueryParam("limit") @DefaultValue("100") int limit) {
+                                                @QueryParam("limit") @DefaultValue("100") int limit,
+                                                @QueryParam("modifiedAfter") String modifiedAfter) {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        // Optional incremental bound (ISO-8601): objects changed after it (modified after it, or never modified and
+        // created after it). Absent or unparseable -> null -> the full population (unchanged behaviour).
+        java.util.Date modifiedAfterDate =
+                com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         String stage = "start";
         try {
             stage = "getContext";
             SailPointContext context = getContext();
             stage = "extract";
             NativeProvisioningTxnExtractionResult result =
-                    new NativeProvisioningTxnExtractionService().extract(context, safeStart, safeLimit);
+                    new NativeProvisioningTxnExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeProvisioningTxnWire.envelope(result, safeStart, safeLimit);
             LOG.fine("KeyForgeNativeIIQ provisioning-transactions: returning " + result.getCount() + " record(s)");

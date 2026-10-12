@@ -22,7 +22,13 @@ public final class NativeSyslogEventExtractionService {
 
     public NativeSyslogEventExtractionResult extract(SailPointContext context, int start, int limit)
             throws GeneralException {
+        return extract(context, start, limit, null);
+    }
+
+    /** One page, bounded to objects created after {@code createdAfter} ({@code null} = full population). */
+    public NativeSyslogEventExtractionResult extract(SailPointContext context, int start, int limit,
+                      java.util.Date createdAfter) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeSyslogEventExtractor(context, config).extract(Math.max(0, start), limit);
+        return new NativeSyslogEventExtractor(context, config).extract(Math.max(0, start), limit, createdAfter);
     }
 }

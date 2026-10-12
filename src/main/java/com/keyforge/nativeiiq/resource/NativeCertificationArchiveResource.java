@@ -48,9 +48,14 @@ public class NativeCertificationArchiveResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getCertificationArchives(@QueryParam("start") @DefaultValue("0") int start,
-                                             @QueryParam("limit") @DefaultValue("100") int limit) {
+                                             @QueryParam("limit") @DefaultValue("100") int limit,
+                                             @QueryParam("modifiedAfter") String modifiedAfter) {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
+        // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
+        // Absent or unparseable -> null -> the full population (unchanged behaviour).
+        java.util.Date createdAfter =
+                com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         String stage = "start";
         try {
             LOG.fine("KeyForgeNativeIIQ certification-archives: entering (start=" + safeStart + ", limit=" + safeLimit + ")");
@@ -60,7 +65,7 @@ public class NativeCertificationArchiveResource extends BasePluginResource {
 
             stage = "extract";
             NativeCertificationArchiveExtractionResult result =
-                    new NativeCertificationArchiveExtractionService().extract(context, safeStart, safeLimit);
+                    new NativeCertificationArchiveExtractionService().extract(context, safeStart, safeLimit, createdAfter);
 
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeCertificationArchiveWire.envelope(result, safeStart, safeLimit);

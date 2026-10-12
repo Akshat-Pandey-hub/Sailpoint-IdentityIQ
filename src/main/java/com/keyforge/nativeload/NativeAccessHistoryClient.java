@@ -23,9 +23,20 @@ public final class NativeAccessHistoryClient {
             "plugin/rest/keyForgeNativeIIQ/access-history/certifications";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativeAccessHistoryClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    /**
+     * Sets the optional incremental bound (ISO-8601 instant). When set, every page request carries
+     * {@code &modifiedAfter=}, so the IIQ plugin returns only objects created after it (these objects are
+     * append-only; server-side {@code Filter.gt("created", ...)}). {@code null}/blank clears it (full scan).
+     */
+    public NativeAccessHistoryClient withModifiedAfter(String modifiedAfter) {
+        this.modifiedAfter = (modifiedAfter == null || modifiedAfter.isBlank()) ? null : modifiedAfter.trim();
+        return this;
     }
 
     /** Fetches one page of the given Access-History endpoint (raw JSON envelope body). */
@@ -34,6 +45,9 @@ public final class NativeAccessHistoryClient {
         Map<String, String> params = new LinkedHashMap<String, String>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) {
+            params.put("modifiedAfter", modifiedAfter); // server-side incremental bound (created >)
+        }
         return session.get(path, params);
     }
 }

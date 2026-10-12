@@ -27,8 +27,14 @@ public final class NativeHistEntitlementCaptureExtractor {
 
     /** Appends one mapped row per source object in the requested page; returns the total source count. */
     public int extract(int start, int limit, List<NativeHistEntitlementCaptureRow> out) throws GeneralException {
+        return extract(start, limit, null, out);
+    }
+
+    /** Same, bounded to records created after {@code createdAfter} ({@code null} = all records). */
+    public int extract(int start, int limit, java.util.Date createdAfter, List<NativeHistEntitlementCaptureRow> out)
+            throws GeneralException {
         return NativeAccessHistoryScan.scan(
-                ahContext, HistoricalEntitlementCapture.class, start, limit,
+                ahContext, HistoricalEntitlementCapture.class, start, limit, createdAfter,
                 o -> NativeHistEntitlementCaptureMapper.map(o, config.getSourceSystem(), config.getExtractionRunId()),
                 out);
     }

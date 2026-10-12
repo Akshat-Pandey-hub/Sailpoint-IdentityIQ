@@ -16,9 +16,20 @@ public final class NativeWorkItemArchiveClient implements NativeWorkItemArchiveP
     public static final String WORKITEM_ARCHIVES_PATH = "plugin/rest/keyForgeNativeIIQ/workitem-archives";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativeWorkItemArchiveClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    /**
+     * Sets the optional incremental bound (ISO-8601 instant). When set, every page request carries
+     * {@code &modifiedAfter=}, so the IIQ plugin returns only objects created after it (these objects are
+     * append-only; server-side {@code Filter.gt("created", ...)}). {@code null}/blank clears it (full scan).
+     */
+    public NativeWorkItemArchiveClient withModifiedAfter(String modifiedAfter) {
+        this.modifiedAfter = (modifiedAfter == null || modifiedAfter.isBlank()) ? null : modifiedAfter.trim();
+        return this;
     }
 
     @Override
@@ -27,6 +38,9 @@ public final class NativeWorkItemArchiveClient implements NativeWorkItemArchiveP
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) {
+            params.put("modifiedAfter", modifiedAfter); // server-side incremental bound (created >)
+        }
         return session.get(WORKITEM_ARCHIVES_PATH, params);
     }
 }
