@@ -29,6 +29,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 class KfAgentRequestValidationTest {
 
+    /** Test-only REST API credential (in memory; never a real secret). */
+    private static final RestAuthFilter TEST_AUTH =
+            RestAuthFilter.fixed(RestCredentials.create("tester", "test-only-password".toCharArray()));
+    private static final String AUTH_HEADER = "Basic " + java.util.Base64.getEncoder()
+            .encodeToString("tester:test-only-password".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
     private static Map<String, String> q(String... kv) {
         Map<String, String> m = new LinkedHashMap<>();
         for (int i = 0; i < kv.length; i += 2) {
@@ -85,6 +91,7 @@ class KfAgentRequestValidationTest {
         c.setConnectTimeout(2000);
         c.setReadTimeout(5000);
         c.setRequestMethod(method);
+        c.setRequestProperty("Authorization", AUTH_HEADER);
         try {
             int status = c.getResponseCode();
             InputStream in = status >= 400 ? c.getErrorStream() : c.getInputStream();
@@ -102,7 +109,7 @@ class KfAgentRequestValidationTest {
         String base = "http://127.0.0.1:" + port;
         HttpServer http = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
         http.setExecutor(Executors.newFixedThreadPool(4));
-        new KfAgentRestServer(new AppConfig("http://localhost:1/identityiq", "u", "p"), "127.0.0.1", port)
+        new KfAgentRestServer(new AppConfig("http://localhost:1/identityiq", "u", "p"), "127.0.0.1", port, TEST_AUTH)
                 .registerInto(http);
         http.start();
         try {

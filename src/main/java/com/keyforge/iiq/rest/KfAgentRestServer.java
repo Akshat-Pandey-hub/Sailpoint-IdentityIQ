@@ -185,12 +185,26 @@ public final class KfAgentRestServer {
                     "entitlementCertificationStatus"));
     private final NativeSyslogEventRestService syslogEventService = new NativeSyslogEventRestService();
 
+    private final RestAuthFilter auth;
     private HttpServer server;
 
     public KfAgentRestServer(AppConfig iiqConfig, String host, int port) {
+        this(iiqConfig, host, port, RestAuthFilter.fromDefaultStore());
+    }
+
+    /**
+     * @param auth the REST API Basic-auth guard applied to every context this server registers (separate from
+     *             the IdentityIQ login in {@code iiqConfig}, which this service uses to call IIQ)
+     */
+    public KfAgentRestServer(AppConfig iiqConfig, String host, int port, RestAuthFilter auth) {
         this.host = host;
         this.port = port;
         this.session = new IiqSessionClient(iiqConfig); // authenticates lazily, session reused across requests
+        this.auth = auth;
+    }
+
+    public RestAuthFilter auth() {
+        return auth;
     }
 
     /**
@@ -201,8 +215,8 @@ public final class KfAgentRestServer {
      * the caller owns its lifecycle.
      */
     public void registerInto(HttpServer target) {
-        target.createContext("/health", this::handleHealth);
-        target.createContext(PREFIX, this::route);
+        auth.protect(target.createContext("/health", this::handleHealth));
+        auth.protect(target.createContext(PREFIX, this::route));
     }
 
     public void start() throws IOException {
@@ -330,14 +344,18 @@ public final class KfAgentRestServer {
                         + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules', 'access-history', 'access-history/identity-events', 'access-history/role-events', 'access-history/certifications', 'role-hierarchy', 'group-definitions', 'workitem-archives', 'certification-archives', 'policy-violations', 'workgroupmember', 'entitlement-assignment', 'workgroup-members', 'entitlement-certification', 'entitlement-certification-status', 'syslog-events'"));
             }
         } catch (Exception e) {
-            writeJson(ex, 500, error(e.getClass().getSimpleName()
-                    + (e.getMessage() == null ? "" : ": " + e.getMessage())));
+            // generic message to the caller; the details stay in the server log (never credentials/headers)
+            System.err.println("[kfagent] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
+                    + " failed: " + e);
+            e.printStackTrace();
+            writeJson(ex, 500, error("Internal Server Error"));
         } catch (Error fatal) {
             // e.g. OutOfMemoryError on an oversized request: answer this caller with a JSON 500 (best effort)
             // instead of dropping the connection; the worker pool and the server keep serving other requests.
+            System.err.println("[kfagent] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
+                    + " failed: " + fatal);
             try {
-                writeJson(ex, 500, error(fatal.getClass().getSimpleName()
-                        + (fatal.getMessage() == null ? "" : ": " + fatal.getMessage())));
+                writeJson(ex, 500, error("Internal Server Error"));
             } catch (Throwable ignored) {
                 // the response could not be written (e.g. headers already sent); nothing more to do
             }

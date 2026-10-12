@@ -4,6 +4,8 @@ import com.keyforge.iiq.config.AppConfig;
 import com.keyforge.iiq.parquet.ParquetConfig;
 import com.keyforge.iiq.rest.KfAgentRestServer;
 import com.keyforge.iiq.rest.ParquetRestServer;
+import com.keyforge.iiq.rest.RestAuthFilter;
+import com.keyforge.iiq.rest.RestCredentials;
 import com.keyforge.iiq.rest.RestConfig;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 class StartKfAgentCombinedTest {
 
+    /** Test-only REST API credential (in memory; never a real secret). */
+    private static final RestAuthFilter TEST_AUTH =
+            RestAuthFilter.fixed(RestCredentials.create("tester", "test-only-password".toCharArray()));
+    private static final String AUTH_HEADER = "Basic " + java.util.Base64.getEncoder()
+            .encodeToString("tester:test-only-password".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
     /** A free localhost port (found, then released for immediate reuse — standard test practice). */
     private static int freePort() throws IOException {
         try (ServerSocket s = new ServerSocket(0)) {
@@ -59,6 +67,7 @@ class StartKfAgentCombinedTest {
         c.setConnectTimeout(2000);
         c.setReadTimeout(2000);
         c.setRequestMethod("GET");
+        c.setRequestProperty("Authorization", AUTH_HEADER);
         try {
             return c.getResponseCode();
         } finally {
@@ -79,13 +88,13 @@ class StartKfAgentCombinedTest {
 
         // Dummy IIQ config: the KF Agent constructor only stores it (lazy session); /health never calls IIQ.
         KfAgentRestServer kfAgent =
-                new KfAgentRestServer(new AppConfig("http://localhost:1/identityiq", "u", "p"), "127.0.0.1", port);
+                new KfAgentRestServer(new AppConfig("http://localhost:1/identityiq", "u", "p"), "127.0.0.1", port, TEST_AUTH);
         kfAgent.registerInto(http); // owns /health
 
         // Empty temp dir -> proves the Parquet endpoints mount with NO datasets present. includeHealth=false
         // because KF Agent already owns /health (two contexts on one path would be illegal).
         ParquetRestServer parquet =
-                new ParquetRestServer(new RestConfig("127.0.0.1", 0), new ParquetConfig(emptyParquetDir));
+                new ParquetRestServer(new RestConfig("127.0.0.1", 0), new ParquetConfig(emptyParquetDir), TEST_AUTH);
         parquet.registerInto(http, false);
 
         http.start();

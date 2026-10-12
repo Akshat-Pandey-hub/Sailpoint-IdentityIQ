@@ -24,11 +24,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class RestHttpSmokeTest {
 
+    /** Test-only REST API credential (in memory; never a real secret). */
+    private static final RestAuthFilter TEST_AUTH =
+            RestAuthFilter.fixed(RestCredentials.create("tester", "test-only-password".toCharArray()));
+    private static final String AUTH_HEADER = "Basic " + java.util.Base64.getEncoder()
+            .encodeToString("tester:test-only-password".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
     private final ObjectMapper json = new ObjectMapper();
 
     @Test
     void endpointsRespond(@TempDir Path outDir) throws Exception {
-        ParquetRestServer server = new ParquetRestServer(new RestConfig("127.0.0.1", 0), new ParquetConfig(outDir));
+        ParquetRestServer server = new ParquetRestServer(new RestConfig("127.0.0.1", 0), new ParquetConfig(outDir), TEST_AUTH);
         HttpClient client;
         int port;
         try {
@@ -70,7 +76,8 @@ class RestHttpSmokeTest {
     }
 
     private static HttpResponse<String> get(HttpClient c, int port, String path) throws Exception {
-        return c.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).GET().build(),
+        return c.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
+                        .header("Authorization", AUTH_HEADER).GET().build(),
                 HttpResponse.BodyHandlers.ofString());
     }
 }

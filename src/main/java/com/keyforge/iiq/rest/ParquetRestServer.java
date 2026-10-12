@@ -56,11 +56,18 @@ public final class ParquetRestServer {
     private final Endpoint nativeEndpoint;
     private final ObjectMapper json = new ObjectMapper();
 
+    private final RestAuthFilter auth;
     private HttpServer server;
 
     public ParquetRestServer(RestConfig restConfig, ParquetConfig parquetConfig) {
+        this(restConfig, parquetConfig, RestAuthFilter.fromDefaultStore());
+    }
+
+    /** @param auth the REST API Basic-auth guard applied to every context this server registers */
+    public ParquetRestServer(RestConfig restConfig, ParquetConfig parquetConfig, RestAuthFilter auth) {
         this.restConfig = restConfig;
         this.parquetConfig = parquetConfig;
+        this.auth = auth;
 
         // REST/SCIM datasets: existing catalog + latest part-file resolver (unchanged behavior).
         DatasetCatalog restCatalog = new DatasetCatalog();
@@ -89,10 +96,10 @@ public final class ParquetRestServer {
      */
     public void registerInto(HttpServer target, boolean includeHealth) {
         if (includeHealth) {
-            target.createContext("/health", this::handleHealth);
+            auth.protect(target.createContext("/health", this::handleHealth));
         }
-        target.createContext(PREFIX, rest::handle);
-        target.createContext(NATIVE_PREFIX, nativeEndpoint::handle);
+        auth.protect(target.createContext(PREFIX, rest::handle));
+        auth.protect(target.createContext(NATIVE_PREFIX, nativeEndpoint::handle));
     }
 
     public void start() throws IOException {
@@ -100,6 +107,7 @@ public final class ParquetRestServer {
         registerInto(server, true);
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.start();
+        System.out.println(auth.describe());
         System.out.println("REST query service listening on http://" + restConfig.host() + ":" + restConfig.port());
         System.out.println("Parquet output dir: " + parquetConfig.outputDir().toAbsolutePath());
         System.out.println("REST/SCIM datasets:  " + rest.catalog.datasets());
