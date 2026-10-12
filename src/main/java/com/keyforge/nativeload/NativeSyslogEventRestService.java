@@ -33,11 +33,98 @@ public final class NativeSyslogEventRestService {
 
     private static final int INTERNAL_PAGE_SIZE = 500;
 
+    private final NativeSyslogEventParser parser = new NativeSyslogEventParser();
+
     /** Scalar response field name -> value extractor (all 11 scalar, all filterable). */
     private static final Map<String, Function<NativeSyslogEventRecord, String>> SCALARS = buildScalars();
 
     public static final Set<String> FILTERABLE_FIELDS =
             Collections.unmodifiableSet(new LinkedHashSet<>(SCALARS.keySet()));
+
+    /**
+     * HTTP response header carrying the source population size (IIQ {@code countObjects(SyslogEvent)}) that the
+     * plugin reported for the rows in this response. The body stays a plain JSON array; clients that ignore the
+     * header are unaffected. A paging client uses it as the completeness baseline: the first page's value is the
+     * population the scan must cover, and a later page reporting FEWER events means events were removed mid-scan
+     * (the offset window may have shifted, so rows could have been skipped).
+     */
+    public static final String SOURCE_COUNT_HEADER = "X-KF-Source-Count";
+
+    /** The plugin's per-call maximum ({@code NativeSyslogEventResource.MAX_LIMIT}); larger windows are chunked. */
+    static final int PLUGIN_MAX_PAGE = 1000;
+
+    /** One KF Agent response: the serialized rows plus the source count to report ({@code -1} = unknown). */
+    public static final class Page {
+        private final List<Map<String, Object>> rows;
+        private final int sourceCount;
+
+        Page(List<Map<String, Object>> rows, int sourceCount) {
+            this.rows = rows;
+            this.sourceCount = sourceCount;
+        }
+
+        public List<Map<String, Object>> rows() { return rows; }
+        public int sourceCount() { return sourceCount; }
+    }
+
+    /**
+     * Serves one {@code /kfagent/syslog-events} request without re-scanning the whole population when it does not
+     * have to. An UNFILTERED request with a {@code limit} maps directly onto the plugin's own deterministic paging
+     * ({@code ORDER BY created, id}; {@code firstRow=start}, {@code resultLimit<=}{@value #PLUGIN_MAX_PAGE}): it reads
+     * only the requested window, so successive pages cost one plugin call each instead of a full scan each. The
+     * window is the same slice of the same ordered population the full scan would return, so the response body is
+     * unchanged. A filtered request (filters must apply BEFORE start/limit) or one without a {@code limit} ("all")
+     * keeps the existing full scan via {@link #fetch}.
+     *
+     * @throws IllegalArgumentException if a filter names a field that is not filterable
+     * @throws NativeImportException    on a plugin error envelope, a malformed response, or a source count that
+     *                                  shrank between the plugin calls of one window
+     */
+    public Page fetchPage(NativeSyslogEventPageSource source,
+                          Map<String, String> filters, Integer start, Integer limit) {
+        validateFilters(filters);
+        if ((filters == null || filters.isEmpty()) && limit != null && limit >= 0) {
+            return directWindow(source, (start == null || start < 0) ? 0 : start, limit);
+        }
+        int[] baseline = {-1};
+        List<Map<String, Object>> rows = fullScan(source, filters, start, limit, baseline);
+        return new Page(rows, baseline[0]);
+    }
+
+    /** Reads exactly the window [from, from+limit) from the plugin, chunked by its maximum page size. */
+    private Page directWindow(NativeSyslogEventPageSource source, int from, int limit) {
+        List<Map<String, Object>> out = new ArrayList<>(Math.min(limit, PLUGIN_MAX_PAGE));
+        int baseline = -1;
+        int highWater = -1;
+        int offset = from;
+        int remaining = limit;
+        while (remaining > 0) {
+            int chunk = Math.min(remaining, PLUGIN_MAX_PAGE);
+            String json = source.fetchPage(offset, chunk);
+            int count = parser.sourceCount(json);
+            if (count >= 0) {
+                if (baseline < 0) {
+                    baseline = count;
+                }
+                if (highWater >= 0 && count < highWater) {
+                    throw new NativeImportException("SyslogEvent source count shrank during paginated extraction: "
+                            + highWater + " -> " + count + " (events removed mid-scan; aborting to avoid a gap)");
+                }
+                highWater = Math.max(highWater, count);
+            }
+            List<NativeSyslogEventRecord> page = parser.parse(json); // throws on error envelope / malformed body
+            for (NativeSyslogEventRecord r : page) {
+                out.add(toJson(r));
+            }
+            int effective = parser.pageLimit(json);
+            if (page.isEmpty() || page.size() < (effective > 0 ? Math.min(effective, chunk) : chunk)) {
+                break; // end of the population
+            }
+            offset += page.size();
+            remaining -= page.size();
+        }
+        return new Page(out, baseline);
+    }
 
     /**
      * Collect → filter → window → serialize.
@@ -46,6 +133,11 @@ public final class NativeSyslogEventRestService {
      */
     public List<Map<String, Object>> fetch(NativeSyslogEventPageSource source,
                                            Map<String, String> filters, Integer start, Integer limit) {
+        validateFilters(filters);
+        return fullScan(source, filters, start, limit, null);
+    }
+
+    private static void validateFilters(Map<String, String> filters) {
         if (filters != null) {
             for (String key : filters.keySet()) {
                 if (!SCALARS.containsKey(key)) {
@@ -54,8 +146,11 @@ public final class NativeSyslogEventRestService {
                 }
             }
         }
+    }
 
-        List<NativeSyslogEventRecord> all = collectAll(source);
+    private List<Map<String, Object>> fullScan(NativeSyslogEventPageSource source, Map<String, String> filters,
+                                               Integer start, Integer limit, int[] baselineOut) {
+        List<NativeSyslogEventRecord> all = collectAll(source, baselineOut);
 
         List<NativeSyslogEventRecord> matched = new ArrayList<>();
         for (NativeSyslogEventRecord r : all) {
@@ -90,11 +185,15 @@ public final class NativeSyslogEventRestService {
     }
 
     /** Walks the native source to completion via the EXISTING import; collecting sink = no DB. */
-    private List<NativeSyslogEventRecord> collectAll(NativeSyslogEventPageSource source) {
+    private List<NativeSyslogEventRecord> collectAll(NativeSyslogEventPageSource source, int[] baselineOut) {
         CollectingSink sink = new CollectingSink();
         try {
             // Append-only import (no sweep); the collecting sink persists nothing — no PostgreSQL is touched.
-            new NativeSyslogEventImportService(source, sink, INTERNAL_PAGE_SIZE).importAll();
+            NativeSyslogEventImportService.Result result =
+                    new NativeSyslogEventImportService(source, sink, INTERNAL_PAGE_SIZE).importAll();
+            if (baselineOut != null) {
+                baselineOut[0] = result.getSourceCount();
+            }
         } catch (SQLException e) {
             throw new NativeImportException("native syslog-event extraction failed: " + e.getMessage(), e);
         }

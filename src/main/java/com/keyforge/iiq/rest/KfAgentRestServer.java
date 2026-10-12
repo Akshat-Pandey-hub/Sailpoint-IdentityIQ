@@ -815,7 +815,9 @@ public final class KfAgentRestServer {
      * Native SyslogEvent (IIQ's own immutable operational/diagnostic log — server-side logging events,
      * distinct from AuditEvent). Reuses the EXISTING native {@link NativeSyslogEventClient} page source +
      * import (append-only); the service collects records in memory (no DB). No modifiedAfter support on the
-     * client (full-scan only); modifiedAfter stays reserved. No PostgreSQL on this path.
+     * client (full-scan only); modifiedAfter stays reserved. No PostgreSQL on this path. An unfiltered request
+     * with a limit reads only its window from the plugin (no full scan per page); the plugin's source count is
+     * returned in the {@value NativeSyslogEventRestService#SOURCE_COUNT_HEADER} header for completeness checks.
      */
     private void handleSyslogEvents(HttpExchange ex, Map<String, String> q) throws IOException {
         Map<String, String> filters = new LinkedHashMap<>();
@@ -829,8 +831,12 @@ public final class KfAgentRestServer {
 
         NativeSyslogEventPageSource source = new NativeSyslogEventClient(session);
         try {
-            List<Map<String, Object>> rows = syslogEventService.fetch(source, filters, start, limit);
-            writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
+            NativeSyslogEventRestService.Page page = syslogEventService.fetchPage(source, filters, start, limit);
+            if (page.sourceCount() >= 0) {
+                ex.getResponseHeaders().set(NativeSyslogEventRestService.SOURCE_COUNT_HEADER,
+                        Integer.toString(page.sourceCount()));
+            }
+            writeJson(ex, 200, mapper.writeValueAsBytes(page.rows())); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field
         }

@@ -27,6 +27,17 @@ final class NativeSyslogEventParser {
         }
     }
 
+    /** The plugin envelope's effective page size ({@code limit}, after its own clamping); -1 if absent. */
+    int pageLimit(String json) {
+        try {
+            JsonNode root = mapper.readTree(json == null ? "" : json);
+            JsonNode n = root == null ? null : root.get("limit");
+            return (n == null || n.isNull()) ? -1 : n.asInt(-1);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
     List<NativeSyslogEventRecord> parse(String json) {
         JsonNode root;
         try {
