@@ -60,7 +60,7 @@ public final class ParquetRestServer {
     private HttpServer server;
 
     public ParquetRestServer(RestConfig restConfig, ParquetConfig parquetConfig) {
-        this(restConfig, parquetConfig, RestAuthFilter.fromDefaultStore());
+        this(restConfig, parquetConfig, RestAuthFilter.fromEnvironment());
     }
 
     /** @param auth the REST API Basic-auth guard applied to every context this server registers */

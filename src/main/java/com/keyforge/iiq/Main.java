@@ -240,10 +240,6 @@ public final class Main {
             System.exit(runOneParquet(parquetDataset));
             return;
         }
-        if ("set-rest-credentials".equals(command)) {
-            System.exit(runSetRestCredentials());
-            return;
-        }
         if ("start-rest".equals(command)) {
             runStartRest();   // blocks until the process is stopped
             return;
@@ -4169,49 +4165,6 @@ public final class Main {
         System.out.println("JSON written to: " + out.toAbsolutePath());
     }
 
-    /**
-     * Interactively sets the REST API (HTTP Basic) credential checked by start-kfagent / start-rest. Prompts on the
-     * console (password hidden, entered twice) so the secret never appears on a command line, in shell history or
-     * in an .env file, and stores only a salted PBKDF2 hash in the per-user credential file. Running servers pick
-     * the change up automatically. Unrelated to the IdentityIQ login (IIQ_USERNAME / IIQ_PASSWORD).
-     */
-    private static int runSetRestCredentials() {
-        java.io.Console console = System.console();
-        if (console == null) {
-            System.err.println("set-rest-credentials must be run in an interactive terminal (no console available).");
-            return 2;
-        }
-        java.nio.file.Path file = com.keyforge.iiq.rest.RestCredentials.defaultPath();
-        System.out.println("REST API credential file: " + file.toAbsolutePath());
-        String user = console.readLine("REST API username: ");
-        if (user == null || user.isBlank() || user.contains(":")) {
-            System.err.println("Username must be non-blank and must not contain ':'.");
-            return 2;
-        }
-        char[] p1 = console.readPassword("REST API password (min 12 characters): ");
-        char[] p2 = console.readPassword("Confirm password: ");
-        try {
-            if (p1 == null || p2 == null || !java.util.Arrays.equals(p1, p2)) {
-                System.err.println("Passwords do not match; nothing was changed.");
-                return 2;
-            }
-            if (p1.length < 12) {
-                System.err.println("Password must be at least 12 characters; nothing was changed.");
-                return 2;
-            }
-            com.keyforge.iiq.rest.RestCredentials.create(user.trim(), p1).save(file);
-            System.out.println("Saved REST API credential for user '" + user.trim() + "' (password stored as a salted "
-                    + "hash; file restricted to the current user). Running servers apply it automatically.");
-            return 0;
-        } catch (Exception e) {
-            System.err.println("Could not save the REST API credential: " + e.getMessage());
-            return 1;
-        } finally {
-            if (p1 != null) java.util.Arrays.fill(p1, '\0');
-            if (p2 != null) java.util.Arrays.fill(p2, '\0');
-        }
-    }
-
     private static void runStartRest() {
         try {
             ParquetConfig pq = ParquetConfig.load();
@@ -4258,9 +4211,9 @@ public final class Main {
                     com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress(host, port), 0);
             http.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(8));
 
-            // ONE REST API Basic-auth guard (server-side credential file, separate from the IIQ login) protects
-            // every context on this port: /health, /kfagent/*, /iiq_parquet/*, /native_parquet/*.
-            com.keyforge.iiq.rest.RestAuthFilter restAuth = com.keyforge.iiq.rest.RestAuthFilter.fromDefaultStore();
+            // ONE REST API Basic-auth guard protects every context on this port (/health, /kfagent/*,
+            // /iiq_parquet/*, /native_parquet/*): callers must send the configured IIQ_USERNAME / IIQ_PASSWORD.
+            com.keyforge.iiq.rest.RestAuthFilter restAuth = com.keyforge.iiq.rest.RestAuthFilter.forIiqLogin(iiqConfig);
             System.out.println(restAuth.describe());
             com.keyforge.iiq.rest.KfAgentRestServer kfAgent =
                     new com.keyforge.iiq.rest.KfAgentRestServer(iiqConfig, host, port, restAuth);
@@ -5595,7 +5548,6 @@ public final class Main {
         System.out.println("  extract-cert-item-decisions-parquet     Write kf_cert_item_decision Parquet dataset (source-limited)");
         System.out.println("  extract-event-links-parquet             Write kf_event_link Parquet dataset (derived)");
         System.out.println("  extract-all-parquet                     Orchestrate: run every individual Parquet extractor");
-        System.out.println("  set-rest-credentials                    Interactively set the REST API (HTTP Basic) username/password required by start-rest and start-kfagent (stored hashed in ~/.keyforge/kfagent-rest-auth.properties, or KFAGENT_REST_AUTH_FILE); separate from the IIQ login");
         System.out.println("  start-rest                              Start the read-only REST query service over the Parquet datasets");
         System.out.println("  start-kfagent                           Start the KF Agent REST service (native extraction as JSON, no DB) AND, best-effort, the Parquet query service on the SAME port (one process, one port). Env: KFAGENT_HOST (0.0.0.0), KFAGENT_PORT (8100; falls back to REST_PORT), PARQUET_OUT_DIR (Parquet datasets; mount is non-fatal if it fails). GET /health, /kfagent/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/role-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status,syslog-events}?<any response field>=<value> (generic exact filters, AND-combined) plus &modifiedAfter=&start=&limit= ; PLUS /iiq_parquet/* and /native_parquet/* (Parquet query API) on the same port");
         System.out.println("                                          (DuckDB; no IIQ/PostgreSQL). Config: REST_HOST (default 127.0.0.1),");

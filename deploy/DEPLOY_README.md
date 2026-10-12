@@ -50,6 +50,9 @@ Serves on `http://<server>:8100/` :
 - `/kfagent/*`            (native data as JSON)
 - `/iiq_parquet/*`, `/native_parquet/*`   (Parquet query API — needs datasets present)
 
+Every endpoint requires **HTTP Basic Auth** with the same `IIQ_USERNAME` / `IIQ_PASSWORD` from
+`kfagent.env` (in Postman: Authorization → Basic Auth). Missing or wrong credentials → `401`.
+
 ### Run an extraction job (one-off; writes to PostgreSQL)
 Each is the same `java -jar … <command>` you run on Windows, e.g.:
 ```bash
@@ -61,10 +64,10 @@ These need the `PG_*` variables (already in `kfagent.env`).
 
 ## 5. Which commands need which variables
 
-- `start-kfagent` → needs only `IIQ_BASE_URL/USERNAME/PASSWORD` (+ optional `KFAGENT_*`, `PARQUET_OUT_DIR`). **No PostgreSQL.**
+- `start-kfagent` → needs only `IIQ_BASE_URL/USERNAME/PASSWORD` (+ optional `KFAGENT_*`, `PARQUET_OUT_DIR`). **No PostgreSQL.** The IIQ username/password are also the REST Basic Auth credentials.
 - `extract-*-db` / `derive-*-db` / `reconcile-*-db` → need `IIQ_*` **and** `PG_*`.
-- `extract-*-parquet` → need `IIQ_*` and `PARQUET_OUT_DIR`.
-- `start-rest` (standalone Parquet, optional) → needs only `PARQUET_OUT_DIR` (+ optional `REST_HOST/REST_PORT`).
+- `extract-native-parquet` → needs `PG_*` (+ optional `IIQ_NATIVE_SCHEMA`) and `PARQUET_OUT_DIR`; see `PARQUET.md`.
+- `start-rest` (standalone Parquet, optional) → needs `PARQUET_OUT_DIR` and `IIQ_USERNAME/IIQ_PASSWORD` (Basic Auth) (+ optional `REST_HOST/REST_PORT`).
 
 ## 6. Keeping it running (admin decides)
 

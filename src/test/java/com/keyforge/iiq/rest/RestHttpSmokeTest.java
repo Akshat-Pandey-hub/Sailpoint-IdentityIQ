@@ -26,7 +26,7 @@ class RestHttpSmokeTest {
 
     /** Test-only REST API credential (in memory; never a real secret). */
     private static final RestAuthFilter TEST_AUTH =
-            RestAuthFilter.fixed(RestCredentials.create("tester", "test-only-password".toCharArray()));
+            RestAuthFilter.of(RestCredentials.of("tester", "test-only-password"));
     private static final String AUTH_HEADER = "Basic " + java.util.Base64.getEncoder()
             .encodeToString("tester:test-only-password".getBytes(java.nio.charset.StandardCharsets.UTF_8));
 

@@ -4,7 +4,6 @@ import com.keyforge.iiq.config.AppConfig;
 import com.keyforge.iiq.parquet.ParquetConfig;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,15 +13,12 @@ import java.net.ServerSocket;
 import java.net.URL;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.FileTime;
 import java.util.Base64;
 import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -30,8 +26,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * REST API Basic auth ({@link RestAuthFilter}, {@link RestCredentials}): every context of the combined server
  * (/health, /kfagent/*, /iiq_parquet/*, /native_parquet/*) rejects missing/wrong credentials with a JSON 401 and
- * {@code WWW-Authenticate: Basic}; an unconfigured server starts but fails closed; credential changes apply without
- * a restart; handler failures become a generic JSON 500 and never stop the server. No live IIQ (dummy config).
+ * {@code WWW-Authenticate: Basic}; the accepted credential is the configured IIQ login; an unconfigured guard rejects
+ * everything; handler failures become a generic JSON 500 and never stop the server. No live IIQ (dummy config).
  */
 class RestAuthFilterTest {
 
@@ -46,36 +42,38 @@ class RestAuthFilterTest {
 
     @Test
     void credentialsMatchOnlyTheExactUserAndPassword() {
-        RestCredentials c = RestCredentials.create(USER, PASS.toCharArray());
-        assertTrue(c.matches(USER, PASS.toCharArray()));
-        assertFalse(c.matches(USER, "wrong".toCharArray()));
-        assertFalse(c.matches("Tester", PASS.toCharArray()), "username is case-sensitive");
-        assertFalse(c.matches(null, PASS.toCharArray()));
-        assertThrows(IllegalArgumentException.class, () -> RestCredentials.create("a:b", PASS.toCharArray()));
-        assertThrows(IllegalArgumentException.class, () -> RestCredentials.create(USER, new char[0]));
+        RestCredentials c = RestCredentials.of(USER, PASS);
+        assertTrue(c.matches(USER, PASS));
+        assertFalse(c.matches(USER, "wrong"));
+        assertFalse(c.matches("Tester", PASS), "username is case-sensitive");
+        assertFalse(c.matches(null, PASS));
+        assertThrows(IllegalArgumentException.class, () -> RestCredentials.of(USER, ""));
+        assertThrows(IllegalArgumentException.class, () -> RestCredentials.of(" ", PASS));
     }
 
     @Test
-    void fileStoresOnlyASaltedHashAndRoundTrips(@TempDir Path dir) throws Exception {
-        Path file = dir.resolve("sub").resolve("rest-auth.properties");
-        RestCredentials.create(USER, PASS.toCharArray()).save(file);
-        String text = Files.readString(file);
-        assertFalse(text.contains(PASS), "the password itself is never written");
-        assertTrue(text.contains("password.hash=pbkdf2-sha256\\:"), text);
-        RestCredentials loaded = RestCredentials.load(file);
-        assertTrue(loaded.matches(USER, PASS.toCharArray()));
-        assertNull(RestCredentials.load(dir.resolve("absent.properties")));
-        Files.writeString(dir.resolve("bad.properties"), "username=x\npassword.hash=plain\n");
-        assertThrows(IOException.class, () -> RestCredentials.load(dir.resolve("bad.properties")));
+    void guardUsesTheConfiguredIiqLogin() {
+        RestAuthFilter f = RestAuthFilter.forIiqLogin(new AppConfig("http://localhost:1/identityiq", "spadmin", "s3cret!"));
+        assertTrue(f.authorized(basic("spadmin", "s3cret!")));
+        assertFalse(f.authorized(basic("spadmin", "other")));
+        assertTrue(f.describe().contains("'spadmin'"));
+        assertFalse(f.describe().contains("s3cret!"), "the password is never printed");
+    }
+
+    @Test
+    void anUnconfiguredGuardRejectsEverything() {
+        RestAuthFilter none = RestAuthFilter.unconfigured();
+        assertFalse(none.isConfigured());
+        assertFalse(none.authorized(basic(USER, PASS)));
+        assertTrue(none.describe().contains("rejected with 401"));
     }
 
     @Test
     void headerParsing() {
-        RestAuthFilter f = RestAuthFilter.fixed(RestCredentials.create(USER, PASS.toCharArray()));
+        RestAuthFilter f = RestAuthFilter.of(RestCredentials.of(USER, PASS));
         assertTrue(f.authorized(basic(USER, PASS)));
         assertTrue(f.authorized("basic " + basic(USER, PASS).substring(6)), "scheme is case-insensitive");
-        assertTrue(f.authorized(basic(USER, PASS)), "cached verification still answers true");
-        assertFalse(f.authorized(null));
+                assertFalse(f.authorized(null));
         assertFalse(f.authorized(basic(USER, "nope")));
         assertFalse(f.authorized("Bearer abc"));
         assertFalse(f.authorized("Basic !!!not-base64"));
@@ -130,11 +128,11 @@ class RestAuthFilterTest {
     }
 
     @Test
-    void everyEndpointRequiresValidBasicAuth(@TempDir Path parquetDir) throws Exception {
+    void everyEndpointRequiresValidBasicAuth(@org.junit.jupiter.api.io.TempDir Path parquetDir) throws Exception {
         assumeLoopbackAvailable();
         int port = freePort();
         String base = "http://127.0.0.1:" + port;
-        HttpServer http = combined(port, RestAuthFilter.fixed(RestCredentials.create(USER, PASS.toCharArray())),
+        HttpServer http = combined(port, RestAuthFilter.of(RestCredentials.of(USER, PASS)),
                 parquetDir);
         try {
             String[] paths = {"/health", "/kfagent/identities", "/kfagent/no-such-thing", "/iiq_parquet/datasets",
@@ -158,42 +156,11 @@ class RestAuthFilterTest {
     }
 
     @Test
-    void unconfiguredServerStartsButFailsClosedAndPicksUpCredentialsWithoutRestart(@TempDir Path dir)
-            throws Exception {
-        assumeLoopbackAvailable();
-        Path file = dir.resolve("rest-auth.properties");
-        RestAuthFilter auth = RestAuthFilter.fromFile(file); // file does not exist yet
-        assertFalse(auth.isConfigured());
-        assertTrue(auth.describe().contains("NOT configured"));
-        int port = freePort();
-        String base = "http://127.0.0.1:" + port;
-        HttpServer http = combined(port, auth, dir);
-        try {
-            assertEquals(401, get(base + "/health", basic(USER, PASS)).status(), "no credential → nobody gets in");
-
-            RestCredentials.create(USER, PASS.toCharArray()).save(file);
-            assertEquals(200, get(base + "/health", basic(USER, PASS)).status(), "applied without a restart");
-            assertEquals(401, get(base + "/health", basic(USER, "old")).status());
-
-            RestCredentials.create(USER, "a brand new password".toCharArray()).save(file);
-            Files.setLastModifiedTime(file, FileTime.fromMillis(System.currentTimeMillis() + 5_000));
-            assertEquals(401, get(base + "/health", basic(USER, PASS)).status(), "old password stops working");
-            assertEquals(200, get(base + "/health", basic(USER, "a brand new password")).status());
-
-            Files.delete(file);
-            assertEquals(401, get(base + "/health", basic(USER, "a brand new password")).status(),
-                    "removing the credential locks the service again");
-        } finally {
-            http.stop(0);
-        }
-    }
-
-    @Test
     void handlerFailuresBecomeGenericJson500AndTheServerKeepsServing() throws Exception {
         assumeLoopbackAvailable();
         int port = freePort();
         String base = "http://127.0.0.1:" + port;
-        RestAuthFilter auth = RestAuthFilter.fixed(RestCredentials.create(USER, PASS.toCharArray()));
+        RestAuthFilter auth = RestAuthFilter.of(RestCredentials.of(USER, PASS));
         HttpServer http = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
         http.setExecutor(Executors.newFixedThreadPool(2));
         auth.protect(http.createContext("/boom", ex -> {
