@@ -50,8 +50,9 @@ Serves on `http://<server>:8100/` :
 - `/kfagent/*`            (native data as JSON)
 - `/iiq_parquet/*`, `/native_parquet/*`   (Parquet query API — needs datasets present)
 
-Every endpoint requires **HTTP Basic Auth** with the same `IIQ_USERNAME` / `IIQ_PASSWORD` from
-`kfagent.env` (in Postman: Authorization → Basic Auth). Missing or wrong credentials → `401`.
+Every endpoint requires **HTTP Basic Auth** with the client ID / client secret set as `KFAGENT_USERNAME` /
+`KFAGENT_PASSWORD` in `kfagent.env` (in Postman: Authorization → Basic Auth). Missing or wrong credentials → `401`.
+`IIQ_USERNAME` / `IIQ_PASSWORD` are used only for Part 1's own IdentityIQ login and are not accepted here.
 
 ### Run an extraction job (one-off; writes to PostgreSQL)
 Each is the same `java -jar … <command>` you run on Windows, e.g.:
@@ -64,10 +65,10 @@ These need the `PG_*` variables (already in `kfagent.env`).
 
 ## 5. Which commands need which variables
 
-- `start-kfagent` → needs only `IIQ_BASE_URL/USERNAME/PASSWORD` (+ optional `KFAGENT_*`, `PARQUET_OUT_DIR`). **No PostgreSQL.** The IIQ username/password are also the REST Basic Auth credentials.
+- `start-kfagent` → needs `IIQ_BASE_URL/USERNAME/PASSWORD` (the IdentityIQ login) and `KFAGENT_USERNAME/KFAGENT_PASSWORD` (the REST Basic Auth client ID / secret; without both every request is rejected with 401) (+ optional `KFAGENT_HOST/KFAGENT_PORT`, `PARQUET_OUT_DIR`). **No PostgreSQL.**
 - `extract-*-db` / `derive-*-db` / `reconcile-*-db` → need `IIQ_*` **and** `PG_*`.
 - `extract-native-parquet` → needs `PG_*` (+ optional `IIQ_NATIVE_SCHEMA`, e.g. `iiq_native_part2` to read Part 2's tables) and `PARQUET_OUT_DIR`; see `PARQUET.md`. Use a `PARQUET_OUT_DIR` outside any code folder, restricted to the service account (the files hold identity data).
-- `start-rest` (standalone Parquet, optional) → needs `PARQUET_OUT_DIR` and `IIQ_BASE_URL/IIQ_USERNAME/IIQ_PASSWORD` (the Basic Auth credentials; without all three every request is rejected with 401) (+ optional `REST_HOST/REST_PORT`). It also needs IIQ_BASE_URL; without it every request gets a 401.
+- `start-rest` (standalone Parquet, optional) → needs `PARQUET_OUT_DIR` and `KFAGENT_USERNAME/KFAGENT_PASSWORD` (the Basic Auth client ID / secret; without both every request is rejected with 401) (+ optional `REST_HOST/REST_PORT`).
 
 ## 6. Keeping it running (admin decides)
 

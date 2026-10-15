@@ -15,9 +15,11 @@ import java.util.Base64;
  * {@code /iiq_parquet/*}, {@code /native_parquet/*}) in every startup mode. Two jobs:
  * <ol>
  *   <li><b>HTTP Basic authentication</b>: the caller (e.g. Postman → Authorization → Basic Auth) must send the
- *       configured IdentityIQ username/password ({@code IIQ_USERNAME} / {@code IIQ_PASSWORD}). Missing or wrong →
+ *       configured client ID / client secret ({@code KFAGENT_USERNAME} / {@code KFAGENT_PASSWORD}). Missing or wrong →
  *       {@code 401 {"error":"Unauthorized"}} with {@code WWW-Authenticate: Basic}; the handler never runs, so no data
- *       is exposed. If no credentials are configured, every request is rejected (fail closed).</li>
+ *       is exposed. If no credentials are configured, every request is rejected (fail closed). The IdentityIQ login
+ *       ({@code IIQ_USERNAME} / {@code IIQ_PASSWORD}) is separate: it is used only by Part 1's own IdentityIQ
+ *       session and is never accepted here.</li>
  *   <li><b>Per-request safety net</b>: anything a handler throws (including an {@link Error}) is logged server-side
  *       and answered with a generic {@code 500 {"error":"Internal Server Error"}}; the server keeps serving.</li>
  * </ol>
@@ -26,6 +28,11 @@ import java.util.Base64;
 public final class RestAuthFilter extends Filter {
 
     static final String REALM = "KF Agent REST";
+
+    /** Setting holding the client ID that REST callers send as the Basic-auth username. */
+    public static final String KEY_USERNAME = "KFAGENT_USERNAME";
+    /** Setting holding the client secret that REST callers send as the Basic-auth password. */
+    public static final String KEY_PASSWORD = "KFAGENT_PASSWORD";
     private static final byte[] UNAUTHORIZED = "{\"error\":\"Unauthorized\"}".getBytes(StandardCharsets.UTF_8);
     private static final byte[] INTERNAL = "{\"error\":\"Internal Server Error\"}".getBytes(StandardCharsets.UTF_8);
 
@@ -40,19 +47,27 @@ public final class RestAuthFilter extends Filter {
         return new RestAuthFilter(credentials);
     }
 
-    /** Guard that accepts the configured IdentityIQ login ({@code IIQ_USERNAME} / {@code IIQ_PASSWORD}). */
-    public static RestAuthFilter forIiqLogin(AppConfig iiqConfig) {
-        return new RestAuthFilter(RestCredentials.of(iiqConfig.getUsername(), iiqConfig.getPassword()));
+    /**
+     * Guard that accepts exactly this client ID / client secret. If either is missing or blank the guard is
+     * unconfigured and rejects every request (fail closed); it never falls back to the IdentityIQ login.
+     */
+    public static RestAuthFilter forClientCredentials(String clientId, String clientSecret) {
+        if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isEmpty()) {
+            return unconfigured();
+        }
+        return of(RestCredentials.of(clientId, clientSecret));
     }
 
     /**
-     * Same, loading the IdentityIQ login from the environment; if it is not configured the guard rejects every
-     * request (the service still starts) — used by start-rest, which does not otherwise need IIQ.
+     * The guard for every startup mode (start-kfagent, start-rest): the client ID / client secret from
+     * {@code KFAGENT_USERNAME} / {@code KFAGENT_PASSWORD}, resolved like the IdentityIQ settings (environment,
+     * {@code -D} system property or the {@code IIQ_CONFIG_FILE} file). If they are not configured, or the
+     * configuration cannot be read, the guard rejects every request (the service still starts).
      */
     public static RestAuthFilter fromEnvironment() {
         try {
-            return forIiqLogin(AppConfig.load());
-        } catch (RuntimeException notConfigured) {
+            return forClientCredentials(AppConfig.setting(KEY_USERNAME), AppConfig.setting(KEY_PASSWORD));
+        } catch (RuntimeException unreadableConfig) {
             return unconfigured();
         }
     }
@@ -75,9 +90,10 @@ public final class RestAuthFilter extends Filter {
     /** One-line startup status, safe to print (no secrets). */
     public String describe() {
         return isConfigured()
-                ? "REST API authentication: HTTP Basic (IIQ_USERNAME / IIQ_PASSWORD, user '" + credentials.username() + "')"
-                : "[WARN] REST API authentication: IIQ_USERNAME / IIQ_PASSWORD are not set — every request will be "
-                + "rejected with 401";
+                ? "REST API authentication: HTTP Basic (" + KEY_USERNAME + " / " + KEY_PASSWORD + ", client '"
+                + credentials.username() + "')"
+                : "[WARN] REST API authentication: " + KEY_USERNAME + " / " + KEY_PASSWORD + " are not set — every "
+                + "request will be rejected with 401";
     }
 
     @Override

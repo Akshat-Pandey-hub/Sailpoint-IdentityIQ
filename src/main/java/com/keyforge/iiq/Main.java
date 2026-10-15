@@ -4212,8 +4212,9 @@ public final class Main {
             http.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(8));
 
             // ONE REST API Basic-auth guard protects every context on this port (/health, /kfagent/*,
-            // /iiq_parquet/*, /native_parquet/*): callers must send the configured IIQ_USERNAME / IIQ_PASSWORD.
-            com.keyforge.iiq.rest.RestAuthFilter restAuth = com.keyforge.iiq.rest.RestAuthFilter.forIiqLogin(iiqConfig);
+            // /iiq_parquet/*, /native_parquet/*): callers must send the client ID / secret configured in
+            // KFAGENT_USERNAME / KFAGENT_PASSWORD. IIQ_USERNAME / IIQ_PASSWORD are used only for the IIQ login.
+            com.keyforge.iiq.rest.RestAuthFilter restAuth = com.keyforge.iiq.rest.RestAuthFilter.fromEnvironment();
             System.out.println(restAuth.describe());
             com.keyforge.iiq.rest.KfAgentRestServer kfAgent =
                     new com.keyforge.iiq.rest.KfAgentRestServer(iiqConfig, host, port, restAuth);

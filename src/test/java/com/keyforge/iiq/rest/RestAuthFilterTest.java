@@ -26,8 +26,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * REST API Basic auth ({@link RestAuthFilter}, {@link RestCredentials}): every context of the combined server
  * (/health, /kfagent/*, /iiq_parquet/*, /native_parquet/*) rejects missing/wrong credentials with a JSON 401 and
- * {@code WWW-Authenticate: Basic}; the accepted credential is the configured IIQ login; an unconfigured guard rejects
- * everything; handler failures become a generic JSON 500 and never stop the server. No live IIQ (dummy config).
+ * {@code WWW-Authenticate: Basic}; the accepted credential is the client ID / secret (KFAGENT_USERNAME /
+ * KFAGENT_PASSWORD), never the IIQ login; an unconfigured guard rejects everything; handler failures become a generic JSON 500 and never stop the server. No live IIQ (dummy config).
  */
 class RestAuthFilterTest {
 
@@ -51,13 +51,81 @@ class RestAuthFilterTest {
         assertThrows(IllegalArgumentException.class, () -> RestCredentials.of(" ", PASS));
     }
 
+    private static final String CLIENT_ID = "example-client-id";
+    private static final String CLIENT_SECRET = "example-client-secret";
+    private static final String IIQ_USER = "spadmin";
+    private static final String IIQ_PASS = "iiq-only-password";
+
     @Test
-    void guardUsesTheConfiguredIiqLogin() {
-        RestAuthFilter f = RestAuthFilter.forIiqLogin(new AppConfig("http://localhost:1/identityiq", "spadmin", "s3cret!"));
-        assertTrue(f.authorized(basic("spadmin", "s3cret!")));
-        assertFalse(f.authorized(basic("spadmin", "other")));
-        assertTrue(f.describe().contains("'spadmin'"));
-        assertFalse(f.describe().contains("s3cret!"), "the password is never printed");
+    void guardAcceptsTheClientCredentialsAndNeverTheIiqLogin() {
+        RestAuthFilter f = RestAuthFilter.forClientCredentials(CLIENT_ID, CLIENT_SECRET);
+        assertTrue(f.isConfigured());
+        assertTrue(f.authorized(basic(CLIENT_ID, CLIENT_SECRET)));
+        assertFalse(f.authorized(basic(CLIENT_ID, "other")));
+        assertFalse(f.authorized(basic("other-client", CLIENT_SECRET)));
+        assertFalse(f.authorized(basic(IIQ_USER, IIQ_PASS)), "the IdentityIQ login is not a REST credential");
+        assertTrue(f.describe().contains("KFAGENT_USERNAME / KFAGENT_PASSWORD"), f.describe());
+        assertTrue(f.describe().contains("'" + CLIENT_ID + "'"));
+        assertFalse(f.describe().contains(CLIENT_SECRET), "the secret is never printed");
+    }
+
+    @Test
+    void missingClientCredentialsFailClosed() {
+        for (String[] pair : new String[][]{{null, CLIENT_SECRET}, {CLIENT_ID, null}, {" ", CLIENT_SECRET},
+                {CLIENT_ID, ""}, {null, null}}) {
+            RestAuthFilter f = RestAuthFilter.forClientCredentials(pair[0], pair[1]);
+            assertFalse(f.isConfigured());
+            assertFalse(f.authorized(basic(CLIENT_ID, CLIENT_SECRET)));
+            assertFalse(f.authorized(basic(IIQ_USER, IIQ_PASS)), "no fallback to the IdentityIQ login");
+            assertTrue(f.describe().contains("KFAGENT_USERNAME / KFAGENT_PASSWORD are not set"), f.describe());
+        }
+    }
+
+    /** Runs with these system properties set (cleared afterwards); skipped if the real environment overrides them. */
+    private static void withProperties(String[][] props, Runnable body) {
+        for (String key : new String[]{"KFAGENT_USERNAME", "KFAGENT_PASSWORD", "IIQ_CONFIG_FILE"}) {
+            assumeTrue(System.getenv(key) == null, key + " is set in the environment, which overrides -D");
+        }
+        try {
+            for (String[] p : props) {
+                System.setProperty(p[0], p[1]);
+            }
+            body.run();
+        } finally {
+            for (String[] p : props) {
+                System.clearProperty(p[0]);
+            }
+        }
+    }
+
+    @Test
+    void fromEnvironmentUsesKfagentCredentialsNotIiqCredentials() {
+        withProperties(new String[][]{{"KFAGENT_USERNAME", CLIENT_ID}, {"KFAGENT_PASSWORD", CLIENT_SECRET},
+                {"IIQ_USERNAME", IIQ_USER}, {"IIQ_PASSWORD", IIQ_PASS}}, () -> {
+            RestAuthFilter f = RestAuthFilter.fromEnvironment();
+            assertTrue(f.authorized(basic(CLIENT_ID, CLIENT_SECRET)));
+            assertFalse(f.authorized(basic(IIQ_USER, IIQ_PASS)));
+        });
+    }
+
+    @Test
+    void fromEnvironmentWithoutKfagentCredentialsRejectsEverythingEvenIfIiqIsSet() {
+        withProperties(new String[][]{{"IIQ_USERNAME", IIQ_USER}, {"IIQ_PASSWORD", IIQ_PASS}}, () -> {
+            RestAuthFilter f = RestAuthFilter.fromEnvironment();
+            assertFalse(f.isConfigured());
+            assertFalse(f.authorized(basic(IIQ_USER, IIQ_PASS)));
+        });
+    }
+
+    @Test
+    void kfAgentServerDefaultGuardUsesClientCredentialsWhileItsIiqConfigIsSeparate() {
+        assumeLoopbackAvailable(); // the server builds its IIQ session client (an HttpClient)
+        withProperties(new String[][]{{"KFAGENT_USERNAME", CLIENT_ID}, {"KFAGENT_PASSWORD", CLIENT_SECRET}}, () -> {
+            KfAgentRestServer server = new KfAgentRestServer(
+                    new AppConfig("http://localhost:1/identityiq", IIQ_USER, IIQ_PASS), "127.0.0.1", 0);
+            assertTrue(server.auth().authorized(basic(CLIENT_ID, CLIENT_SECRET)));
+            assertFalse(server.auth().authorized(basic(IIQ_USER, IIQ_PASS)));
+        });
     }
 
     @Test
@@ -152,6 +220,39 @@ class RestAuthFilterTest {
             assertEquals(400, get(base + "/kfagent/identities?limit=abc", basic(USER, PASS)).status());
         } finally {
             http.stop(0);
+        }
+    }
+
+    @Test
+    void everyRouteGroupAcceptsOnlyTheClientCredentialsAndFailsClosedWithoutThem(
+            @org.junit.jupiter.api.io.TempDir Path parquetDir) throws Exception {
+        assumeLoopbackAvailable();
+        String[] paths = {"/health", "/kfagent/identities", "/iiq_parquet/datasets", "/native_parquet/datasets"};
+
+        int port = freePort();
+        String base = "http://127.0.0.1:" + port;
+        HttpServer http = combined(port, RestAuthFilter.forClientCredentials(CLIENT_ID, CLIENT_SECRET), parquetDir);
+        try {
+            for (String p : paths) {
+                assertEquals(401, get(base + p, basic(IIQ_USER, IIQ_PASS)).status(), "IIQ login on " + p);
+            }
+            assertEquals(200, get(base + "/health", basic(CLIENT_ID, CLIENT_SECRET)).status());
+            assertEquals(200, get(base + "/iiq_parquet/datasets", basic(CLIENT_ID, CLIENT_SECRET)).status());
+            assertEquals(200, get(base + "/native_parquet/datasets", basic(CLIENT_ID, CLIENT_SECRET)).status());
+        } finally {
+            http.stop(0);
+        }
+
+        int port2 = freePort();
+        String base2 = "http://127.0.0.1:" + port2;
+        HttpServer unconfigured = combined(port2, RestAuthFilter.forClientCredentials(null, null), parquetDir);
+        try {
+            for (String p : paths) {
+                assertEquals(401, get(base2 + p, basic(CLIENT_ID, CLIENT_SECRET)).status(), "unconfigured " + p);
+                assertEquals(401, get(base2 + p, basic(IIQ_USER, IIQ_PASS)).status(), "unconfigured " + p);
+            }
+        } finally {
+            unconfigured.stop(0);
         }
     }
 

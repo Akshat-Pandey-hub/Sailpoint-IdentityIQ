@@ -59,7 +59,8 @@ business columns. Re-running never duplicates a record. No per-run versions are 
 ## 3. Query the datasets
 
 The query API is served by `start-kfagent` (on the KF Agent port, default 8100) or standalone by `start-rest`.
-Every request requires **HTTP Basic Auth** with the configured `IIQ_USERNAME` / `IIQ_PASSWORD`.
+Every request requires **HTTP Basic Auth** with the configured client ID / client secret (`KFAGENT_USERNAME` /
+`KFAGENT_PASSWORD`).
 
 | Endpoint | Returns |
 |---|---|

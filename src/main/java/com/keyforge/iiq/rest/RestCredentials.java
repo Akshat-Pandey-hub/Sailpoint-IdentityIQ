@@ -5,9 +5,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /**
- * The username/password a REST caller must present with HTTP Basic auth. The service uses its configured
- * IdentityIQ login ({@code IIQ_USERNAME} / {@code IIQ_PASSWORD}, from CMD or .env as today), so no extra setup is
- * needed. Held in memory only as the username and a SHA-256 digest of the password; compared in constant time.
+ * The username/password a REST caller must present with HTTP Basic auth: the configured client ID / client secret
+ * ({@code KFAGENT_USERNAME} / {@code KFAGENT_PASSWORD}), separate from the IdentityIQ login. Held in memory only as
+ * the username and a SHA-256 digest of the password; compared in constant time.
  */
 public final class RestCredentials {
 

@@ -189,12 +189,13 @@ public final class KfAgentRestServer {
     private HttpServer server;
 
     public KfAgentRestServer(AppConfig iiqConfig, String host, int port) {
-        this(iiqConfig, host, port, RestAuthFilter.forIiqLogin(iiqConfig));
+        this(iiqConfig, host, port, RestAuthFilter.fromEnvironment());
     }
 
     /**
-     * @param auth the REST API Basic-auth guard applied to every context this server registers (by default it
-     *             accepts the configured IdentityIQ login, IIQ_USERNAME / IIQ_PASSWORD)
+     * @param iiqConfig the IdentityIQ login (IIQ_USERNAME / IIQ_PASSWORD), used only for this server's own session
+     * @param auth the REST API Basic-auth guard applied to every context this server registers (by default the
+     *             client ID / secret in KFAGENT_USERNAME / KFAGENT_PASSWORD)
      */
     public KfAgentRestServer(AppConfig iiqConfig, String host, int port, RestAuthFilter auth) {
         this.host = host;

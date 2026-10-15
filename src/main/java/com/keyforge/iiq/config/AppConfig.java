@@ -99,6 +99,14 @@ public final class AppConfig {
         return password;
     }
 
+    /**
+     * One optional setting, resolved exactly like the IdentityIQ settings (environment variable, then JVM system
+     * property, then the {@link #KEY_CONFIG_FILE} file) and trimmed; {@code null} when unset or blank.
+     */
+    public static String setting(String key) {
+        return resolve(key, loadOptionalFile());
+    }
+
     // --- resolution helpers -------------------------------------------------
 
     private static String resolve(String key, Properties fileProps) {
