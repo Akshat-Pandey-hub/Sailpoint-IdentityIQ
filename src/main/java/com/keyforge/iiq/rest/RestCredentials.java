@@ -42,6 +42,11 @@ public final class RestCredentials {
         return userOk & passOk;
     }
 
+    /** True when {@code suppliedUser} is the configured username (used only to explain a rejection). */
+    public boolean userMatches(String suppliedUser) {
+        return suppliedUser != null && MessageDigest.isEqual(userDigest, sha256(suppliedUser));
+    }
+
     private static byte[] sha256(String s) {
         try {
             return MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8));

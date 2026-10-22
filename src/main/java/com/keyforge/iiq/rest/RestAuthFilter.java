@@ -1,6 +1,7 @@
 package com.keyforge.iiq.rest;
 
 import com.keyforge.iiq.config.AppConfig;
+import com.keyforge.iiq.debug.DebugLog;
 import com.sun.net.httpserver.Filter;
 import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpExchange;
@@ -91,7 +92,7 @@ public final class RestAuthFilter extends Filter {
     public String describe() {
         return isConfigured()
                 ? "REST API authentication: HTTP Basic (" + KEY_USERNAME + " / " + KEY_PASSWORD + ", client '"
-                + credentials.username() + "')"
+                + (DebugLog.debugEnabled() ? credentials.username() : "hidden at normal log level") + "')"
                 : "[WARN] REST API authentication: " + KEY_USERNAME + " / " + KEY_PASSWORD + " are not set — every "
                 + "request will be rejected with 401";
     }
@@ -103,10 +104,19 @@ public final class RestAuthFilter extends Filter {
 
     @Override
     public void doFilter(HttpExchange ex, Chain chain) throws IOException {
+        DebugLog.begin("req");
+        String header = ex.getRequestHeaders().getFirst("Authorization");
+        String from = ex.getRemoteAddress() == null ? "?" : String.valueOf(ex.getRemoteAddress().getAddress());
+        DebugLog.log("REQUEST", "method", ex.getRequestMethod(), "path", ex.getRequestURI().getPath(),
+                "query/filters", ex.getRequestURI().getRawQuery() == null ? "-" : ex.getRequestURI().getRawQuery(),
+                "from", from, "via", ex.getRequestHeaders().getFirst("X-Forwarded-For") == null
+                        ? "direct" : "proxy (X-Forwarded-For " + ex.getRequestHeaders().getFirst("X-Forwarded-For") + ")");
         try {
-            if (!authorized(ex.getRequestHeaders().getFirst("Authorization"))) {
+            String denied = denyReason(header);
+            logAuth(header, denied);
+            if (denied != null) {
                 System.err.println("[auth] 401 " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
-                        + " from " + (ex.getRemoteAddress() == null ? "?" : ex.getRemoteAddress().getAddress()));
+                        + " from " + from + " (" + denied + ")");
                 ex.getResponseHeaders().set("WWW-Authenticate", "Basic realm=\"" + REALM + "\", charset=\"UTF-8\"");
                 send(ex, 401, UNAUTHORIZED);
                 return;
@@ -116,6 +126,7 @@ public final class RestAuthFilter extends Filter {
             System.err.println("[rest] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
                     + " failed: " + t);
             t.printStackTrace();
+            DebugLog.error(t, "path", ex.getRequestURI().getPath());
             if (ex.getResponseCode() == -1) { // nothing sent yet: answer this caller, keep the server serving
                 try {
                     send(ex, 500, INTERNAL);
@@ -124,7 +135,74 @@ public final class RestAuthFilter extends Filter {
                 }
             }
         } finally {
+            DebugLog.log("RESPONSE", "path", ex.getRequestURI().getPath(), "status", ex.getResponseCode(),
+                    "ms", DebugLog.elapsedMs());
+            DebugLog.end();
             ex.close();
+        }
+    }
+
+    /** Debug line: what the caller sent, what the service expects, and the decision with its reason. */
+    private void logAuth(String header, String denied) {
+        if (!DebugLog.enabled()) {
+            return;
+        }
+        String sentUser = null;
+        String sentPassword = null;
+        String scheme = header == null ? "none (no Authorization header)" : header.trim().split("\\s+")[0];
+        String pair = decodeBasic(header);
+        if (pair != null) {
+            int colon = pair.indexOf(':');
+            sentUser = colon < 0 ? pair : pair.substring(0, colon);
+            sentPassword = colon < 0 ? null : pair.substring(colon + 1);
+        }
+        DebugLog.log("AUTH", "scheme", scheme, "sentUser", sentUser, "sentPassword", sentPassword,
+                "expectedUser", DebugLog.setting(KEY_USERNAME), "expectedPassword", DebugLog.setting(KEY_PASSWORD),
+                "result", denied == null ? "ALLOW" : "DENY 401", "reason", denied == null ? "credentials match" : denied);
+    }
+
+    /** Why a request is rejected, or null when it is allowed. */
+    String denyReason(String header) {
+        if (credentials == null) {
+            return "NOT_CONFIGURED: KFAGENT_USERNAME / KFAGENT_PASSWORD are not set for this service, so every request"
+                    + " is rejected";
+        }
+        if (header == null) {
+            return "NO_CREDENTIALS: the request has no Authorization header (Postman 'No Auth'/'Inherit', a health"
+                    + " monitor, or a proxy removed it)";
+        }
+        String h = header.trim();
+        if (h.length() < 6 || !h.regionMatches(true, 0, "Basic ", 0, 6)) {
+            return "NOT_BASIC: Authorization is '" + h.split("\\s+")[0] + "', but only Basic Auth is accepted"
+                    + " (not OAuth/Bearer)";
+        }
+        String pair = decodeBasic(header);
+        if (pair == null) {
+            return "BAD_ENCODING: the Basic Auth value is not valid Base64";
+        }
+        int colon = pair.indexOf(':');
+        if (colon < 0) {
+            return "BAD_FORMAT: the Basic Auth value has no ':' between username and password";
+        }
+        if (credentials.matches(pair.substring(0, colon), pair.substring(colon + 1))) {
+            return null;
+        }
+        return credentials.userMatches(pair.substring(0, colon)) ?"WRONG_PASSWORD: the username matches KFAGENT_USERNAME but the password is not KFAGENT_PASSWORD"
+                : "WRONG_USERNAME: the username sent is not KFAGENT_USERNAME (IIQ login or a swapped/old client ID?)";
+    }
+
+    private static String decodeBasic(String header) {
+        if (header == null) {
+            return null;
+        }
+        String h = header.trim();
+        if (h.length() < 6 || !h.regionMatches(true, 0, "Basic ", 0, 6)) {
+            return null;
+        }
+        try {
+            return new String(Base64.getDecoder().decode(h.substring(6).trim()), StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException badBase64) {
+            return null;
         }
     }
 

@@ -23,12 +23,16 @@ IIQ_BASE_URL=https://preview.keyforge.ai/identityiq/
 IIQ_USERNAME=
 IIQ_PASSWORD=
 
+# KF Agent REST credentials: the client ID / secret callers (Postman, Part 2) send as Basic Auth.
+KFAGENT_USERNAME=
+KFAGENT_PASSWORD=
+
 # -----------------------------------------------------------------------------
-# PostgreSQL target (used by the extract-users-db command).
-# Prefer environment variables; PG_PORT defaults to 5432 if omitted.
+# Logging level (optional; default debug):
+#   debug  : everything - settings, each request with the credentials sent/expected, every IdentityIQ call
+#            (usernames and the KF Agent credentials are printed; IIQ_PASSWORD is always hidden)
+#   normal : only what ran and its result - service, result, login OK/failed, errors with their reason
+#            (no usernames, passwords or settings)
+#   off    : nothing
 # -----------------------------------------------------------------------------
-PG_HOST=localhost
-PG_PORT=5432
-PG_DATABASE=my_local_db
-PG_USERNAME=
-PG_PASSWORD=
+KF_LOG_LEVEL=debug

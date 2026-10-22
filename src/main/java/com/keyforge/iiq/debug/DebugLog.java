@@ -1,0 +1,425 @@
+package com.keyforge.iiq.debug;
+
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.net.ConnectException;
+import java.net.UnknownHostException;
+import java.net.http.HttpTimeoutException;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Properties;
+import java.util.UUID;
+
+/**
+ * Audit log for Part 1: one short line per step, so a run can be followed end to end — what started, which service
+ * ran and what it does, the result, and every error with a plain-language reason.
+ *
+ * <p>Level, from {@code KF_LOG_LEVEL} (environment, {@code -DKF_LOG_LEVEL=...}, or the {@code IIQ_CONFIG_FILE}
+ * properties file); default {@code debug}:
+ * <ul>
+ *   <li>{@code debug}: everything — every setting loaded, each request with the credentials sent and expected, every
+ *       call to IdentityIQ. <b>Prints usernames and the KF Agent password in plain text.</b></li>
+ *   <li>{@code normal}: what ran and its result only — start, service, result, login OK/failed, errors with their
+ *       reason. No usernames, passwords or settings.</li>
+ *   <li>{@code off}: nothing.</li>
+ * </ul>
+ * The IdentityIQ password ({@code IIQ_PASSWORD}) is never printed at any level. Legacy {@code KF_DEBUG=false}
+ * (when {@code KF_LOG_LEVEL} is not set) means {@code off}.
+ *
+ * <p>Line format: {@code [DEBUG|INFO] <time> [<request/command id>] <STEP> | key=value | key=value}. Output goes to
+ * standard output (on a server: {@code journalctl -u <service>}).
+ */
+public final class DebugLog {
+
+    public static final String KEY_LEVEL = "KF_LOG_LEVEL";
+    public static final String KEY_DEBUG = "KF_DEBUG";
+
+    /** How much is logged. */
+    public enum Level { OFF, NORMAL, DEBUG }
+
+    static final String HIDDEN = "****** (hidden)";
+
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    private static final ThreadLocal<String> CONTEXT = new ThreadLocal<>();
+    private static final ThreadLocal<Long> STARTED = new ThreadLocal<>();
+
+    /** Settings read through AppConfig (environment, -D, or the IIQ_CONFIG_FILE properties file). */
+    private static final List<String> FILE_BACKED = List.of(
+            "IIQ_BASE_URL", "IIQ_USERNAME", "IIQ_PASSWORD", "KFAGENT_USERNAME", "KFAGENT_PASSWORD", KEY_LEVEL);
+    /** Every setting printed at startup in debug, in this order. */
+    private static final List<String> SETTINGS = List.of(
+            "IIQ_CONFIG_FILE", "IIQ_BASE_URL", "IIQ_USERNAME", "IIQ_PASSWORD",
+            "KFAGENT_USERNAME", "KFAGENT_PASSWORD", "KFAGENT_HOST", "KFAGENT_PORT", "REST_HOST", "REST_PORT",
+            "PARQUET_OUT_DIR", "RAW_OUT_DIR", "IIQ_DEBUG_HTTP", KEY_LEVEL);
+    /** Values never printed, at any level. */
+    private static final List<String> ALWAYS_HIDDEN = List.of("IIQ_PASSWORD", "PG_PASSWORD");
+    /** Values printed only in debug: usernames, the KF Agent credentials, and what a caller sent. */
+    private static final List<String> DEBUG_ONLY_KEYS = List.of(
+            "IIQ_USERNAME", "KFAGENT_USERNAME", "KFAGENT_PASSWORD",
+            "sentUser", "sentPassword", "expectedUser", "expectedPassword");
+    /** Whole lines printed only in debug. */
+    private static final List<String> DEBUG_ONLY_STEPS = List.of("SETTING", "REQUEST", "IIQ-CALL");
+
+    private static volatile Level cachedLevel;
+    private static volatile Properties cachedFile;
+    private static volatile boolean fileLoaded;
+
+    private DebugLog() {
+    }
+
+    /** The configured level (read once). */
+    public static Level level() {
+        Level l = cachedLevel;
+        if (l == null) {
+            l = parseLevel(raw(KEY_LEVEL, configFile()), firstNonBlank(System.getenv(KEY_DEBUG),
+                    System.getProperty(KEY_DEBUG)));
+            cachedLevel = l;
+        }
+        return l;
+    }
+
+    static Level parseLevel(String levelSetting, String legacyDebug) {
+        if (levelSetting != null && !levelSetting.isBlank()) {
+            switch (levelSetting.trim().toLowerCase()) {
+                case "off":
+                case "none":
+                    return Level.OFF;
+                case "normal":
+                case "info":
+                    return Level.NORMAL;
+                default:
+                    return Level.DEBUG;
+            }
+        }
+        if (legacyDebug != null && "false".equalsIgnoreCase(legacyDebug.trim())) {
+            return Level.OFF;
+        }
+        return Level.DEBUG;
+    }
+
+    /** True unless the level is off. Guard for building log lines. */
+    public static boolean enabled() {
+        return level() != Level.OFF;
+    }
+
+    /** True only at debug level. */
+    public static boolean debugEnabled() {
+        return level() == Level.DEBUG;
+    }
+
+    // --- request / command context -----------------------------------------
+
+    /** Starts a request or command scope; its short id prefixes every line on this thread until {@link #end}. */
+    public static String begin(String prefix) {
+        String id = prefix + "-" + UUID.randomUUID().toString().substring(0, 8);
+        CONTEXT.set(id);
+        STARTED.set(System.nanoTime());
+        return id;
+    }
+
+    /** Milliseconds since {@link #begin} on this thread, or -1. */
+    public static long elapsedMs() {
+        Long t = STARTED.get();
+        return t == null ? -1 : (System.nanoTime() - t) / 1_000_000;
+    }
+
+    public static void end() {
+        CONTEXT.remove();
+        STARTED.remove();
+    }
+
+    // --- writing -----------------------------------------------------------
+
+    /** One line: {@code step} then alternating key, value pairs. Filtered and masked for the configured level. */
+    public static void log(String step, Object... keyValues) {
+        String line = render(level(), step, keyValues);
+        if (line != null) {
+            System.out.println(line);
+        }
+    }
+
+    /**
+     * The line for this level, or null when the level does not print it. IIQ_PASSWORD is always masked; in normal,
+     * debug-only lines are dropped and usernames/passwords/sent credentials are left out.
+     */
+    static String render(Level level, String step, Object... keyValues) {
+        if (level == Level.OFF) {
+            return null;
+        }
+        boolean debug = level == Level.DEBUG;
+        if (!debug && DEBUG_ONLY_STEPS.contains(step)) {
+            return null;
+        }
+        if (!debug && "IIQ-LOGIN".equals(step) && keyValues.length > 1 && "start".equals(keyValues[1])) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder(256);
+        sb.append(debug ? "[DEBUG] " : "[INFO] ").append(LocalDateTime.now().format(TIME));
+        String ctx = CONTEXT.get();
+        sb.append(" [").append(ctx == null ? "-" : ctx).append("] ");
+        sb.append(String.format("%-14s", step));
+        for (int i = 0; i + 1 < keyValues.length; i += 2) {
+            String key = String.valueOf(keyValues[i]);
+            if (!debug && DEBUG_ONLY_KEYS.contains(key)) {
+                continue;
+            }
+            Object value = ALWAYS_HIDDEN.contains(key) && keyValues[i + 1] != null ? HIDDEN : keyValues[i + 1];
+            sb.append(" | ").append(key).append('=').append(show(value));
+        }
+        if (keyValues.length % 2 == 1) {
+            sb.append(" | ").append(show(keyValues[keyValues.length - 1]));
+        }
+        return sb.toString();
+    }
+
+    /**
+     * An error line with the exception, its root cause, a plain-language reason, and the settings/credentials that
+     * reason depends on (so the log shows exactly which values were used when it failed).
+     */
+    public static void error(Throwable t, Object... context) {
+        if (!enabled() || t == null) {
+            return;
+        }
+        Throwable root = t;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        String reason = reason(t, root);
+        Object[] head = {
+                "error", t.getClass().getSimpleName(),
+                "message", firstLine(t.getMessage()),
+                "rootCause", root == t ? "-" : root.getClass().getSimpleName() + ": " + firstLine(root.getMessage()),
+                "reason", reason};
+        Object[] values = valuesFor(reason);
+        Object[] all = new Object[head.length + context.length + values.length];
+        System.arraycopy(head, 0, all, 0, head.length);
+        System.arraycopy(context, 0, all, head.length, context.length);
+        System.arraycopy(values, 0, all, head.length + context.length, values.length);
+        log("ERROR", all);
+        StackTraceElement where = firstOwnFrame(t);
+        if (where != null) {
+            log("ERROR-AT", "at", where.toString());
+        }
+    }
+
+    /** Startup / command line: what is running and every setting it loaded, with where each came from. */
+    public static void settings(String command, String purpose) {
+        if (!enabled()) {
+            return;
+        }
+        log("START", "command", command, "purpose", purpose, "javaVersion", System.getProperty("java.version"),
+                "logLevel", debugEnabled()
+                        ? "debug (KF_LOG_LEVEL=normal for results only; usernames and KF Agent credentials are printed;"
+                        + " IIQ_PASSWORD is always hidden)"
+                        : "normal (KF_LOG_LEVEL=debug to also print settings, requests and credentials)");
+        if (!debugEnabled()) {
+            return;
+        }
+        Properties file = configFile();
+        for (String key : SETTINGS) {
+            Object value = raw(key, file);
+            if (ALWAYS_HIDDEN.contains(key) && value != null) {
+                value = HIDDEN;
+            }
+            log("SETTING", "name", key, "value", value, "source", source(key, file), "note", note(key, file));
+        }
+    }
+
+    /** The resolved (trimmed) value of a setting, the way Part 1 reads it; null when not set. */
+    public static String setting(String key) {
+        String raw = raw(key, configFile());
+        return raw == null ? null : raw.trim();
+    }
+
+    // --- reasons -----------------------------------------------------------
+
+    static String reason(Throwable t, Throwable root) {
+        String msg = (t.getMessage() == null ? "" : t.getMessage()).toLowerCase();
+        String rootMsg = (root.getMessage() == null ? "" : root.getMessage()).toLowerCase();
+        String type = t.getClass().getSimpleName();
+        if (msg.contains("login failed")) {
+            return "IIQ_LOGIN_REJECTED: IdentityIQ did not accept IIQ_USERNAME / IIQ_PASSWORD";
+        }
+        if (msg.contains("redirected") && msg.contains("not accepted")) {
+            return "IIQ_SESSION_REJECTED: IdentityIQ sent the request back to its login page - the session expired"
+                    + " (idle timeout / IIQ restart) or the IIQ login is no longer valid; restart the service or check"
+                    + " IIQ_USERNAME / IIQ_PASSWORD";
+        }
+        if (inChain(t, UnknownHostException.class)) {
+            return "IIQ_HOST_UNKNOWN: the host in IIQ_BASE_URL cannot be resolved (DNS / typo)";
+        }
+        if (inChain(t, ConnectException.class)) {
+            return "IIQ_UNREACHABLE: nothing answered at IIQ_BASE_URL (server down, wrong port, firewall or proxy)";
+        }
+        if (inChain(t, HttpTimeoutException.class) || rootMsg.contains("timed out")) {
+            return "IIQ_TIMEOUT: IdentityIQ did not answer in time (slow server or network)";
+        }
+        if (msg.contains("i/o error calling identityiq")) {
+            return "IIQ_IO_ERROR: the connection to IIQ_BASE_URL failed (network, TLS/certificate or proxy)";
+        }
+        if (msg.contains("http 404")) {
+            return "IIQ_NOT_FOUND: the IdentityIQ endpoint does not exist - plugin not installed / older plugin"
+                    + " version, or IIQ_BASE_URL path wrong";
+        }
+        if (msg.contains("http 401") || msg.contains("http 403")) {
+            return "IIQ_FORBIDDEN: IdentityIQ refused the call - the IIQ user lacks the needed rights";
+        }
+        if (msg.contains("http 5")) {
+            return "IIQ_SERVER_ERROR: IdentityIQ or the plugin failed internally - check the IdentityIQ server log";
+        }
+        if (t instanceof SQLException || root instanceof SQLException) {
+            return "POSTGRES_ERROR: PostgreSQL rejected the connection or statement - check PG_HOST / PG_PORT /"
+                    + " PG_DATABASE / PG_USERNAME / PG_PASSWORD / PG_SCHEMA";
+        }
+        if (type.contains("Config")) {
+            return "CONFIGURATION_ERROR: a required setting is missing or invalid (see the SETTING lines at START)";
+        }
+        if (t instanceof OutOfMemoryError) {
+            return "OUT_OF_MEMORY: the JVM ran out of memory - use a smaller limit or raise -Xmx";
+        }
+        if (t instanceof IllegalArgumentException) {
+            return "BAD_INPUT: a parameter or filter value is not valid";
+        }
+        if (t instanceof InterruptedException) {
+            return "INTERRUPTED: the process was stopped while working";
+        }
+        return "UNEXPECTED: " + type;
+    }
+
+    private static boolean inChain(Throwable t, Class<? extends Throwable> type) {
+        for (Throwable c = t; c != null; c = c.getCause() == c ? null : c.getCause()) {
+            if (type.isInstance(c)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The settings that a reason depends on, printed with the error. */
+    private static Object[] valuesFor(String reason) {
+        if (reason.startsWith("IIQ_") ) {
+            return new Object[]{"IIQ_BASE_URL", setting("IIQ_BASE_URL"), "IIQ_USERNAME", setting("IIQ_USERNAME"),
+                    "IIQ_PASSWORD", setting("IIQ_PASSWORD")};
+        }
+        return new Object[0];
+    }
+
+    // --- helpers -----------------------------------------------------------
+
+    private static String raw(String key, Properties file) {
+        String v = System.getenv(key);
+        if (v != null && !v.isBlank()) {
+            return v;
+        }
+        v = System.getProperty(key);
+        if (v != null && !v.isBlank()) {
+            return v;
+        }
+        if (FILE_BACKED.contains(key) && file != null) {
+            v = file.getProperty(key);
+            if (v != null && !v.isBlank()) {
+                return v;
+            }
+        }
+        return null;
+    }
+
+    private static String source(String key, Properties file) {
+        String v = System.getenv(key);
+        if (v != null && !v.isBlank()) {
+            return "environment";
+        }
+        v = System.getProperty(key);
+        if (v != null && !v.isBlank()) {
+            return "-D system property";
+        }
+        if (FILE_BACKED.contains(key) && file != null) {
+            v = file.getProperty(key);
+            if (v != null && !v.isBlank()) {
+                return "file " + System.getenv("IIQ_CONFIG_FILE");
+            }
+        }
+        return "not set";
+    }
+
+    private static String note(String key, Properties file) {
+        String v = raw(key, file);
+        if (v == null) {
+            if (key.startsWith("KFAGENT_USERNAME") || key.startsWith("KFAGENT_PASSWORD")) {
+                return "MISSING - every REST request (incl. /health) will be rejected with 401";
+            }
+            return "-";
+        }
+        StringBuilder n = new StringBuilder();
+        n.append("length ").append(v.trim().length());
+        if (!v.equals(v.trim())) {
+            n.append(", has leading/trailing spaces or line ending (trimmed when used)");
+        }
+        if (v.trim().startsWith("\"") || v.trim().startsWith("'")) {
+            n.append(", starts with a quote (the quote is part of the value)");
+        }
+        return n.toString();
+    }
+
+    /** The IIQ_CONFIG_FILE properties (read once), or null. */
+    private static Properties configFile() {
+        if (fileLoaded) {
+            return cachedFile;
+        }
+        String path = firstNonBlank(System.getenv("IIQ_CONFIG_FILE"), System.getProperty("IIQ_CONFIG_FILE"));
+        Properties loaded = null;
+        if (path != null) {
+            Properties p = new Properties();
+            try (InputStream in = new FileInputStream(path.trim())) {
+                p.load(in);
+                loaded = p;
+            } catch (Exception unreadable) {
+                loaded = null;
+            }
+        }
+        cachedFile = loaded;
+        fileLoaded = true;
+        return loaded;
+    }
+
+    private static String firstNonBlank(String a, String b) {
+        if (a != null && !a.isBlank()) {
+            return a;
+        }
+        return b != null && !b.isBlank() ? b : null;
+    }
+
+    private static String show(Object v) {
+        if (v == null) {
+            return "<not set>";
+        }
+        String s = String.valueOf(v);
+        if (s.isEmpty()) {
+            return "\"\"";
+        }
+        if (!s.equals(s.trim())) {
+            return "\"" + s.replace("\r", "\\r").replace("\n", "\\n") + "\"";
+        }
+        return s.replace("\r", "\\r").replace("\n", "\\n");
+    }
+
+    private static String firstLine(String s) {
+        if (s == null) {
+            return "-";
+        }
+        int nl = s.indexOf('\n');
+        String line = nl < 0 ? s : s.substring(0, nl);
+        return line.length() > 400 ? line.substring(0, 400) + "..." : line;
+    }
+
+    private static StackTraceElement firstOwnFrame(Throwable t) {
+        for (StackTraceElement e : t.getStackTrace()) {
+            if (e.getClassName().startsWith("com.keyforge") && !e.getClassName().equals(DebugLog.class.getName())) {
+                return e;
+            }
+        }
+        return null;
+    }
+}

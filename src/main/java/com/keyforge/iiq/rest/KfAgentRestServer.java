@@ -254,6 +254,23 @@ public final class KfAgentRestServer {
                 writeJson(ex, 400, error("malformed query string: " + badEncoding.getMessage()));
                 return;
             }
+            if (com.keyforge.iiq.debug.DebugLog.enabled()) {
+                Map<String, String> filters = new LinkedHashMap<>();
+                for (Map.Entry<String, String> e : q.entrySet()) {
+                    if (!RESERVED.contains(e.getKey())) {
+                        filters.put(e.getKey(), e.getValue());
+                    }
+                }
+                com.keyforge.iiq.debug.DebugLog.log("SERVICE", "endpoint", "/kfagent/" + sub,
+                        "purpose", KfAgentServiceCatalog.purpose(sub),
+                        "how", "log into IdentityIQ (session reused if already logged in) and read through the KeyForge"
+                                + " IIQ plugin; nothing is written",
+                        "filters", filters.isEmpty() ? "none" : filters, "start", q.get("start"), "limit", q.get("limit"),
+                        "modifiedAfter", q.get("modifiedAfter"),
+                        "IIQ_BASE_URL", com.keyforge.iiq.debug.DebugLog.setting("IIQ_BASE_URL"),
+                        "IIQ_USERNAME", com.keyforge.iiq.debug.DebugLog.setting("IIQ_USERNAME"),
+                        "IIQ_PASSWORD", com.keyforge.iiq.debug.DebugLog.setting("IIQ_PASSWORD"));
+            }
             String invalid = invalidReservedParam(q);
             if (invalid != null) {
                 writeJson(ex, 400, error(invalid));
@@ -349,8 +366,12 @@ public final class KfAgentRestServer {
             System.err.println("[kfagent] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
                     + " failed: " + e);
             e.printStackTrace();
+            com.keyforge.iiq.debug.DebugLog.error(e, "endpoint", ex.getRequestURI().getPath(),
+                    "query/filters", ex.getRequestURI().getRawQuery());
             writeJson(ex, 500, error("Internal Server Error"));
         } catch (Error fatal) {
+            com.keyforge.iiq.debug.DebugLog.error(fatal, "endpoint", ex.getRequestURI().getPath(),
+                    "query/filters", ex.getRequestURI().getRawQuery());
             // e.g. OutOfMemoryError on an oversized request: answer this caller with a JSON 500 (best effort)
             // instead of dropping the connection; the worker pool and the server keep serving other requests.
             System.err.println("[kfagent] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
@@ -1430,5 +1451,28 @@ public final class KfAgentRestServer {
         try (OutputStream os = ex.getResponseBody()) {
             os.write(body);
         }
+        logResult(ex, status, body);
+    }
+
+    /** Debug RESULT line: status, rows returned (for a JSON array) or the error message sent to the caller. */
+    private void logResult(HttpExchange ex, int status, byte[] body) {
+        if (!com.keyforge.iiq.debug.DebugLog.enabled()) {
+            return;
+        }
+        Object detail;
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(body);
+            if (node.isArray()) {
+                detail = node.size() + " rows";
+            } else if (node.has("error")) {
+                detail = "error: " + node.get("error").asText();
+            } else {
+                detail = "object";
+            }
+        } catch (Exception notJson) {
+            detail = "-";
+        }
+        com.keyforge.iiq.debug.DebugLog.log("RESULT", "endpoint", ex.getRequestURI().getPath(), "status", status,
+                "returned", detail, "bytes", body.length, "ms", com.keyforge.iiq.debug.DebugLog.elapsedMs());
     }
 }

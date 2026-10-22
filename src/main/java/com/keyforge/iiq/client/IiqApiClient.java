@@ -89,9 +89,14 @@ public class IiqApiClient {
                 .build();
 
         HttpResponse<String> response;
+        long t0 = System.nanoTime();
         try {
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (java.io.IOException e) {
+            com.keyforge.iiq.debug.DebugLog.log("IIQ-CALL", "method", "GET", "url", safeUri(uri), "auth",
+                    "Basic (IIQ_USERNAME/IIQ_PASSWORD)", "result", "FAILED (no answer)",
+                    "error", e.getClass().getSimpleName() + ": " + e.getMessage(),
+                    "ms", (System.nanoTime() - t0) / 1_000_000);
             throw new IiqApiException("I/O error calling IdentityIQ at " + safeUri(uri), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -99,6 +104,16 @@ public class IiqApiClient {
         }
 
         int status = response.statusCode();
+        com.keyforge.iiq.debug.DebugLog.log("IIQ-CALL", "method", "GET", "url", safeUri(uri), "auth",
+                "Basic (IIQ_USERNAME/IIQ_PASSWORD)", "IIQ_USERNAME", com.keyforge.iiq.debug.DebugLog.setting("IIQ_USERNAME"),
+                "IIQ_PASSWORD", com.keyforge.iiq.debug.DebugLog.setting("IIQ_PASSWORD"), "status", status,
+                "meaning", status >= 200 && status < 300 ? "OK"
+                        : status == 401 ? "IIQ REJECTED IIQ_USERNAME/IIQ_PASSWORD"
+                        : status == 403 ? "IIQ REFUSED - user lacks rights"
+                        : status == 404 ? "NOT FOUND - endpoint missing or wrong path"
+                        : status >= 500 ? "IIQ SERVER ERROR - see IdentityIQ log" : "HTTP " + status,
+                "responseBytes", response.body() == null ? 0 : response.body().length(),
+                "ms", (System.nanoTime() - t0) / 1_000_000);
         if (status < 200 || status >= 300) {
             throw new IiqApiException(
                     "IdentityIQ request to " + safeUri(uri) + " failed with HTTP " + status

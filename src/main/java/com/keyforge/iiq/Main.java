@@ -229,6 +229,13 @@ public final class Main {
         String command = args[0];
         extractionMode = ExtractionMode.fromArgs(args);
 
+        // Debug audit log (KF_DEBUG, on by default for now): what is running, every setting it loaded, and any
+        // error that escapes a thread.
+        com.keyforge.iiq.debug.DebugLog.begin("cmd");
+        com.keyforge.iiq.debug.DebugLog.settings(String.join(" ", args), commandPurpose(command));
+        Thread.setDefaultUncaughtExceptionHandler((thread, t) ->
+                com.keyforge.iiq.debug.DebugLog.error(t, "thread", thread.getName(), "where", "uncaught"));
+
         // Parquet workstream: one independent extractor per dataset, plus an orchestration command.
         // Data-driven so the command<->dataset mapping has a single source of truth (ParquetCommands).
         if (com.keyforge.iiq.parquet.ParquetCommands.ALL.equals(command)) {
@@ -378,12 +385,15 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -394,7 +404,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -432,15 +442,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -472,7 +486,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -511,15 +525,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -551,7 +569,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -579,15 +597,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -598,7 +620,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -622,15 +644,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -666,7 +692,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -689,15 +715,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -722,7 +752,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -745,15 +775,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -780,7 +814,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -806,15 +840,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -924,6 +962,7 @@ public final class Main {
                         + " marked deleted=" + sw.marked() + " revived=" + sw.revived());
             }
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.out.println("  soft-delete sweep [" + table + "]: ERROR — " + e.getMessage());
         }
     }
@@ -946,6 +985,7 @@ public final class Main {
                     ids.add(pk);
                 }
             } catch (RuntimeException unmappable) {
+                com.keyforge.iiq.debug.DebugLog.error(unmappable);
                 // record that cannot form a valid PK was never persisted -> safe to exclude from keep-set
             }
         }
@@ -959,6 +999,7 @@ public final class Main {
                         + " marked deleted=" + sw.marked() + " revived=" + sw.revived());
             }
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.out.println("  soft-delete sweep [" + table + "]: ERROR — " + e.getMessage());
         }
     }
@@ -1020,7 +1061,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -1044,15 +1085,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -1187,6 +1232,7 @@ public final class Main {
             try {
                 code = RunLedger.run(job.command(), job.runner());
             } catch (RuntimeException e) {
+                com.keyforge.iiq.debug.DebugLog.error(e);
                 code = 1;
                 System.err.println("Unexpected error in " + job.command() + ": " + e.getMessage());
             }
@@ -1218,7 +1264,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: business SQL executed natively inside IIQ via the plugin "
@@ -1241,18 +1287,23 @@ public final class Main {
                 return result.isTruncated() ? 6 : 0;
             }
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native SQL-report error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -1275,7 +1326,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: business SQL executed natively inside IIQ via the plugin "
@@ -1299,18 +1350,23 @@ public final class Main {
                 return result.isTruncated() ? 6 : 0;
             }
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native SQL-report error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -1334,7 +1390,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: business SQL executed natively inside IIQ via the plugin "
@@ -1358,18 +1414,23 @@ public final class Main {
                 return result.isTruncated() ? 6 : 0;
             }
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native SQL-report error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -1395,7 +1456,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: business SQL executed natively inside IIQ via the plugin "
@@ -1419,18 +1480,23 @@ public final class Main {
                 return result.isTruncated() ? 6 : 0;
             }
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native SQL-report error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -1443,7 +1509,7 @@ public final class Main {
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -1469,18 +1535,23 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native payload error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -1498,6 +1569,7 @@ public final class Main {
             int n = Integer.parseInt(v.trim());
             return n > 0 ? n : 100;
         } catch (NumberFormatException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             return 100;
         }
     }
@@ -1536,7 +1608,7 @@ public final class Main {
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -1560,18 +1632,23 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native payload error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -1643,9 +1720,9 @@ public final class Main {
                         + " unchanged=" + totalUnchanged + " datasets-failed=" + failed);
                 return failed > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
-        catch (SQLException e) { System.err.println("PostgreSQL/Parquet error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL/Parquet error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractNativeSyslogEventsDb() {
@@ -1654,7 +1731,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -1683,11 +1760,11 @@ public final class Main {
                 }
                 return result.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractNativePolicyConstraintsDb() {
@@ -1696,7 +1773,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -1729,11 +1806,11 @@ public final class Main {
                 }
                 return result.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractNativeAuditEventsDb() {
@@ -1742,7 +1819,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -1771,11 +1848,11 @@ public final class Main {
                 }
                 return result.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     /**
@@ -1791,7 +1868,7 @@ public final class Main {
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
             String runId = java.util.UUID.randomUUID().toString();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API (DatabaseInstance.ACCESS_HISTORY) via plugin REST "
@@ -1840,11 +1917,11 @@ public final class Main {
             }
             System.out.println("  append-only: no deletion sweep (immutable historical evidence); re-run is idempotent");
             return totalFailed > 0 ? 6 : 0;
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     /** {@code schema.kf_table} -> {@code kf_table} for the run-ledger entity name. */
@@ -1859,7 +1936,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -1879,11 +1956,11 @@ public final class Main {
                         result.getFailures(), repository.targetTable());
                 return result.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractNativePoliciesDb() {
@@ -1892,7 +1969,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -1912,11 +1989,11 @@ public final class Main {
                         result.getFailures(), repository.targetTable());
                 return result.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static void printNativeCurrentStateSummary(String label, int persisted, int extracted, int inserted,
@@ -1949,7 +2026,7 @@ public final class Main {
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -1970,18 +2047,23 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native payload error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -2016,7 +2098,7 @@ public final class Main {
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -2037,18 +2119,23 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native payload error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -2083,7 +2170,7 @@ public final class Main {
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -2107,18 +2194,23 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native payload error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -2159,7 +2251,7 @@ public final class Main {
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -2183,18 +2275,23 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native payload error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -2233,7 +2330,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
                     + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST ("
@@ -2264,11 +2361,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractNativeRoleRelationshipsDb() {
@@ -2277,7 +2374,7 @@ public final class Main {
             PgConfig pg = PgConfig.load();
             String schema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiq.getBaseUrl() + " (user '" + iiq.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiq.getBaseUrl() + " (user '" + shownUser(iiq.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pg.getJdbcUrl() + " (user '" + pg.getUsername() + "', native schema '" + schema + "')");
             System.out.println("Source: native Bundle Profile/relationship APIs via plugin REST ("
                     + com.keyforge.nativeload.NativeRoleRelationshipClient.PATH + "), page size " + pageSize);
@@ -2306,14 +2403,19 @@ public final class Main {
                 return r.failed > 0 ? 6 : 0;
             }
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage()); return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native payload error: " + e.getMessage()); return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage()); return 1;
         }
     }
@@ -2325,7 +2427,7 @@ public final class Main {
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -2349,18 +2451,23 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native payload error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -2401,7 +2508,7 @@ public final class Main {
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -2421,18 +2528,23 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native payload error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -2474,10 +2586,10 @@ public final class Main {
                         + ", deletion sweep=" + (result.sweepSkipped ? "skipped (empty source or failed rows)" : "marked " + result.marked + " deleted"));
                 return result.failed == 0 ? 0 : 6;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException | IiqApiException e) { System.err.println("Native Workflow extraction error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException | IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native Workflow extraction error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractNativeWorkgroupMembershipsDb() {
@@ -2496,10 +2608,10 @@ public final class Main {
                         + ", deletion sweep=" + (result.sweepSkipped ? "skipped (empty source or failed rows)" : "marked " + result.deleted + " deleted"));
                 return result.failed == 0 ? 0 : 6;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException | IiqApiException e) { System.err.println("Native membership extraction error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException | IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native membership extraction error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     /**
@@ -2516,7 +2628,7 @@ public final class Main {
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST "
@@ -2537,18 +2649,23 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native payload error: " + e.getMessage());
             return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -2587,7 +2704,7 @@ public final class Main {
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST ("
@@ -2615,14 +2732,19 @@ public final class Main {
                 return r.getFailed() > 0 ? 6 : 0;
             }
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage()); return 3;
         } catch (NativeImportException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Native payload error: " + e.getMessage()); return 4;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage()); return 1;
         }
     }
@@ -2634,7 +2756,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
                     + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST ("
@@ -2665,11 +2787,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     /** Native current-state account↔entitlement edges (from Link entitlement attributes). */
@@ -2679,7 +2801,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
                     + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST ("
@@ -2711,11 +2833,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     /** Native current-state Certification (campaign/cert container). */
@@ -2725,7 +2847,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
                     + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST ("
@@ -2745,11 +2867,11 @@ public final class Main {
                         r.getMarkedDeleted(), r.getRevived(), repository.targetTable(), r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     /** Native current-state CertificationEntity (who/what was reviewed + entity action). */
@@ -2759,7 +2881,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
                     + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST ("
@@ -2780,11 +2902,11 @@ public final class Main {
                         r.isSweepSkipped(), r.getMarkedDeleted(), r.getRevived(), repository.targetTable(), r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     /** Native current-state CertificationItem (reviewed item + folded decision/action). */
@@ -2794,7 +2916,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
                     + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST ("
@@ -2815,11 +2937,11 @@ public final class Main {
                         r.isSweepSkipped(), r.getMarkedDeleted(), r.getRevived(), repository.targetTable(), r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     /** Native append-only CertificationArchive (immutable historical certifications; no deletion sweep). */
@@ -2829,7 +2951,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
                     + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST ("
@@ -2855,11 +2977,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     /** Shared summary printer for the native current-state relationship/certification imports. */
@@ -2887,7 +3009,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
                     + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST ("
@@ -2907,11 +3029,11 @@ public final class Main {
                         r.getMarkedDeleted(), r.getRevived(), repository.targetTable(), r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     /** Native current-state IdentityRequest (+ derived items + request-time approval summaries) into iiq_native. */
@@ -2921,7 +3043,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
                     + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST ("
@@ -2962,11 +3084,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractNativeProvisioningTxnDb() {
@@ -2975,7 +3097,7 @@ public final class Main {
             PgConfig pgConfig = PgConfig.load();
             String nativeSchema = NativeSchemaConfig.resolve();
             int pageSize = nativePageSize();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl() + " (user '" + pgConfig.getUsername()
                     + "', native schema '" + nativeSchema + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST ("
@@ -3012,11 +3134,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { System.err.println("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Native payload error: " + e.getMessage()); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractUsersDb() {
@@ -3025,7 +3147,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -3049,15 +3171,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3100,12 +3226,15 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3138,12 +3267,15 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3226,12 +3358,15 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3290,12 +3425,15 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3426,12 +3564,15 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3442,7 +3583,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -3471,15 +3612,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3490,7 +3635,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -3530,15 +3675,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3578,12 +3727,15 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3594,7 +3746,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -3629,15 +3781,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3675,12 +3831,15 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3691,7 +3850,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -3729,15 +3888,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3774,12 +3937,15 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3790,7 +3956,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -3829,15 +3995,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3874,12 +4044,15 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3890,7 +4063,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -3938,15 +4111,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -3974,16 +4151,16 @@ public final class Main {
                         + " (" + a.roleId() + ")");
             }
             return 0;
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractIdentityRolesDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             List<IdentityRoleAssignment> rels =
@@ -4013,10 +4190,10 @@ public final class Main {
                         rels, a -> com.keyforge.iiq.identityrole.IdentityRoleRowMapper.map(a).id());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     // ---- Parquet workstream (Phase 1): direct IIQ -> Parquet (independent of PostgreSQL) ----
@@ -4043,12 +4220,13 @@ public final class Main {
                 java.nio.file.Files.createDirectories(duckTmp);
                 System.setProperty("java.io.tmpdir", duckTmp.toString());
             } catch (Exception ignore) {
+                com.keyforge.iiq.debug.DebugLog.error(ignore);
                 // fall back to the default temp dir
             }
             boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
             ParquetExtractionService svc = new ParquetExtractionService();
 
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("Parquet output: " + pq.outputDir().toAbsolutePath());
             System.out.println("Datasets: " + datasets);
             System.out.println();
@@ -4073,9 +4251,11 @@ public final class Main {
             System.out.println("Total rows written: " + totalWritten + "  (datasets with errors: " + failedDatasets + ")");
             return failedDatasets > 0 ? 6 : 0;
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -4106,7 +4286,7 @@ public final class Main {
             String inclXml = System.getProperty("INCLUDE_XML", System.getenv("INCLUDE_XML"));
             boolean includeXml = inclXml == null || !"false".equalsIgnoreCase(inclXml.trim());
 
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("Source: native SailPoint Java API via plugin REST (" + path + "), full population");
 
             IiqSessionClient session = new IiqSessionClient(iiqConfig);
@@ -4130,15 +4310,19 @@ public final class Main {
             printInspectSummary(tree, out);
             return 0;
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ plugin API error: " + e.getMessage());
             return 4;
         } catch (java.io.IOException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Could not read response or write output file: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -4175,6 +4359,7 @@ public final class Main {
                 java.nio.file.Files.createDirectories(duckTmp);
                 System.setProperty("java.io.tmpdir", duckTmp.toString());
             } catch (Exception ignore) {
+                com.keyforge.iiq.debug.DebugLog.error(ignore);
                 // fall back to the default temp dir
             }
             ParquetRestServer server = new ParquetRestServer(rest, pq);
@@ -4182,8 +4367,10 @@ public final class Main {
             server.start();
             Thread.currentThread().join(); // keep the process running while serving requests
         } catch (InterruptedException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             Thread.currentThread().interrupt();
         } catch (Exception e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Failed to start REST service: " + e.getMessage());
             System.exit(1);
         }
@@ -4202,7 +4389,7 @@ public final class Main {
             String host = envOrDefault("KFAGENT_HOST", "0.0.0.0");
             int port = intEnvOrDefault("KFAGENT_PORT",
                     intEnvOrDefault("REST_PORT", com.keyforge.iiq.rest.KfAgentRestServer.DEFAULT_PORT));
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
 
             // ONE HTTP server, ONE port: KF Agent (/health, /kfagent/*) and the Parquet query service
             // (/iiq_parquet/*, /native_parquet/*) are mounted as separate path contexts on the SAME port.
@@ -4242,8 +4429,10 @@ public final class Main {
             Runtime.getRuntime().addShutdownHook(new Thread(() -> httpFinal.stop(0)));
             Thread.currentThread().join(); // keep the process running while serving requests
         } catch (InterruptedException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             Thread.currentThread().interrupt();
         } catch (Exception e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Failed to start KF Agent REST service: " + e.getMessage());
             System.exit(1);
         }
@@ -4264,10 +4453,12 @@ public final class Main {
                 java.nio.file.Files.createDirectories(duckTmp);
                 System.setProperty("java.io.tmpdir", duckTmp.toString());
             } catch (Exception ignore) {
+                com.keyforge.iiq.debug.DebugLog.error(ignore);
                 // fall back to the default temp dir
             }
             return new ParquetRestServer(new RestConfig("0.0.0.0", 0), pq, restAuth); // host/port unused when co-mounted
         } catch (Throwable t) {
+            com.keyforge.iiq.debug.DebugLog.error(t);
             System.err.println("[WARN] Parquet query endpoints not mounted (" + t.getClass().getSimpleName()
                     + ": " + t.getMessage() + "). KF Agent continues; run 'start-rest' separately to serve them.");
             return null;
@@ -4290,6 +4481,7 @@ public final class Main {
         try {
             return Integer.parseInt(v.trim());
         } catch (NumberFormatException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             return def;
         }
     }
@@ -4327,12 +4519,15 @@ public final class Main {
             return res.anyFailed() ? 4 : 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -4343,7 +4538,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
 
@@ -4396,15 +4591,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -4458,12 +4657,15 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -4474,7 +4676,7 @@ public final class Main {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
             System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl()
-                    + " (user '" + iiqConfig.getUsername() + "')");
+                    + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
@@ -4513,15 +4715,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (IiqApiException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("IdentityIQ API error: " + e.getMessage());
             return 4;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -4549,16 +4755,16 @@ public final class Main {
                         + " approvals=" + (r.interactions() == null ? 0 : r.interactions().size()));
             }
             return 0;
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractAccessRequestsDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
@@ -4587,10 +4793,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     // ---- Phase 5: Audit Events (kf_audit_event) ----
@@ -4611,16 +4817,16 @@ public final class Main {
                         + " | target=" + e.target() + " | created=" + e.created() + " | id=" + e.id());
             }
             return 0;
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractAuditEventsDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
@@ -4642,10 +4848,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     // ---- Phase 4d (audit side): derived kf_event_link (audit event -> identity/account/entitlement) ----
@@ -4685,9 +4891,9 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static List<String> distinctSorted(List<String> values) {
@@ -4705,6 +4911,7 @@ public final class Main {
                 java.nio.file.Files.createDirectories(duckTmp);
                 System.setProperty("java.io.tmpdir", duckTmp.toString());
             } catch (Exception ignore) {
+                com.keyforge.iiq.debug.DebugLog.error(ignore);
                 // fall back to default temp dir
             }
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
@@ -4736,9 +4943,9 @@ public final class Main {
                 System.out.println("Written to " + repo.targetTable() + " (persist failures: " + r.persistFailures() + ")");
                 return r.persistFailures() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runDeriveRecordLineageDb() {
@@ -4770,9 +4977,9 @@ public final class Main {
                         + " (failed tables: " + r.failedTables() + ")");
                 return r.failedTables() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runDeriveEventsDb() {
@@ -4801,9 +5008,9 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runDeriveNativeEventsDb() {
@@ -4851,12 +5058,15 @@ public final class Main {
                 return 0;
             }
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -4905,12 +5115,15 @@ public final class Main {
                 return 0;
             }
         } catch (ConfigException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Configuration error: " + e.getMessage());
             return 3;
         } catch (SQLException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("PostgreSQL error: " + e.getMessage());
             return 5;
         } catch (RuntimeException e) {
+            com.keyforge.iiq.debug.DebugLog.error(e);
             System.err.println("Unexpected error: " + e.getMessage());
             return 1;
         }
@@ -4953,9 +5166,9 @@ public final class Main {
                         + " (persist failures: " + r.persistFailures() + ")");
                 return r.persistFailures() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runReconcileCanonicalViewsDb() {
@@ -4985,9 +5198,9 @@ public final class Main {
                 }
                 return conflict ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     // ---- Domain 15: TaskResult (kf_task_result — extraction-provenance ledger) ----
@@ -5007,16 +5220,16 @@ public final class Main {
                         + ", launcher=" + t.launcher() + ", completed=" + t.completed() + "]");
             }
             return 0;
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractTaskResultsDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             List<TaskResult> results = new TaskResultService(
@@ -5056,10 +5269,10 @@ public final class Main {
                 }
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     // ---- Certification campaigns: kf_certification_campaign (POST rest/certificationGroups) ----
@@ -5084,16 +5297,16 @@ public final class Main {
             System.out.println("(campaign type/phase/start-end/sign-off and the item-decision hierarchy are NOT "
                     + "exposed by this endpoint -> stored NULL / out of scope; see report)");
             return 0;
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractCertificationsDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
@@ -5114,10 +5327,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     // ---- Phase 4d (provisioning side): kf_event_link (ProvisioningTransaction -> Request / Certification) ----
@@ -5144,16 +5357,16 @@ public final class Main {
                         + " certificationName=" + t.certificationName());
             }
             return 0;
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractProvisioningTransactionsDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
@@ -5177,10 +5390,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     // ---- Provisioning items: kf_provisioning_item (GET rest/provisioningTransactions/{id} detail plan) ----
@@ -5206,16 +5419,16 @@ public final class Main {
                         + "=" + it.value() + " result=" + it.result() + " txn=" + it.parentTransactionId());
             }
             return 0;
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractProvisioningItemsDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
@@ -5234,17 +5447,17 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runDeriveProvisioningLinksDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
@@ -5280,10 +5493,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     // ---- Phase 3: Governance configuration (kf_workflow_definition, kf_violation, kf_policy) ----
@@ -5304,16 +5517,16 @@ public final class Main {
             System.out.println("(approval scheme/mode/levels/escalation/e-signature are NULL: not exposed by SCIM "
                     + "- authoritative source is the workflow XML (JDBC/plugin), deferred)");
             return 0;
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractWorkflowsDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             List<WorkflowDefinition> wfs = new WorkflowService(new IiqApiClient(iiqConfig)).getAllWorkflows();
@@ -5335,10 +5548,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractPolicyViolations() {
@@ -5358,16 +5571,16 @@ public final class Main {
                         + " identity=" + (v.identity() == null ? null : v.identity().displayName()));
             }
             return 0;
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractPolicyViolationsDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             List<PolicyViolation> vs = new ViolationService(new IiqApiClient(iiqConfig)).getAllViolations();
@@ -5384,10 +5597,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractPolicies() {
@@ -5407,16 +5620,16 @@ public final class Main {
             }
             System.out.println("(per-constraint detail is not in the list grid; deferred to the policy-editor/JDBC source)");
             return 0;
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
     }
 
     private static int runExtractPoliciesDb() {
         try {
             AppConfig iiqConfig = AppConfig.load();
             PgConfig pgConfig = PgConfig.load();
-            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + iiqConfig.getUsername() + "')");
+            System.out.println("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
             System.out.println("PostgreSQL: " + pgConfig.getJdbcUrl()
                     + " (user '" + pgConfig.getUsername() + "', schema '" + pgConfig.getSchema() + "')");
             boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
@@ -5434,10 +5647,51 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { System.err.println("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Configuration error: " + e.getMessage()); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("IdentityIQ API error: " + e.getMessage()); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("PostgreSQL error: " + e.getMessage()); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); System.err.println("Unexpected error: " + e.getMessage()); return 1; }
+    }
+
+    /** A username for a startup line: shown at debug log level only (KF_LOG_LEVEL). */
+    static String shownUser(String username) {
+        return com.keyforge.iiq.debug.DebugLog.debugEnabled() ? username : "hidden at normal log level";
+    }
+
+    /** Plain-language description of a command, for the debug START line. */
+    static String commandPurpose(String command) {
+        if (command == null) {
+            return "-";
+        }
+        switch (command) {
+            case "start-kfagent":
+                return "KF Agent REST service: answers /health and /kfagent/* by reading live from IdentityIQ"
+                        + " (logs in with IIQ_USERNAME/IIQ_PASSWORD, reads through the KeyForge IIQ plugin);"
+                        + " callers must send KFAGENT_USERNAME/KFAGENT_PASSWORD; also mounts the Parquet query API";
+            case "start-rest":
+                return "Parquet query REST service over the files in PARQUET_OUT_DIR; callers must send"
+                        + " KFAGENT_USERNAME/KFAGENT_PASSWORD";
+            default:
+                break;
+        }
+        String entity = command.replaceFirst("^(extract|derive|reconcile)-", "").replaceFirst("-db$", "")
+                .replaceFirst("^native-", "");
+        if (command.startsWith("extract-native-") && command.endsWith("-db")) {
+            return "read '" + entity + "' from IdentityIQ through the KeyForge IIQ plugin and save it to PostgreSQL";
+        }
+        if (command.startsWith("extract-") && command.endsWith("-db")) {
+            return "read '" + entity + "' from IdentityIQ (SCIM/REST) and save it to PostgreSQL";
+        }
+        if (command.startsWith("extract-") && command.contains("parquet")) {
+            return "read data from IdentityIQ and write Parquet files to PARQUET_OUT_DIR";
+        }
+        if (command.startsWith("extract-")) {
+            return "read '" + entity + "' from IdentityIQ and print it (no database)";
+        }
+        if (command.startsWith("derive-") || command.startsWith("reconcile-")) {
+            return "compute '" + entity + "' from tables already in PostgreSQL (no IdentityIQ call)";
+        }
+        return "command '" + command + "'";
     }
 
     private static void printUsage() {

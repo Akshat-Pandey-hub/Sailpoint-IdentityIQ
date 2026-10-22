@@ -37,10 +37,17 @@ public final class RunLedger {
     public static int run(String command, java.util.function.IntSupplier runner) {
         begin(command);
         int exitCode = 1;
+        com.keyforge.iiq.debug.DebugLog.log("COMMAND", "name", command, "status", "running");
         try {
             exitCode = runner.getAsInt();
             return exitCode;
+        } catch (RuntimeException | Error escaped) {
+            com.keyforge.iiq.debug.DebugLog.error(escaped, "command", command);
+            throw escaped;
         } finally {
+            com.keyforge.iiq.debug.DebugLog.log("COMMAND-END", "name", command, "exitCode", exitCode,
+                    "result", exitCode == 0 ? "SUCCESS" : "FAILED (see ERROR lines above)",
+                    "ms", com.keyforge.iiq.debug.DebugLog.elapsedMs());
             finish(exitCode);
         }
     }

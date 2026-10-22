@@ -343,6 +343,9 @@ public class IiqSessionClient extends IiqApiClient {
         if (authenticated) {
             return;
         }
+        com.keyforge.iiq.debug.DebugLog.log("IIQ-LOGIN", "step", "start", "purpose",
+                "open an IdentityIQ web session (login page + form post) used by every following call",
+                "IIQ_BASE_URL", baseUrl, "IIQ_USERNAME", username, "IIQ_PASSWORD", password);
 
         // 1. GET login.jsf: seed the JSESSIONID cookie and read the JSF ViewState token.
         URI loginUri = buildUri(LOGIN_PATH, null);
@@ -396,11 +399,17 @@ public class IiqSessionClient extends IiqApiClient {
                 && response.body() != null && response.body().contains("name=\"" + FIELD_PASSWORD + "\"");
         boolean transportOk = status >= 200 && status < 400;
         if (redirectedToLogin || stillOnLoginPage || !transportOk) {
+            com.keyforge.iiq.debug.DebugLog.log("IIQ-LOGIN", "step", "result", "result", "FAILED",
+                    "reason", !transportOk ? "IdentityIQ answered HTTP " + status
+                            : "IdentityIQ rejected the username/password (returned to the login page)",
+                    "IIQ_BASE_URL", baseUrl, "IIQ_USERNAME", username, "IIQ_PASSWORD", password);
             throw new IiqApiException("IdentityIQ login failed for user '" + username + "' (HTTP "
                     + status + (location.isEmpty() ? "" : ", redirect " + location)
                     + ") — check IIQ_USERNAME / IIQ_PASSWORD.", status);
         }
         authenticated = true;
+        com.keyforge.iiq.debug.DebugLog.log("IIQ-LOGIN", "step", "result", "result", "OK",
+                "detail", "session established and reused for later calls", "IIQ_USERNAME", username);
     }
 
     // --- helpers ------------------------------------------------------------
@@ -447,14 +456,51 @@ public class IiqSessionClient extends IiqApiClient {
     }
 
     private HttpResponse<String> send(HttpRequest request, URI uri) {
+        long t0 = System.nanoTime();
         try {
-            return httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            HttpResponse<String> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            logCall(request, uri, response, t0);
+            return response;
         } catch (java.io.IOException e) {
+            com.keyforge.iiq.debug.DebugLog.log("IIQ-CALL", "method", request.method(), "url", uri,
+                    "result", "FAILED (no answer)", "error", e.getClass().getSimpleName() + ": " + e.getMessage(),
+                    "ms", (System.nanoTime() - t0) / 1_000_000, "IIQ_BASE_URL", baseUrl);
             throw new IiqApiException("I/O error calling IdentityIQ at " + uri, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IiqApiException("Interrupted while calling IdentityIQ at " + uri, e);
         }
+    }
+
+    /** Debug IIQ-CALL line for every HTTP call to IdentityIQ, with a plain meaning of the status. */
+    private void logCall(HttpRequest request, URI uri, HttpResponse<String> response, long t0) {
+        if (!com.keyforge.iiq.debug.DebugLog.enabled()) {
+            return;
+        }
+        int status = response.statusCode();
+        String location = response.headers().firstValue("Location").orElse(null);
+        String meaning;
+        if (status >= 200 && status < 300) {
+            meaning = "OK";
+        } else if (isRedirect(status) && location != null && location.toLowerCase().contains(LOGIN_PATH)
+                && !uri.getPath().endsWith(LOGIN_PATH)) {
+            meaning = "SENT TO LOGIN PAGE - IIQ session expired or not accepted";
+        } else if (isRedirect(status)) {
+            meaning = "REDIRECT";
+        } else if (status == 401 || status == 403) {
+            meaning = "IIQ REFUSED - user lacks rights";
+        } else if (status == 404) {
+            meaning = "NOT FOUND - plugin endpoint missing or wrong path";
+        } else if (status >= 500) {
+            meaning = "IIQ SERVER ERROR - see IdentityIQ log";
+        } else {
+            meaning = "HTTP " + status;
+        }
+        com.keyforge.iiq.debug.DebugLog.log("IIQ-CALL", "method", request.method(), "url", uri, "status", status,
+                "meaning", meaning, "location", location, "session", authenticated ? "logged in" : "logging in",
+                "responseBytes", response.body() == null ? 0 : response.body().length(),
+                "ms", (System.nanoTime() - t0) / 1_000_000);
     }
 
     private URI buildUri(String path, Map<String, String> queryParams) {
