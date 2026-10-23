@@ -38,6 +38,11 @@ public final class NativePolicyRestService {
 
     private static final int INTERNAL_PAGE_SIZE = 500;
 
+    /** The plugin's per-call maximum ({@code NativePolicyResource.MAX_LIMIT}); larger windows are chunked. */
+    static final int PLUGIN_MAX_PAGE = 1000;
+
+    private final NativePolicyParser parser = new NativePolicyParser();
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     /** Scalar response field name -> value extractor. The {@code descriptions} jsonb field is NOT filterable. */
@@ -62,22 +67,23 @@ public final class NativePolicyRestService {
             }
         }
 
-        List<NativePolicyRecord> all = collectAll(source);
+        boolean filtered = filters != null && !filters.isEmpty();
+        boolean windowed = limit != null && limit >= 0;
+        int first = (start == null || start < 0) ? 0 : start;
 
-        List<NativePolicyRecord> matched = new ArrayList<>();
-        for (NativePolicyRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
+        List<NativePolicyRecord> rows;
+        if (filtered || windowed || first > 0) {
+            KfAgentPagedReader<NativePolicyRecord> reader = new KfAgentPagedReader<>(
+                    source::fetchPage, parser::parse, PLUGIN_MAX_PAGE, INTERNAL_PAGE_SIZE);
+            // start without limit reads from the offset to the end; the skipped rows are never fetched.
+            rows = filtered
+                    ? reader.filtered(r -> matches(r, filters), first, windowed ? limit : null)
+                    : reader.window(first, windowed ? limit : Integer.MAX_VALUE);
+        } else {
+            rows = collectAll(source); // no filters, no start, no limit: the full snapshot
         }
-
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativePolicyRecord r : matched.subList(from, to)) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (NativePolicyRecord r : rows) {
             out.add(toJson(r));
         }
         return out;

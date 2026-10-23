@@ -50,9 +50,13 @@ class NativePolicyRestServiceTest {
     }
 
     private static NativePolicyPageSource source() {
-        return (start, limit) -> start == 0
-                ? "{\"rows\":[" + sod() + "," + entitlementSod() + "]}"
-                : "{\"rows\":[]}";
+        // honours start/limit like the plugin (firstRow/resultLimit over a fixed order)
+        List<String> rows = List.of(sod(), entitlementSod());
+        return (start, limit) -> {
+            int from = Math.min(Math.max(0, start), rows.size());
+            int to = Math.min(rows.size(), from + (limit <= 0 ? 100 : limit));
+            return "{\"limit\":" + limit + ",\"rows\":[" + String.join(",", rows.subList(from, to)) + "]}";
+        };
     }
 
     private static NativePolicyPageSource emptySource() {

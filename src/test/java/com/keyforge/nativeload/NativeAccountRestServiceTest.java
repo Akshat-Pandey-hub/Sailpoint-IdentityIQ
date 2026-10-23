@@ -51,9 +51,14 @@ class NativeAccountRestServiceTest {
     }
 
     private static NativeLinkPageSource source() {
-        String envelope = "{\"entity\":\"Link\",\"rows\":[" + evans() + "," + bailey() + "]}";
-        String empty = "{\"entity\":\"Link\",\"rows\":[]}";
-        return (start, limit) -> start == 0 ? envelope : empty;
+        // honours start/limit like the plugin (firstRow/resultLimit over a fixed order)
+        List<String> rows = List.of(evans(), bailey());
+        return (start, limit) -> {
+            int from = Math.min(Math.max(0, start), rows.size());
+            int to = Math.min(rows.size(), from + (limit <= 0 ? 100 : limit));
+            return "{\"entity\":\"Link\",\"limit\":" + limit + ",\"rows\":["
+                    + String.join(",", rows.subList(from, to)) + "]}";
+        };
     }
 
     private static Map<String, String> f(String... kv) {

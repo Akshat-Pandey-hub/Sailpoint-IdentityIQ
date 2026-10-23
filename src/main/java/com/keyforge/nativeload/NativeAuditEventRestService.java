@@ -34,6 +34,11 @@ public final class NativeAuditEventRestService {
 
     private static final int INTERNAL_PAGE_SIZE = 500;
 
+    /** The plugin's per-call maximum ({@code NativeAuditEventResource.MAX_LIMIT}); larger windows are chunked. */
+    static final int PLUGIN_MAX_PAGE = 1000;
+
+    private final NativeAuditEventParser parser = new NativeAuditEventParser();
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     /** Scalar response field name -> value extractor. The {@code attributes} jsonb field is NOT filterable. */
@@ -58,22 +63,25 @@ public final class NativeAuditEventRestService {
             }
         }
 
-        List<NativeAuditEventRecord> all = collectAll(source);
+        boolean filtered = filters != null && !filters.isEmpty();
+        boolean windowed = limit != null && limit >= 0;
+        int first = (start == null || start < 0) ? 0 : start;
 
-        List<NativeAuditEventRecord> matched = new ArrayList<>();
-        for (NativeAuditEventRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
+        List<NativeAuditEventRecord> rows;
+        if (filtered || windowed || first > 0) {
+            SourceCountGuard guard = new SourceCountGuard("AuditEvent", parser::sourceCount);
+            KfAgentPagedReader<NativeAuditEventRecord> reader = new KfAgentPagedReader<>(
+                    (s, l) -> guard.check(source.fetchPage(s, l)), parser::parse, PLUGIN_MAX_PAGE,
+                    INTERNAL_PAGE_SIZE);
+            // start without limit reads from the offset to the end; the skipped rows are never fetched.
+            rows = filtered
+                    ? reader.filtered(r -> matches(r, filters), first, windowed ? limit : null)
+                    : reader.window(first, windowed ? limit : Integer.MAX_VALUE);
+        } else {
+            rows = collectAll(source); // no filters, no start, no limit: the full snapshot
         }
-
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativeAuditEventRecord r : matched.subList(from, to)) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (NativeAuditEventRecord r : rows) {
             out.add(toJson(r));
         }
         return out;

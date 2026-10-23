@@ -46,10 +46,114 @@ class NativeIdentityRestServiceTest {
                 + "\"capabilities\":[],\"attributes\":{\"lastname\":\"Evans\"},\"score\":\"257\"}";
     }
 
+    /** Fake source that honours start/limit like the plugin (firstRow/resultLimit over a fixed order). */
     private static NativeIdentityPageSource source() {
-        String envelope = "{\"entity\":\"Identity\",\"rows\":[" + spadmin() + "," + evans() + "]}";
-        String empty = "{\"entity\":\"Identity\",\"rows\":[]}";
-        return (start, limit) -> start == 0 ? envelope : empty;
+        List<String> rows = List.of(spadmin(), evans());
+        return (start, limit) -> {
+            int from = Math.min(Math.max(0, start), rows.size());
+            int to = Math.min(rows.size(), from + (limit <= 0 ? 100 : limit));
+            return "{\"entity\":\"Identity\",\"limit\":" + limit + ",\"rows\":["
+                    + String.join(",", rows.subList(from, to)) + "]}";
+        };
+    }
+
+    /** Plugin-like fake over {@code size} identities "id00000".., recording every (start, limit) call. */
+    private static final class RecordingSource implements NativeIdentityPageSource {
+        final int size;
+        final List<int[]> calls = new java.util.ArrayList<>();
+
+        RecordingSource(int size) {
+            this.size = size;
+        }
+
+        @Override
+        public String fetchPage(int start, int limit) {
+            calls.add(new int[]{start, limit});
+            int effective = limit <= 0 ? 100 : Math.min(limit, 1000);
+            StringBuilder rows = new StringBuilder();
+            for (int i = start; i < Math.min(size, start + effective); i++) {
+                if (rows.length() > 0) {
+                    rows.append(',');
+                }
+                rows.append("{\"sourceId\":\"").append(id(i)).append("\",\"name\":\"user").append(i)
+                        .append("\",\"inactive\":").append(i % 2 == 0).append('}');
+            }
+            return "{\"entity\":\"Identity\",\"limit\":" + effective + ",\"rows\":[" + rows + "]}";
+        }
+
+        int rowsRead() {
+            int n = 0;
+            for (int[] c : calls) {
+                n += Math.max(0, Math.min(size, c[0] + Math.min(c[1], 1000)) - c[0]);
+            }
+            return n;
+        }
+
+        static String id(int i) {
+            return String.format("id%05d", i);
+        }
+    }
+
+    private static List<Object> ids(List<Map<String, Object>> rows) {
+        List<Object> out = new java.util.ArrayList<>();
+        rows.forEach(r -> out.add(r.get("source_id")));
+        return out;
+    }
+
+    @Test
+    void limitReadsOnlyThatWindowFromThePlugin() {
+        RecordingSource plugin = new RecordingSource(10_000);
+        List<Map<String, Object>> rows = svc.fetch(plugin, null, null, 10);
+
+        assertEquals(10, rows.size());
+        assertEquals(RecordingSource.id(0), rows.get(0).get("source_id"));
+        assertEquals(1, plugin.calls.size(), "one plugin call, not a scan of 10,000");
+        assertEquals(0, plugin.calls.get(0)[0]);
+        assertEquals(10, plugin.calls.get(0)[1]);
+    }
+
+    @Test
+    void startAndLimitArePassedToThePlugin() {
+        RecordingSource plugin = new RecordingSource(10_000);
+        List<Map<String, Object>> rows = svc.fetch(plugin, null, 1, 2);
+
+        assertEquals(List.of(RecordingSource.id(1), RecordingSource.id(2)), ids(rows));
+        assertEquals(1, plugin.calls.size());
+        assertEquals(1, plugin.calls.get(0)[0], "plugin start=1");
+        assertEquals(2, plugin.calls.get(0)[1], "plugin limit=2");
+    }
+
+    @Test
+    void startWithoutLimitNeverReadsTheSkippedRows() {
+        RecordingSource plugin = new RecordingSource(2_500);
+        List<Map<String, Object>> rows = svc.fetch(plugin, null, 2_000, null);
+
+        assertEquals(500, rows.size());
+        assertEquals(RecordingSource.id(2_000), rows.get(0).get("source_id"));
+        assertEquals(2_000, plugin.calls.get(0)[0], "first plugin call starts at the offset");
+        assertEquals(500, plugin.rowsRead());
+    }
+
+    @Test
+    void filteredRequestStopsOnceTheWindowIsFilled() {
+        RecordingSource plugin = new RecordingSource(10_000);
+        List<Map<String, Object>> rows = svc.fetch(plugin, f("name", "user1234"), null, 1);
+
+        assertEquals(List.of(RecordingSource.id(1_234)), ids(rows));
+        assertEquals(3, plugin.calls.size(), "pages 0, 500, 1000 only");
+        assertTrue(plugin.rowsRead() < 10_000);
+
+        RecordingSource paged = new RecordingSource(3_000);
+        List<Map<String, Object>> inactive = svc.fetch(paged, f("inactive", "true"), 2, 3);
+        assertEquals(List.of(RecordingSource.id(4), RecordingSource.id(6), RecordingSource.id(8)), ids(inactive),
+                "filter first, then start/limit over the matches");
+    }
+
+    @Test
+    void noParametersStillReturnsEveryIdentity() {
+        RecordingSource plugin = new RecordingSource(1_234);
+        assertEquals(1_234, svc.fetch(plugin, null, null, null).size());
+        assertEquals(1_234, plugin.rowsRead());
     }
 
     private static Map<String, String> f(String... kv) {

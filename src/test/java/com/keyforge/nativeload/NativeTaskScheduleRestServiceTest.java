@@ -56,7 +56,13 @@ class NativeTaskScheduleRestServiceTest {
     }
 
     private static NativeTaskSchedulePageSource source() {
-        return (start, limit) -> start == 0 ? "{\"rows\":[" + expired() + "," + sunset() + "]}" : "{\"rows\":[]}";
+        // honours start/limit like the plugin (firstRow/resultLimit over a fixed order)
+        List<String> rows = List.of(expired(), sunset());
+        return (start, limit) -> {
+            int from = Math.min(Math.max(0, start), rows.size());
+            int to = Math.min(rows.size(), from + (limit <= 0 ? 100 : limit));
+            return "{\"limit\":" + limit + ",\"rows\":[" + String.join(",", rows.subList(from, to)) + "]}";
+        };
     }
 
     private static NativeTaskSchedulePageSource emptySource() {
