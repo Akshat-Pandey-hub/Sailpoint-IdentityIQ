@@ -66,22 +66,19 @@ public final class NativeWorkgroupMemberRestService {
             }
         }
 
-        List<NativeWorkgroupMembershipRecord> all = collectAll(source);
+        List<NativeWorkgroupMembershipRecord> rows = KfAgentExpandedPagedReader.isFullSnapshot(filters, start, limit)
+                ? collectAll(source)
+                : new KfAgentExpandedPagedReader<NativeWorkgroupMembershipRecord>(source::fetchPage,
+                        (json, offset, requested) -> {
+                            NativeWorkgroupMembershipPage page = parser.parse(json);
+                            return new KfAgentExpandedPagedReader.Page<>(page.rows, page.nextStart, page.done);
+                        }, INTERNAL_PAGE_SIZE)
+                        // the plugin pages IDENTITIES; start/limit count membership rows, so read from the first
+                        // identity and skip rows (an identity offset would land on the wrong membership row)
+                        .read(r -> matches(r, filters), start, limit);
 
-        List<NativeWorkgroupMembershipRecord> matched = new ArrayList<>();
-        for (NativeWorkgroupMembershipRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
-        }
-
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativeWorkgroupMembershipRecord r : matched.subList(from, to)) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (NativeWorkgroupMembershipRecord r : rows) {
             out.add(toJson(r));
         }
         return out;

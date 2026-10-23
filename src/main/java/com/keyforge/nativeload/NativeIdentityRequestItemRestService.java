@@ -33,6 +33,7 @@ import java.util.function.Function;
 public final class NativeIdentityRequestItemRestService {
 
     private static final int INTERNAL_PAGE_SIZE = 500;
+    private final NativeIdentityRequestParser parser = new NativeIdentityRequestParser();
 
     /** Response field name -> value extractor (all scalar, all filterable). */
     private static final Map<String, Function<NativeIdentityRequestItemRecord, String>> SCALARS = buildScalars();
@@ -56,22 +57,19 @@ public final class NativeIdentityRequestItemRestService {
             }
         }
 
-        List<NativeIdentityRequestItemRecord> all = collectAll(source);
+        List<NativeIdentityRequestItemRecord> rows = KfAgentExpandedPagedReader.isFullSnapshot(filters, start, limit)
+                ? collectAll(source)
+                : new KfAgentExpandedPagedReader<NativeIdentityRequestItemRecord>(source::fetchPage,
+                        (json, offset, requested) -> {
+                            List<NativeIdentityRequestRecord> requests = parser.parse(json);
+                            List<NativeIdentityRequestItemRecord> items = new ArrayList<>();
+                            for (NativeIdentityRequestRecord request : requests) items.addAll(request.items);
+                            return new KfAgentExpandedPagedReader.Page<>(items, offset + requests.size(),
+                                    requests.size() < requested, parser.sourceCount(json));
+                        }, INTERNAL_PAGE_SIZE).read(r -> matches(r, filters), start, limit);
 
-        List<NativeIdentityRequestItemRecord> matched = new ArrayList<>();
-        for (NativeIdentityRequestItemRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
-        }
-
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativeIdentityRequestItemRecord r : matched.subList(from, to)) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (NativeIdentityRequestItemRecord r : rows) {
             out.add(toJson(r));
         }
         return out;

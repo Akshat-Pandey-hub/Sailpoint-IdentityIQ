@@ -38,6 +38,7 @@ public final class NativeProvisioningItemRestService {
     private static final int INTERNAL_PAGE_SIZE = 500;
 
     private final ObjectMapper mapper = new ObjectMapper();
+    private final NativeProvisioningTxnParser parser = new NativeProvisioningTxnParser();
 
     /** Scalar response field name -> value extractor. The {@code value_json} jsonb field is NOT filterable. */
     private static final Map<String, Function<NativeProvisioningItemRecord, String>> SCALARS = buildScalars();
@@ -61,22 +62,19 @@ public final class NativeProvisioningItemRestService {
             }
         }
 
-        List<NativeProvisioningItemRecord> all = collectAll(source);
+        List<NativeProvisioningItemRecord> rows = KfAgentExpandedPagedReader.isFullSnapshot(filters, start, limit)
+                ? collectAll(source)
+                : new KfAgentExpandedPagedReader<NativeProvisioningItemRecord>(source::fetchPage,
+                        (json, offset, requested) -> {
+                            List<NativeProvisioningTxnRecord> txns = parser.parse(json);
+                            List<NativeProvisioningItemRecord> items = new ArrayList<>();
+                            for (NativeProvisioningTxnRecord txn : txns) items.addAll(txn.items);
+                            return new KfAgentExpandedPagedReader.Page<>(items, offset + txns.size(),
+                                    txns.size() < requested, parser.sourceCount(json));
+                        }, INTERNAL_PAGE_SIZE).read(r -> matches(r, filters), start, limit);
 
-        List<NativeProvisioningItemRecord> matched = new ArrayList<>();
-        for (NativeProvisioningItemRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
-        }
-
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativeProvisioningItemRecord r : matched.subList(from, to)) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (NativeProvisioningItemRecord r : rows) {
             out.add(toJson(r));
         }
         return out;

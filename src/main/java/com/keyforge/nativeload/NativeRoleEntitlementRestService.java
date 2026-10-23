@@ -11,6 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 
 /**
@@ -60,22 +61,24 @@ public final class NativeRoleEntitlementRestService {
             }
         }
 
-        List<NativeRoleRelationshipRecord> all = collectAll(source);
-
-        List<NativeRoleRelationshipRecord> matched = new ArrayList<>();
-        for (NativeRoleRelationshipRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
+        List<NativeRoleRelationshipRecord> rows;
+        if (KfAgentExpandedPagedReader.isFullSnapshot(filters, start, limit)) {
+            rows = collectAll(source);
+        } else {
+            String runId = UUID.randomUUID().toString();
+            NativeRoleRelationshipParser parser = new NativeRoleRelationshipParser();
+            rows = new KfAgentExpandedPagedReader<NativeRoleRelationshipRecord>(
+                    (offset, pageSize) -> source.fetchPage(offset, pageSize, runId),
+                    (json, offset, requested) -> {
+                        NativeRoleRelationshipPage page = parser.parse(json);
+                        if (!runId.equals(page.runId)) throw new NativeImportException("Role relationship page run ID mismatch");
+                        return new KfAgentExpandedPagedReader.Page<>(page.entitlements,
+                                offset + page.returnedBundles, page.returnedBundles < requested, page.sourceCount);
+                    }, INTERNAL_PAGE_SIZE).read(r -> matches(r, filters), start, limit);
         }
 
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativeRoleRelationshipRecord r : matched.subList(from, to)) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (NativeRoleRelationshipRecord r : rows) {
             out.add(toJson(r));
         }
         return out;

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -152,6 +153,20 @@ class NativeAccountEntitlementRestServiceTest {
         assertEquals(1, svc.fetch(source(), f("permission_aggregation_source", "aggregation"), null, null).size());
         assertEquals(1, svc.fetch(source(), f("attribute_name", "groups"), null, null).size());
         assertEquals(2, svc.fetch(source(), f("application_name", "UnixApp"), null, null).size());
+    }
+
+    @Test
+    void boundedOutputWindowReadsOneLinkPageAtTheSource() {
+        List<String> calls = new ArrayList<>();
+        NativeAccountEntitlementPageSource recording = (start, limit) -> {
+            calls.add(start + ":" + limit);
+            return "{\"sourceCount\":3,\"returnedLinks\":1,\"rows\":[" + attributeEdge() + "]}";
+        };
+
+        List<Map<String, Object>> result = svc.fetch(recording, null, null, 1);
+
+        assertEquals(List.of("0:500"), calls, "one full link page (a link can expand to zero edges), not a scan");
+        assertEquals(1, result.size());
     }
 
     @Test

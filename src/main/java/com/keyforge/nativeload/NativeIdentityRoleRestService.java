@@ -37,6 +37,7 @@ public final class NativeIdentityRoleRestService {
     private static final int INTERNAL_PAGE_SIZE = 500;
 
     private final ObjectMapper mapper = new ObjectMapper();
+    private final NativeIdentityRoleParser parser = new NativeIdentityRoleParser();
 
     /** Scalar response field name -> value extractor. The {@code targets} jsonb field is NOT filterable. */
     private static final Map<String, Function<NativeIdentityRoleRecord, String>> SCALARS = buildScalars();
@@ -60,22 +61,21 @@ public final class NativeIdentityRoleRestService {
             }
         }
 
-        List<NativeIdentityRoleRecord> all = collectAll(source);
+        List<NativeIdentityRoleRecord> rows = KfAgentExpandedPagedReader.isFullSnapshot(filters, start, limit)
+                ? collectAll(source)
+                : new KfAgentExpandedPagedReader<NativeIdentityRoleRecord>(source::fetchPage,
+                        (json, offset, requested) -> {
+                            int returned = parser.returnedIdentities(json);
+                            List<NativeIdentityRoleRecord> page = parser.parse(json);
+                            return new KfAgentExpandedPagedReader.Page<>(page,
+                                    offset + (returned < 0 ? requested : returned),
+                                    returned < 0 ? page.isEmpty() : returned < requested,
+                                    parser.sourceCount(json));
+                        }, INTERNAL_PAGE_SIZE)
+                        .read(r -> matches(r, filters), start, limit);
 
-        List<NativeIdentityRoleRecord> matched = new ArrayList<>();
-        for (NativeIdentityRoleRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
-        }
-
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativeIdentityRoleRecord r : matched.subList(from, to)) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (NativeIdentityRoleRecord r : rows) {
             out.add(toJson(r));
         }
         return out;

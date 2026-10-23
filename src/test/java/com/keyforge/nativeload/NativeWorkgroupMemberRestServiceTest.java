@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -160,6 +161,31 @@ class NativeWorkgroupMemberRestServiceTest {
         // filter first, then window
         assertEquals(2, svc.fetch(source(), f("workgroup_id", "wg-1"), null, null).size());
         assertEquals(1, svc.fetch(source(), f("workgroup_id", "wg-1"), 1, 5).size());
+    }
+
+    @Test
+    void startCountsMembershipRowsNotIdentities() {
+        // The plugin pages IDENTITIES; identity 0 belongs to two workgroups, so membership row 1 is its 2nd workgroup.
+        List<String> calls = new ArrayList<>();
+        NativeWorkgroupMemberRestService.PageSource recording = (start, limit) -> {
+            calls.add(start + ":" + limit);
+            return start == 0
+                    ? "{\"rows\":[" + member("wg-1", "Security Admins", "id-1", "Alexander Evans", "Alexander", "Evans", false)
+                        + "," + member("wg-2", "Auditors", "id-1", "Alexander Evans", "Alexander", "Evans", false)
+                        + "," + member("wg-1", "Security Admins", "id-2", "Alexander Cook", "Alexander", "Cook", false)
+                        + "],\"nextStart\":2,\"done\":true}"
+                    : "{\"rows\":[],\"nextStart\":" + start + ",\"done\":true}";
+        };
+
+        for (Map<String, String> noFilters : java.util.Arrays.asList(null, new java.util.LinkedHashMap<String, String>())) {
+            calls.clear();
+            List<Map<String, Object>> result = svc.fetch(recording, noFilters, 1, 1);
+
+            assertEquals(1, result.size());
+            assertEquals("id-1", result.get(0).get("identity_id"), "2nd membership row, not the 2nd identity");
+            assertEquals("wg-2", result.get(0).get("workgroup_id"));
+            assertEquals(List.of("0:500"), calls, "reads from the first identity in one full page");
+        }
     }
 
     @Test

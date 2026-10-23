@@ -38,6 +38,7 @@ import java.util.function.Function;
 public final class NativeIdentityRequestApprovalRestService {
 
     private static final int INTERNAL_PAGE_SIZE = 500;
+    private final NativeIdentityRequestParser parser = new NativeIdentityRequestParser();
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -63,22 +64,19 @@ public final class NativeIdentityRequestApprovalRestService {
             }
         }
 
-        List<NativeIdentityRequestApprovalRecord> all = collectAll(source);
+        List<NativeIdentityRequestApprovalRecord> rows = KfAgentExpandedPagedReader.isFullSnapshot(filters, start, limit)
+                ? collectAll(source)
+                : new KfAgentExpandedPagedReader<NativeIdentityRequestApprovalRecord>(source::fetchPage,
+                        (json, offset, requested) -> {
+                            List<NativeIdentityRequestRecord> requests = parser.parse(json);
+                            List<NativeIdentityRequestApprovalRecord> approvals = new ArrayList<>();
+                            for (NativeIdentityRequestRecord request : requests) approvals.addAll(request.approvals);
+                            return new KfAgentExpandedPagedReader.Page<>(approvals, offset + requests.size(),
+                                    requests.size() < requested, parser.sourceCount(json));
+                        }, INTERNAL_PAGE_SIZE).read(r -> matches(r, filters), start, limit);
 
-        List<NativeIdentityRequestApprovalRecord> matched = new ArrayList<>();
-        for (NativeIdentityRequestApprovalRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
-        }
-
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativeIdentityRequestApprovalRecord r : matched.subList(from, to)) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (NativeIdentityRequestApprovalRecord r : rows) {
             out.add(toJson(r));
         }
         return out;
