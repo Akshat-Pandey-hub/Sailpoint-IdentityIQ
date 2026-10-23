@@ -47,6 +47,8 @@ import java.util.concurrent.Executors;
  */
 public final class ParquetRestServer {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(ParquetRestServer.class);
+
     public static final String PREFIX = "/iiq_parquet";
     public static final String NATIVE_PREFIX = "/native_parquet";
 
@@ -107,12 +109,12 @@ public final class ParquetRestServer {
         registerInto(server, true);
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.start();
-        System.out.println(auth.describe());
-        System.out.println("REST query service listening on http://" + restConfig.host() + ":" + restConfig.port());
-        System.out.println("Parquet output dir: " + parquetConfig.outputDir().toAbsolutePath());
-        System.out.println("REST/SCIM datasets:  " + rest.catalog.datasets());
-        System.out.println("Native datasets:     " + nativeEndpoint.catalog.datasets());
-        System.out.println("Endpoints: GET /health"
+        LOG.info(auth.describe());
+        LOG.info("REST query service listening on http://" + restConfig.host() + ":" + restConfig.port());
+        LOG.info("Parquet output dir: " + parquetConfig.outputDir().toAbsolutePath());
+        LOG.info("REST/SCIM datasets:  " + rest.catalog.datasets());
+        LOG.info("Native datasets:     " + nativeEndpoint.catalog.datasets());
+        LOG.info("Endpoints: GET /health"
                 + " | GET " + PREFIX + "/datasets | GET " + PREFIX + "/{dataset}[/schema]"
                 + " | GET " + NATIVE_PREFIX + "/datasets | GET " + NATIVE_PREFIX + "/{dataset}[/schema]");
     }
@@ -201,7 +203,7 @@ public final class ParquetRestServer {
             } catch (ApiException e) {
                 Http.sendError(json, ex, e);
             } catch (Exception e) {
-                System.err.println("[rest] unexpected error: " + e);
+                LOG.error("[rest] unexpected error", e);
                 Http.sendError(json, ex, new ApiException(500, "Internal Server Error", "Unexpected server error"));
             }
         }

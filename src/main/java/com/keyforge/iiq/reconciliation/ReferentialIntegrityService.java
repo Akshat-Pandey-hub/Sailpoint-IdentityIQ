@@ -18,6 +18,8 @@ import java.util.List;
  */
 public final class ReferentialIntegrityService {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(ReferentialIntegrityService.class);
+
     private final ReconciliationRepository repo;
 
     public ReferentialIntegrityService() {
@@ -74,7 +76,7 @@ public final class ReferentialIntegrityService {
                 repo.upsert(conn, runId, finding, now);
             } catch (SQLException e) {
                 result.persistFailures++;
-                System.err.println("[reconcile] failed to persist finding '" + c.name() + "': " + e.getMessage());
+                LOG.warn("[reconcile] failed to persist finding '" + c.name() + "': " + e.getMessage());
             }
         }
         return result;

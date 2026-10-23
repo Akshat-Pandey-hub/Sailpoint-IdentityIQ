@@ -55,11 +55,11 @@ class DebugLogTest {
         Object[] kv = {"scheme", "Basic", "sentUser", "client-a", "sentPassword", "pw-a", "expectedUser", "client-b",
                 "expectedPassword", "pw-b", "result", "DENY 401", "reason", "WRONG_USERNAME"};
         String debug = DebugLog.render(DebugLog.Level.DEBUG, "AUTH", kv);
-        assertTrue(debug.startsWith("[DEBUG]") && debug.contains("sentUser=client-a")
+        assertTrue(debug.contains("AUTH") && debug.contains("sentUser=client-a")
                 && debug.contains("expectedPassword=pw-b"), debug);
 
         String normal = DebugLog.render(DebugLog.Level.NORMAL, "AUTH", kv);
-        assertTrue(normal.startsWith("[INFO]") && normal.contains("result=DENY 401")
+        assertTrue(normal.contains("AUTH") && normal.contains("result=DENY 401")
                 && normal.contains("reason=WRONG_USERNAME"), normal);
         assertFalse(normal.contains("client-a") || normal.contains("pw-a") || normal.contains("pw-b"), normal);
     }

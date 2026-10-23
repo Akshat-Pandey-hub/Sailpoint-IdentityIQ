@@ -6,8 +6,6 @@ import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.net.http.HttpTimeoutException;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
@@ -28,8 +26,9 @@ import java.util.UUID;
  * The IdentityIQ password ({@code IIQ_PASSWORD}) is never printed at any level. Legacy {@code KF_DEBUG=false}
  * (when {@code KF_LOG_LEVEL} is not set) means {@code off}.
  *
- * <p>Line format: {@code [DEBUG|INFO] <time> [<request/command id>] <STEP> | key=value | key=value}. Output goes to
- * standard output (on a server: {@code journalctl -u <service>}).
+ * <p>Message format: {@code [<request/command id>] <STEP> | key=value | key=value}, written through SLF4J (logger
+ * {@code com.keyforge.audit}); time, level, thread and destination (console + rolling file) come from
+ * {@code log4j2.properties}.
  */
 public final class DebugLog {
 
@@ -41,7 +40,6 @@ public final class DebugLog {
 
     static final String HIDDEN = "****** (hidden)";
 
-    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     private static final ThreadLocal<String> CONTEXT = new ThreadLocal<>();
     private static final ThreadLocal<Long> STARTED = new ThreadLocal<>();
 
@@ -132,33 +130,58 @@ public final class DebugLog {
 
     // --- writing -----------------------------------------------------------
 
-    /** One line: {@code step} then alternating key, value pairs. Filtered and masked for the configured level. */
+    /**
+     * One line: {@code step} then alternating key, value pairs. Filtered and masked for the configured level, then
+     * written through SLF4J (logger {@value #LOGGER_NAME}): ERROR steps at error, debug-only steps at debug, the
+     * rest at info. Time, level and thread come from the log4j2 pattern.
+     */
     public static void log(String step, Object... keyValues) {
         String line = render(level(), step, keyValues);
-        if (line != null) {
-            System.out.println(line);
+        if (line == null) {
+            return;
+        }
+        if (step.startsWith("ERROR")) {
+            Audit.LOG.error(line);
+        } else if (isDebugOnly(step, keyValues)) {
+            Audit.LOG.debug(line);
+        } else {
+            Audit.LOG.info(line);
         }
     }
 
+    /** SLF4J logger name for these lines (configurable on its own in log4j2.properties). */
+    public static final String LOGGER_NAME = "com.keyforge.audit";
+
     /**
-     * The line for this level, or null when the level does not print it. IIQ_PASSWORD is always masked; in normal,
-     * debug-only lines are dropped and usernames/passwords/sent credentials are left out.
+     * Holds the logger so it is created on first use, not when this class loads: {@link LoggingSetup} reads the
+     * level through this class BEFORE logging may start (otherwise Log4j2 would initialize without kf.log.level /
+     * kf.log.dir).
+     */
+    private static final class Audit {
+        static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(LOGGER_NAME);
+    }
+
+    private static boolean isDebugOnly(String step, Object... keyValues) {
+        return DEBUG_ONLY_STEPS.contains(step)
+                || ("IIQ-LOGIN".equals(step) && keyValues.length > 1 && "start".equals(keyValues[1]));
+    }
+
+    /**
+     * The message for this level ({@code [context] STEP | key=value | ...}), or null when the level does not print
+     * it. IIQ_PASSWORD is always masked; in normal, debug-only lines are dropped and usernames/passwords/sent
+     * credentials are left out.
      */
     static String render(Level level, String step, Object... keyValues) {
         if (level == Level.OFF) {
             return null;
         }
         boolean debug = level == Level.DEBUG;
-        if (!debug && DEBUG_ONLY_STEPS.contains(step)) {
-            return null;
-        }
-        if (!debug && "IIQ-LOGIN".equals(step) && keyValues.length > 1 && "start".equals(keyValues[1])) {
+        if (!debug && isDebugOnly(step, keyValues)) {
             return null;
         }
         StringBuilder sb = new StringBuilder(256);
-        sb.append(debug ? "[DEBUG] " : "[INFO] ").append(LocalDateTime.now().format(TIME));
         String ctx = CONTEXT.get();
-        sb.append(" [").append(ctx == null ? "-" : ctx).append("] ");
+        sb.append('[').append(ctx == null ? "-" : ctx).append("] ");
         sb.append(String.format("%-14s", step));
         for (int i = 0; i + 1 < keyValues.length; i += 2) {
             String key = String.valueOf(keyValues[i]);

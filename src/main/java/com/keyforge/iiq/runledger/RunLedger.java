@@ -25,6 +25,8 @@ import java.util.UUID;
  */
 public final class RunLedger {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(RunLedger.class);
+
     private static final ThreadLocal<RunContext> CURRENT = new ThreadLocal<>();
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -66,7 +68,7 @@ public final class RunLedger {
             ExtractionRun run = buildRun(ctx, exitCode, Instant.now());
             persist(run, ctx.command());
         } catch (RuntimeException unexpected) {
-            System.err.println("[run-ledger] failed to build/record run for '" + ctx.command()
+            LOG.warn("[run-ledger] failed to build/record run for '" + ctx.command()
                     + "': " + unexpected.getMessage());
         } finally {
             CURRENT.remove();
@@ -143,7 +145,7 @@ public final class RunLedger {
             }
         } catch (Exception e) {
             // Best-effort: never mask the command's own exit code (e.g. PG unreachable on a failed run).
-            System.err.println("[run-ledger] could not record extraction run " + run.extractionRunId()
+            LOG.warn("[run-ledger] could not record extraction run " + run.extractionRunId()
                     + " (" + command + "): " + e.getMessage());
         }
     }

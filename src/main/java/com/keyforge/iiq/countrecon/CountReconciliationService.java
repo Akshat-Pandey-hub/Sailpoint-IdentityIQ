@@ -14,6 +14,8 @@ import java.util.List;
  */
 public final class CountReconciliationService {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(CountReconciliationService.class);
+
     private final CountReconciliationRepository repo;
 
     public CountReconciliationService(CountReconciliationRepository repo) {
@@ -61,7 +63,7 @@ public final class CountReconciliationService {
                 repo.upsert(conn, runId, pair, pg, pq, status, now);
             } catch (SQLException e) {
                 result.persistFailures++;
-                System.err.println("[count-reconcile] failed to persist '" + pair.domain() + "': " + e.getMessage());
+                LOG.warn("[count-reconcile] failed to persist '" + pair.domain() + "': " + e.getMessage());
             }
         }
         return result;

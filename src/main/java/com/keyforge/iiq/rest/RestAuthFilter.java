@@ -28,6 +28,8 @@ import java.util.Base64;
  */
 public final class RestAuthFilter extends Filter {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(RestAuthFilter.class);
+
     static final String REALM = "KF Agent REST";
 
     /** Setting holding the client ID that REST callers send as the Basic-auth username. */
@@ -115,7 +117,7 @@ public final class RestAuthFilter extends Filter {
             String denied = denyReason(header);
             logAuth(header, denied);
             if (denied != null) {
-                System.err.println("[auth] 401 " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
+                LOG.warn("[auth] 401 " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
                         + " from " + from + " (" + denied + ")");
                 ex.getResponseHeaders().set("WWW-Authenticate", "Basic realm=\"" + REALM + "\", charset=\"UTF-8\"");
                 send(ex, 401, UNAUTHORIZED);
@@ -123,9 +125,7 @@ public final class RestAuthFilter extends Filter {
             }
             chain.doFilter(ex);
         } catch (Throwable t) {
-            System.err.println("[rest] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
-                    + " failed: " + t);
-            t.printStackTrace();
+            LOG.error("[rest] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath() + " failed", t);
             DebugLog.error(t, "path", ex.getRequestURI().getPath());
             if (ex.getResponseCode() == -1) { // nothing sent yet: answer this caller, keep the server serving
                 try {
@@ -143,7 +143,7 @@ public final class RestAuthFilter extends Filter {
     }
 
     /** Debug line: what the caller sent, what the service expects, and the decision with its reason. */
-    private void logAuth(String header, String denied) {
+    void logAuth(String header, String denied) {
         if (!DebugLog.enabled()) {
             return;
         }

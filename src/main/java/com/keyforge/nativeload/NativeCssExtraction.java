@@ -49,6 +49,8 @@ import java.time.OffsetDateTime;
  */
 public final class NativeCssExtraction {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(NativeCssExtraction.class);
+
     /** The entity-specific source query + persistence the engine drives. */
     @FunctionalInterface
     public interface Loader {
@@ -78,7 +80,7 @@ public final class NativeCssExtraction {
         boolean incremental = mode.isIncremental();
         String boundIso = incremental ? computeBoundIso(conn, schema, table, mode) : null;
         if (!incremental) {
-            System.out.println("Full mode [native:" + table + "]: full scan (watermark not applied; "
+            LOG.info("Full mode [native:" + table + "]: full scan (watermark not applied; "
                     + "advances to max(modified) so a later --incremental has a baseline)");
         }
         Outcome outcome = loader.load(boundIso, incremental);
@@ -97,7 +99,7 @@ public final class NativeCssExtraction {
             throws SQLException {
         Instant prior = new WatermarkService(schema).readWatermark(conn, watermarkEntity(table));
         Instant boundary = IncrementalFilter.effectiveWatermark(prior, mode, IncrementalConfig.overlapWindow());
-        System.out.println("Incremental mode [native:" + table + "]: watermark(modified)="
+        LOG.info("Incremental mode [native:" + table + "]: watermark(modified)="
                 + (prior == null ? "none (first run -> full scan)" : prior)
                 + "  overlap=" + IncrementalConfig.overlapWindow().toMinutes() + "m"
                 + "  server-side bound=" + (boundary == null ? "n/a (full scan)" : boundary));
@@ -123,9 +125,9 @@ public final class NativeCssExtraction {
         boolean advanced = new WatermarkService(schema).advanceIfSuccessful(
                 conn, watermarkEntity(table), "modified", newWatermark, failed, RunLedger.currentRunId());
         if (advanced) {
-            System.out.println("Watermark advanced [native:" + table + "] -> " + newWatermark);
+            LOG.info("Watermark advanced [native:" + table + "] -> " + newWatermark);
         } else if (failed > 0) {
-            System.out.println("Watermark NOT advanced [native:" + table + "] (row-level failures present; "
+            LOG.info("Watermark NOT advanced [native:" + table + "] (row-level failures present; "
                     + "next incremental run re-scans from the unchanged watermark)");
         }
     }

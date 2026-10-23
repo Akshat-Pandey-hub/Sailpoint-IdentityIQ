@@ -42,6 +42,8 @@ import java.util.regex.Pattern;
  */
 public class IiqSessionClient extends IiqApiClient {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(IiqSessionClient.class);
+
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
     private static final int MAX_ERROR_BODY = 2000;
@@ -133,11 +135,11 @@ public class IiqSessionClient extends IiqApiClient {
 
         int status = response.statusCode();
         if (debug) {
-            System.err.println("[IIQ] GET " + uri + " -> HTTP " + status);
+            LOG.debug("[IIQ] GET " + uri + " -> HTTP " + status);
             if (status < 200 || status >= 300) {
-                System.err.println("[IIQ]   Location: "
+                LOG.debug("[IIQ]   Location: "
                         + response.headers().firstValue("Location").orElse("<none>"));
-                System.err.println("[IIQ]   body: " + truncate(response.body()));
+                LOG.debug("[IIQ]   body: " + truncate(response.body()));
             }
         }
         if (isRedirect(status)) {
@@ -180,9 +182,9 @@ public class IiqSessionClient extends IiqApiClient {
         HttpResponse<String> response = send(builder.build(), uri);
         int status = response.statusCode();
         if (debug) {
-            System.err.println("[IIQ] POST " + uri + " -> HTTP " + status);
+            LOG.debug("[IIQ] POST " + uri + " -> HTTP " + status);
             if (status < 200 || status >= 300) {
-                System.err.println("[IIQ]   body: " + truncate(response.body()));
+                LOG.debug("[IIQ]   body: " + truncate(response.body()));
             }
         }
         if (isRedirect(status)) {
@@ -226,9 +228,9 @@ public class IiqSessionClient extends IiqApiClient {
         HttpResponse<String> response = send(builder.build(), uri);
         int status = response.statusCode();
         if (debug) {
-            System.err.println("[IIQ] POST(form->json) " + uri + " -> HTTP " + status);
+            LOG.debug("[IIQ] POST(form->json) " + uri + " -> HTTP " + status);
             if (status < 200 || status >= 300) {
-                System.err.println("[IIQ]   body: " + truncate(response.body()));
+                LOG.debug("[IIQ]   body: " + truncate(response.body()));
             }
         }
         if (isRedirect(status)) {
@@ -266,7 +268,7 @@ public class IiqSessionClient extends IiqApiClient {
         HttpResponse<String> response = send(request, uri);
         int status = response.statusCode();
         if (debug) {
-            System.err.println("[IIQ] POST(form) " + uri + " -> HTTP " + status
+            LOG.debug("[IIQ] POST(form) " + uri + " -> HTTP " + status
                     + " (Location: " + response.headers().firstValue("Location").orElse("<none>") + ")");
         }
         if (isRedirect(status)) {
@@ -276,7 +278,7 @@ public class IiqSessionClient extends IiqApiClient {
                 HttpResponse<String> followed = send(HttpRequest.newBuilder(target)
                         .timeout(REQUEST_TIMEOUT).header("Accept", "text/html").GET().build(), target);
                 if (debug) {
-                    System.err.println("[IIQ]   -> follow GET " + target + " -> HTTP " + followed.statusCode());
+                    LOG.debug("[IIQ]   -> follow GET " + target + " -> HTTP " + followed.statusCode());
                 }
                 return followed.body();
             }
@@ -318,7 +320,7 @@ public class IiqSessionClient extends IiqApiClient {
                     .timeout(REQUEST_TIMEOUT).header("Accept", "text/html").GET().build(), page);
             this.csrfTokenValue = extractCsrfToken(resp.body());
             if (debug) {
-                System.err.println("[IIQ] GET " + page + " -> HTTP " + resp.statusCode()
+                LOG.debug("[IIQ] GET " + page + " -> HTTP " + resp.statusCode()
                         + " (CSRF token " + (csrfTokenValue == null ? "NOT found" : "acquired") + ")");
             }
         } catch (IiqApiException warmUpFailure) {
@@ -352,7 +354,7 @@ public class IiqSessionClient extends IiqApiClient {
         HttpResponse<String> page = send(HttpRequest.newBuilder(loginUri)
                 .timeout(REQUEST_TIMEOUT).GET().build(), loginUri);
         if (debug) {
-            System.err.println("[IIQ] GET " + loginUri + " -> HTTP " + page.statusCode() + " (login seed)");
+            LOG.debug("[IIQ] GET " + loginUri + " -> HTTP " + page.statusCode() + " (login seed)");
         }
         String html = page.body();
         String viewState = extractHiddenValue(html, FIELD_VIEWSTATE);
@@ -385,7 +387,7 @@ public class IiqSessionClient extends IiqApiClient {
         int status = response.statusCode();
         String location = response.headers().firstValue("Location").orElse("");
         if (debug) {
-            System.err.println("[IIQ] POST " + loginUri + " -> HTTP " + status
+            LOG.debug("[IIQ] POST " + loginUri + " -> HTTP " + status
                     + " (Location: " + (location.isEmpty() ? "<none>" : location) + ")");
         }
 

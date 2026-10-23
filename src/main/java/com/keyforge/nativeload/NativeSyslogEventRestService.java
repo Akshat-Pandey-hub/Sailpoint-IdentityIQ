@@ -83,24 +83,43 @@ public final class NativeSyslogEventRestService {
     public Page fetchPage(NativeSyslogEventPageSource source,
                           Map<String, String> filters, Integer start, Integer limit) {
         validateFilters(filters);
-        if ((filters == null || filters.isEmpty()) && limit != null && limit >= 0) {
-            return directWindow(source, (start == null || start < 0) ? 0 : start, limit);
+        boolean filtered = filters != null && !filters.isEmpty();
+        boolean windowed = limit != null && limit >= 0;
+        int first = (start == null || start < 0) ? 0 : start;
+        if (!filtered && (windowed || first > 0)) {
+            // start without limit reads from the offset to the end; the skipped rows are never fetched.
+            return directWindow(source, first, windowed ? limit : Integer.MAX_VALUE);
+        }
+        if (filtered) {
+            return filteredScan(source, filters, first, windowed ? limit : null);
         }
         int[] baseline = {-1};
         List<Map<String, Object>> rows = fullScan(source, filters, start, limit, baseline);
         return new Page(rows, baseline[0]);
     }
 
-    /** Reads exactly the window [from, from+limit) from the plugin, chunked by its maximum page size. */
-    private Page directWindow(NativeSyslogEventPageSource source, int from, int limit) {
-        List<Map<String, Object>> out = new ArrayList<>(Math.min(limit, PLUGIN_MAX_PAGE));
+    /**
+     * Filters must apply BEFORE start/limit, so pages are read in (created, id) order from the beginning, but only
+     * matching records are kept and reading stops once {@code start + limit} matches are found.
+     */
+    private Page filteredScan(NativeSyslogEventPageSource source, Map<String, String> filters, int from,
+                              Integer limit) {
+        CountGuard guard = new CountGuard();
+        KfAgentPagedReader<NativeSyslogEventRecord> reader = new KfAgentPagedReader<>(
+                (s, l) -> guard.check(source.fetchPage(s, l)), parser::parse, PLUGIN_MAX_PAGE, INTERNAL_PAGE_SIZE);
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (NativeSyslogEventRecord r : reader.filtered(r -> matches(r, filters), from, limit)) {
+            out.add(toJson(r));
+        }
+        return new Page(out, guard.baseline);
+    }
+
+    /** Tracks the plugin-reported source count across the calls of one request; a shrinking count is fatal. */
+    private final class CountGuard {
         int baseline = -1;
         int highWater = -1;
-        int offset = from;
-        int remaining = limit;
-        while (remaining > 0) {
-            int chunk = Math.min(remaining, PLUGIN_MAX_PAGE);
-            String json = source.fetchPage(offset, chunk);
+
+        String check(String json) {
             int count = parser.sourceCount(json);
             if (count >= 0) {
                 if (baseline < 0) {
@@ -112,6 +131,19 @@ public final class NativeSyslogEventRestService {
                 }
                 highWater = Math.max(highWater, count);
             }
+            return json;
+        }
+    }
+
+    /** Reads exactly the window [from, from+limit) from the plugin, chunked by its maximum page size. */
+    private Page directWindow(NativeSyslogEventPageSource source, int from, int limit) {
+        List<Map<String, Object>> out = new ArrayList<>(Math.min(limit, PLUGIN_MAX_PAGE));
+        CountGuard guard = new CountGuard();
+        int offset = from;
+        int remaining = limit;
+        while (remaining > 0) {
+            int chunk = Math.min(remaining, PLUGIN_MAX_PAGE);
+            String json = guard.check(source.fetchPage(offset, chunk));
             List<NativeSyslogEventRecord> page = parser.parse(json); // throws on error envelope / malformed body
             for (NativeSyslogEventRecord r : page) {
                 out.add(toJson(r));
@@ -123,7 +155,7 @@ public final class NativeSyslogEventRestService {
             offset += page.size();
             remaining -= page.size();
         }
-        return new Page(out, baseline);
+        return new Page(out, guard.baseline);
     }
 
     /**

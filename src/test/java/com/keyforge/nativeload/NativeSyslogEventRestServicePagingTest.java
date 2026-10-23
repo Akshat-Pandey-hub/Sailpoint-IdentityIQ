@@ -185,19 +185,59 @@ class NativeSyslogEventRestServicePagingTest {
     }
 
     @Test
-    void filteredOrUnlimitedRequestsKeepTheFullScanContract() {
-        FakePlugin plugin = new FakePlugin(1200, 1000);
+    void filteredRequestStopsReadingOnceTheWindowIsFilled() {
+        FakePlugin plugin = new FakePlugin(300_000, 1000);
         NativeSyslogEventRestService.Page filtered =
                 svc.fetchPage(plugin, Map.of("event_level", "ERROR"), 10, 5);
-        assertEquals(5, filtered.rows().size(), "filter applied BEFORE start/limit, as before");
-        assertEquals("ERROR", filtered.rows().get(0).get("event_level"));
-        assertEquals(1200, filtered.sourceCount(), "full-scan baseline is reported too");
-        assertTrue(plugin.calls.size() >= 3, "a filtered request still scans the whole population");
 
+        // ERROR rows are i % 3 == 0, so matches 10..14 are rows 30, 33, 36, 39, 42 - all on the first page.
+        assertEquals(List.of(String.format("%032x", 31), String.format("%032x", 34), String.format("%032x", 37),
+                String.format("%032x", 40), String.format("%032x", 43)), ids(filtered.rows()),
+                "filter applied BEFORE start/limit");
+        assertEquals(1, plugin.calls.size(), "one 500-row page, not a scan of 300,000");
+        assertEquals(0, plugin.calls.get(0)[0]);
+        assertEquals(500, plugin.calls.get(0)[1]);
+        assertEquals(300_000, filtered.sourceCount(), "the plugin's source count is still reported");
+    }
+
+    @Test
+    void filterMatchOnALaterPageReadsOnlyUpToThatPage() {
+        FakePlugin plugin = new FakePlugin(300_000, 1000);
+        String wanted = "sailpoint.Cls2600"; // row 2600 sits on the page starting at 2500
+        NativeSyslogEventRestService.Page page = svc.fetchPage(plugin, Map.of("classname", wanted), 0, 1);
+
+        assertEquals(List.of(String.format("%032x", 2601)), ids(page.rows()));
+        assertEquals(6, plugin.calls.size(), "pages 0,500,...,2500 only");
+        assertEquals(2500, plugin.calls.get(5)[0]);
+    }
+
+    @Test
+    void startWithoutLimitNeverReadsTheSkippedRows() {
+        FakePlugin plugin = new FakePlugin(2500, 1000);
+        NativeSyslogEventRestService.Page page = svc.fetchPage(plugin, null, 2000, null);
+
+        assertEquals(500, page.rows().size());
+        assertEquals(String.format("%032x", 2001), page.rows().get(0).get("source_id"));
+        assertEquals(2000, plugin.calls.get(0)[0], "first plugin call starts at the offset, not at 0");
+        assertEquals(1, plugin.calls.size());
+    }
+
+    @Test
+    void sourceCountShrinkingDuringAFilteredScanIsFatal() {
+        FakePlugin plugin = new FakePlugin(3000, 1000);
+        plugin.countForCall = c -> c == 0 ? 3000 : 2900;
+        assertThrows(NativeImportException.class,
+                () -> svc.fetchPage(plugin, Map.of("classname", "sailpoint.Cls2999"), 0, 1));
+    }
+
+    @Test
+    void noParametersStillReturnsTheWholePopulationAndUnknownFiltersAreRejected() {
         FakePlugin all = new FakePlugin(1200, 1000);
-        assertEquals(1200, svc.fetchPage(all, null, null, null).rows().size(), "no limit -> all rows");
+        assertEquals(1200, svc.fetchPage(all, null, null, null).rows().size(), "no parameters -> all rows");
 
+        FakePlugin plugin = new FakePlugin(100, 1000);
         assertThrows(IllegalArgumentException.class, () -> svc.fetchPage(plugin, Map.of("syslogid", "x"), 0, 5));
+        assertEquals(0, plugin.calls.size());
     }
 
     @Test

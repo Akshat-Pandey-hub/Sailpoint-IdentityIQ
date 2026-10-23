@@ -18,6 +18,8 @@ import java.util.List;
  */
 public final class RecordLineageService {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(RecordLineageService.class);
+
     private final RecordLineageRepository repo;
 
     public RecordLineageService() {
@@ -78,7 +80,7 @@ public final class RecordLineageService {
             } catch (SQLException e) {
                 result.tables().add(new TableResult(s.table(), TableResult.FAILED, 0, e.getMessage()));
                 result.failed++;
-                System.err.println("[lineage] failed to backfill '" + s.table() + "': " + e.getMessage());
+                LOG.warn("[lineage] failed to backfill '" + s.table() + "': " + e.getMessage());
             }
         }
         return result;

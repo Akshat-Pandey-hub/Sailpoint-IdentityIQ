@@ -124,6 +124,8 @@ import java.util.concurrent.Executors;
  */
 public final class KfAgentRestServer {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(KfAgentRestServer.class);
+
     public static final String PREFIX = "/kfagent";
     public static final int DEFAULT_PORT = 8100;
 
@@ -225,7 +227,7 @@ public final class KfAgentRestServer {
         registerInto(server);
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
-        System.out.println("KF Agent REST listening on http://" + host + ":" + port + PREFIX
+        LOG.info("KF Agent REST listening on http://" + host + ":" + port + PREFIX
                 + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/role-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status,syslog-events}  (read-only; no PostgreSQL on this path)");
     }
 
@@ -363,9 +365,7 @@ public final class KfAgentRestServer {
             }
         } catch (Exception e) {
             // generic message to the caller; the details stay in the server log (never credentials/headers)
-            System.err.println("[kfagent] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
-                    + " failed: " + e);
-            e.printStackTrace();
+            LOG.error("[kfagent] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath() + " failed", e);
             com.keyforge.iiq.debug.DebugLog.error(e, "endpoint", ex.getRequestURI().getPath(),
                     "query/filters", ex.getRequestURI().getRawQuery());
             writeJson(ex, 500, error("Internal Server Error"));
@@ -374,8 +374,7 @@ public final class KfAgentRestServer {
                     "query/filters", ex.getRequestURI().getRawQuery());
             // e.g. OutOfMemoryError on an oversized request: answer this caller with a JSON 500 (best effort)
             // instead of dropping the connection; the worker pool and the server keep serving other requests.
-            System.err.println("[kfagent] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
-                    + " failed: " + fatal);
+            LOG.error("[kfagent] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath() + " failed", fatal);
             try {
                 writeJson(ex, 500, error("Internal Server Error"));
             } catch (Throwable ignored) {

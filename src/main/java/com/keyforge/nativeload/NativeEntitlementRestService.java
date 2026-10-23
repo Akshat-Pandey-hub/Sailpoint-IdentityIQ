@@ -77,38 +77,29 @@ public final class NativeEntitlementRestService {
             }
         }
         boolean filtered = filters != null && !filters.isEmpty();
-        boolean windowed = limit != null && limit >= 0;
         int first = (start == null || start < 0) ? 0 : start;
+        if (filtered && filters.containsKey("source_id")) {
+            // source_id is the ManagedAttribute primary key: at most one match, so the scan can stop at the first.
+            if (first > 0) {
+                return new ArrayList<>();
+            }
+            limit = (limit == null || limit < 0) ? 1 : Math.min(limit, 1);
+        }
+        boolean windowed = limit != null && limit >= 0;
 
-        if (filtered || windowed) {
+        List<NativeManagedAttributeRecord> rows;
+        if (filtered || windowed || first > 0) {
             KfAgentPagedReader<NativeManagedAttributeRecord> reader = new KfAgentPagedReader<>(
                     source::fetchPage, parser::parse, PLUGIN_MAX_PAGE, INTERNAL_PAGE_SIZE);
-            List<NativeManagedAttributeRecord> rows = filtered
+            // start without limit reads from the offset to the end; the skipped rows are never fetched.
+            rows = filtered
                     ? reader.filtered(r -> matches(r, filters), first, windowed ? limit : null)
-                    : reader.window(first, limit);
-            List<Map<String, Object>> out = new ArrayList<>(rows.size());
-            for (NativeManagedAttributeRecord r : rows) {
-                out.add(toJson(r));
-            }
-            return out;
+                    : reader.window(first, windowed ? limit : Integer.MAX_VALUE);
+        } else {
+            rows = collectAll(source); // no filters, no start, no limit: the full snapshot
         }
-
-        List<NativeManagedAttributeRecord> all = collectAll(source);
-
-        List<NativeManagedAttributeRecord> matched = new ArrayList<>();
-        for (NativeManagedAttributeRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
-        }
-
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativeManagedAttributeRecord r : matched.subList(from, to)) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (NativeManagedAttributeRecord r : rows) {
             out.add(toJson(r));
         }
         return out;

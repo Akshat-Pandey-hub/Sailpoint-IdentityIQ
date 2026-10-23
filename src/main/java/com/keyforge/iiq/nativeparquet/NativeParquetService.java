@@ -37,6 +37,8 @@ import java.util.Map;
  */
 public final class NativeParquetService {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(NativeParquetService.class);
+
     /** Lineage envelope keys (must match com.keyforge.iiq.parquet.Lineage). */
     static final String SRC_SYSTEM = "src_system";
     static final String SRC_OBJECT_TYPE = "src_object_type";
@@ -187,7 +189,7 @@ public final class NativeParquetService {
                 map.put(rs.getString(1), new Prior(rs.getString(2), capturedAt, rs.getString(4)));
             }
         } catch (SQLException unreadable) {
-            System.err.println("[native-parquet] prior file " + file.toAbsolutePath() + " is unreadable ("
+            LOG.warn("[native-parquet] prior file " + file.toAbsolutePath() + " is unreadable ("
                     + unreadable.getMessage() + "); rebuilding it from the source");
             map.clear();
         }
