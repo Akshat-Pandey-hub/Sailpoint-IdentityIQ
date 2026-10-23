@@ -72,6 +72,8 @@ public class IiqSessionClient extends IiqApiClient {
     private final boolean debug;
 
     private volatile boolean authenticated;
+    /** Incremented on every successful login; lets concurrent callers renew an expired session only once. */
+    private volatile int sessionGeneration;
     /** CSRF token parsed from an authenticated UI page (IIQ embeds it in JS, not a Set-Cookie). */
     private volatile String csrfTokenValue;
 
@@ -110,27 +112,24 @@ public class IiqSessionClient extends IiqApiClient {
 
     /**
      * Performs an authenticated {@code GET}. The IdentityIQ web session is established
-     * on first use and reused afterwards.
+     * on first use and reused afterwards. When IdentityIQ no longer accepts the session (it
+     * timed out, IIQ restarted, or it was logged out), the session is renewed once and this
+     * call is repeated once, so a long-running service keeps working without a restart.
      *
      * @throws IiqApiException on transport failure, a non-2xx status, or a login
-     *         redirect (which means the session was not accepted)
+     *         redirect (which means the session was not accepted, even after renewing it)
      */
     @Override
     public String get(String path, Map<String, String> queryParams) {
         authenticate();
 
         URI uri = buildUri(path, queryParams);
-        HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
-                .timeout(REQUEST_TIMEOUT)
-                .header("Accept", "application/json, text/javascript, */*; q=0.01")
-                .header("X-Requested-With", "XMLHttpRequest")
-                .header("Referer", baseUrl + "/" + GROUPS_REFERER_PATH);
-        // Echo the CSRF cookie as the browser does; harmless when the server doesn't require it.
-        String csrf = csrfToken();
-        if (csrf != null) {
-            builder.header("X-XSRF-TOKEN", csrf);
+        int generation = sessionGeneration;
+        HttpResponse<String> response = sendGet(uri);
+        if (sessionRejected(response, uri)) {
+            renewSession(generation);
+            response = sendGet(uri);
         }
-        HttpResponse<String> response = send(builder.GET().build(), uri);
 
         int status = response.statusCode();
         if (debug) {
@@ -149,6 +148,55 @@ public class IiqSessionClient extends IiqApiClient {
                     + status + ": " + errorSummary(response.body()), status);
         }
         return response.body();
+    }
+
+    private HttpResponse<String> sendGet(URI uri) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
+                .timeout(REQUEST_TIMEOUT)
+                .header("Accept", "application/json, text/javascript, */*; q=0.01")
+                .header("X-Requested-With", "XMLHttpRequest")
+                .header("Referer", baseUrl + "/" + GROUPS_REFERER_PATH);
+        // Echo the CSRF cookie as the browser does; harmless when the server doesn't require it.
+        String csrf = csrfToken();
+        if (csrf != null) {
+            builder.header("X-XSRF-TOKEN", csrf);
+        }
+        return send(builder.GET().build(), uri);
+    }
+
+    /**
+     * True when IdentityIQ refused the session itself rather than the request: plugin REST endpoints answer an
+     * expired or unknown session with 401, UI endpoints redirect to the login page.
+     */
+    private static boolean sessionRejected(HttpResponse<String> response, URI uri) {
+        int status = response.statusCode();
+        if (status == 401) {
+            return true;
+        }
+        String location = response.headers().firstValue("Location").orElse("");
+        return isRedirect(status) && location.toLowerCase().contains(LOGIN_PATH)
+                && !uri.getPath().endsWith(LOGIN_PATH);
+    }
+
+    /**
+     * Discards the session IdentityIQ no longer accepts and logs in again with the same credentials. Only the first
+     * caller that saw session {@code staleGeneration} rejected logs in; callers that arrive after it reuse the new
+     * session. A failed login throws exactly as the first login does.
+     */
+    private synchronized void renewSession(int staleGeneration) {
+        if (sessionGeneration != staleGeneration && authenticated) {
+            return; // another request already renewed the session
+        }
+        com.keyforge.iiq.debug.DebugLog.log("IIQ-LOGIN", "step", "renew", "reason",
+                "IdentityIQ no longer accepts the session (timed out, restarted or logged out); logging in again",
+                "IIQ_BASE_URL", baseUrl, "IIQ_USERNAME", username);
+        authenticated = false;
+        csrfTokenValue = null;
+        if (cookieManager != null) {
+            cookieManager.getCookieStore().removeAll();
+        }
+        authenticate();
+        ensureCsrfToken();
     }
 
     /**
@@ -400,6 +448,7 @@ public class IiqSessionClient extends IiqApiClient {
                     + ") — check IIQ_USERNAME / IIQ_PASSWORD.", status);
         }
         authenticated = true;
+        sessionGeneration++;
         com.keyforge.iiq.debug.DebugLog.log("IIQ-LOGIN", "step", "result", "result", "OK",
                 "detail", "session established and reused for later calls", "IIQ_USERNAME", username);
     }
@@ -480,7 +529,9 @@ public class IiqSessionClient extends IiqApiClient {
             meaning = "redirected to login (session not valid)";
         } else if (isRedirect(status)) {
             meaning = "REDIRECT";
-        } else if (status == 401 || status == 403) {
+        } else if (status == 401) {
+            meaning = "session not accepted (expired or logged out)";
+        } else if (status == 403) {
             meaning = "access denied";
         } else if (status == 404) {
             meaning = "not found";
