@@ -15,13 +15,14 @@ import java.util.UUID;
  * ran and what it does, the result, and every error with a plain-language reason.
  *
  * <p>Level, from {@code KF_LOG_LEVEL} (environment, {@code -DKF_LOG_LEVEL=...}, or the {@code IIQ_CONFIG_FILE}
- * properties file); default {@code debug}:
+ * properties file); default {@code normal}:
  * <ul>
- *   <li>{@code debug}: everything — every setting loaded, each request with the credentials sent and expected, every
- *       call to IdentityIQ. <b>Prints usernames and the KF Agent password in plain text.</b></li>
- *   <li>{@code normal}: what ran and its result only — start, service, result, login OK/failed, errors with their
- *       reason. No usernames, passwords or settings.</li>
- *   <li>{@code off}: nothing.</li>
+ *   <li>{@code normal}: what ran and its result — start, service, result, login OK/failed, plus every error,
+ *       warning and rejected request (401, 4xx) with its reason. No usernames, passwords or settings.</li>
+ *   <li>{@code debug}: everything in normal plus every setting loaded, each request with the credentials sent and
+ *       expected, and every call to IdentityIQ. <b>Prints usernames and the KF Agent password in plain text.</b></li>
+ *   <li>{@code off}: no routine lines; errors, warnings and rejected requests are still written with their
+ *       reason.</li>
  * </ul>
  * The IdentityIQ password ({@code IIQ_PASSWORD}) is never printed at any level. Legacy {@code KF_DEBUG=false}
  * (when {@code KF_LOG_LEVEL} is not set) means {@code off}.
@@ -321,10 +322,6 @@ public final class DebugLog {
         return sb.toString();
     }
 
-    /**
-     * An error line with the exception, its root cause, a plain-language reason, and the settings/credentials that
-     * reason depends on (so the log shows exactly which values were used when it failed).
-     */
     /** One error line for a failure with no caller message (uncaught errors, background threads). */
     public static void error(Throwable t, Object... context) {
         if (t != null) {
@@ -363,6 +360,9 @@ public final class DebugLog {
 
     // --- reasons -----------------------------------------------------------
 
+    /** "failed with HTTP 4xx" in an IdentityIQ client error (401/403/404 are matched earlier). */
+    private static final java.util.regex.Pattern IIQ_CLIENT_ERROR = java.util.regex.Pattern.compile("http 4\\d\\d");
+
     static String reason(Throwable t, Throwable root) {
         String msg = (t.getMessage() == null ? "" : t.getMessage()).toLowerCase();
         String rootMsg = (root.getMessage() == null ? "" : root.getMessage()).toLowerCase();
@@ -394,6 +394,9 @@ public final class DebugLog {
         }
         if (msg.contains("http 5")) {
             return "IIQ_SERVER_ERROR: IdentityIQ returned a server error (HTTP 5xx); see the IdentityIQ log";
+        }
+        if (msg.contains("identityiq") && IIQ_CLIENT_ERROR.matcher(msg).find()) {
+            return "IIQ_REQUEST_REJECTED: IdentityIQ rejected the request (HTTP 4xx)";
         }
         if (t instanceof SQLException || root instanceof SQLException) {
             return "POSTGRES_ERROR: PostgreSQL connection or statement failed; check the PG_* settings";

@@ -74,9 +74,12 @@ class NativeSyslogEventRestServiceTest {
 
     /** A single-page source: page 0 returns all rows (< internal page size → loop ends); later pages empty. */
     private static NativeSyslogEventPageSource source(List<Map<String, Object>> rows) {
-        String full = envelope(rows);
-        String empty = envelope(List.of());
-        return (start, limit) -> start == 0 ? full : empty;
+        // honours start/limit like the plugin (firstRow/resultLimit over a fixed order)
+        return (start, limit) -> {
+            int from = Math.min(Math.max(0, start), rows.size());
+            int to = Math.min(rows.size(), from + (limit <= 0 ? 200 : limit));
+            return envelope(rows.subList(from, to));
+        };
     }
 
     private static List<Map<String, Object>> sample() {

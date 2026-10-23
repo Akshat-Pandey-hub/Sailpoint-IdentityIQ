@@ -71,22 +71,10 @@ public final class NativeCertificationEntityRestService {
             return out;
         }
 
+        // no filters, no start, no limit: the full snapshot
         List<NativeCertificationEntityRecord> all = collectAll(source);
-
-        List<NativeCertificationEntityRecord> matched = new ArrayList<>();
+        List<Map<String, Object>> out = new ArrayList<>(all.size());
         for (NativeCertificationEntityRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
-        }
-
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativeCertificationEntityRecord r : matched.subList(from, to)) {
             out.add(toJson(r));
         }
         return out;

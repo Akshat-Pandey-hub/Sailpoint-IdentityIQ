@@ -257,17 +257,10 @@ public final class KfAgentRestServer {
                 return;
             }
             if (com.keyforge.iiq.debug.DebugLog.enabled()) {
-                Map<String, String> filters = new LinkedHashMap<>();
-                for (Map.Entry<String, String> e : q.entrySet()) {
-                    if (!RESERVED.contains(e.getKey())) {
-                        filters.put(e.getKey(), e.getValue());
-                    }
-                }
                 com.keyforge.iiq.debug.DebugLog.log("SERVICE", "endpoint", "/kfagent/" + sub,
                         "purpose", KfAgentServiceCatalog.purpose(sub),
                         "source", "IdentityIQ via the KeyForge plugin (read-only)",
-                        "filters", filters.isEmpty() ? "none" : filters, "start", q.get("start"), "limit", q.get("limit"),
-                        "modifiedAfter", q.get("modifiedAfter"),
+                        "start", q.get("start"), "limit", q.get("limit"),
                         "IIQ_BASE_URL", com.keyforge.iiq.debug.DebugLog.setting("IIQ_BASE_URL"),
                         "IIQ_USERNAME", com.keyforge.iiq.debug.DebugLog.setting("IIQ_USERNAME"),
                         "IIQ_PASSWORD", com.keyforge.iiq.debug.DebugLog.setting("IIQ_PASSWORD"));
@@ -1450,9 +1443,13 @@ public final class KfAgentRestServer {
         logResult(ex, status, body);
     }
 
-    /** Debug RESULT line: status, rows returned (for a JSON array) or the error message sent to the caller. */
+    /**
+     * RESULT line: status, rows returned (for a JSON array) or the error message sent to the caller. A 4xx reply
+     * (bad filter, unknown resource, wrong method) is a WARN written at every level, like a 401.
+     */
     private void logResult(HttpExchange ex, int status, byte[] body) {
-        if (!com.keyforge.iiq.debug.DebugLog.enabled()) {
+        boolean rejected = status >= 400 && status < 500;
+        if (!rejected && !com.keyforge.iiq.debug.DebugLog.enabled()) {
             return;
         }
         Object detail;
@@ -1467,6 +1464,11 @@ public final class KfAgentRestServer {
             }
         } catch (Exception notJson) {
             detail = "-";
+        }
+        if (rejected) {
+            com.keyforge.iiq.debug.DebugLog.warn("RESULT", "endpoint", ex.getRequestURI().getPath(), "status", status,
+                    "returned", detail, "ms", com.keyforge.iiq.debug.DebugLog.elapsedMs());
+            return;
         }
         com.keyforge.iiq.debug.DebugLog.log("RESULT", "endpoint", ex.getRequestURI().getPath(), "status", status,
                 "returned", detail, "bytes", body.length, "ms", com.keyforge.iiq.debug.DebugLog.elapsedMs());

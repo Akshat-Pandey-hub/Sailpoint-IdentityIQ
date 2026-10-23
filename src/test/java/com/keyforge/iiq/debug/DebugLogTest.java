@@ -38,6 +38,12 @@ class DebugLogTest {
                 .startsWith("IIQ_NOT_FOUND"));
         assertTrue(reasonFor(new IiqApiException("IdentityIQ request to h failed with HTTP 500: x", 500))
                 .startsWith("IIQ_SERVER_ERROR"));
+        assertTrue(reasonFor(new IiqApiException("IdentityIQ request to h failed with HTTP 400: x", 400))
+                .startsWith("IIQ_REQUEST_REJECTED"), "other 4xx from IIQ is not UNEXPECTED");
+        assertTrue(reasonFor(new IiqApiException("IdentityIQ POST to h failed with HTTP 429: x", 429))
+                .startsWith("IIQ_REQUEST_REJECTED"));
+        assertTrue(reasonFor(new IiqApiException("IdentityIQ request to h failed with HTTP 403: x", 403))
+                .startsWith("IIQ_FORBIDDEN"), "401/403 keep their own reason");
     }
 
     @Test

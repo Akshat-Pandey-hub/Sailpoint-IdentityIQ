@@ -2,12 +2,9 @@ package com.keyforge.nativeload;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.keyforge.iiq.deletion.SoftDeleteSweeper;
 
-import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -18,10 +15,13 @@ import java.util.function.Function;
 
 /**
  * KF Agent REST read service for native task schedules ({@code sailpoint.object.TaskSchedule} →
- * {@code kf_task_schedule}). Reuses the EXISTING native extraction verbatim: the same
- * {@link NativeTaskScheduleClient} page source + {@link NativeTaskScheduleImportService} that the DB path
- * uses, with a non-JDBC {@link CollectingSink} that collects the records in memory (DB bypass). No existing
- * extraction or DB code is modified; no PostgreSQL is touched on this path.
+ * {@code kf_task_schedule}). Reads the {@link NativeTaskScheduleClient} page source and parses it with
+ * {@link NativeTaskScheduleParser}; nothing is persisted and no PostgreSQL is touched on this path.
+ *
+ * <p><b>Paging.</b> IdentityIQ does not page TaskSchedule: it ignores {@code firstRow}/{@code resultLimit} for this
+ * object (verified live — every plugin call returns every schedule, whatever {@code start}/{@code limit} say). So the
+ * agent reads all schedules once and applies the filters and the {@code start}/{@code limit} window itself. A system
+ * has only a small, fixed set of schedules (one per scheduled task), so this read is always small.
  *
  * <p><b>REST contract</b> (verified from {@link NativeTaskScheduleRecord} + {@link NativeTaskScheduleParser} +
  * {@code kf_task_schedule}): 18 SailPoint-facing fields. {@code cron_expressions} and {@code arguments} are
@@ -36,9 +36,6 @@ public final class NativeTaskScheduleRestService {
 
     private static final int INTERNAL_PAGE_SIZE = 500;
 
-    /** The plugin's per-call maximum ({@code NativeTaskScheduleResource.MAX_LIMIT}); larger windows are chunked. */
-    static final int PLUGIN_MAX_PAGE = 1000;
-
     private final NativeTaskScheduleParser parser = new NativeTaskScheduleParser();
 
     private final ObjectMapper mapper = new ObjectMapper();
@@ -50,7 +47,7 @@ public final class NativeTaskScheduleRestService {
             Collections.unmodifiableSet(new LinkedHashSet<>(SCALARS.keySet()));
 
     /**
-     * Collect → filter → window → serialize.
+     * All schedules (see the class note on paging) → filter → {@code start}/{@code limit} window → serialize.
      *
      * @throws IllegalArgumentException if a filter names a field that is not filterable
      */
@@ -65,26 +62,46 @@ public final class NativeTaskScheduleRestService {
             }
         }
 
-        boolean filtered = filters != null && !filters.isEmpty();
-        boolean windowed = limit != null && limit >= 0;
-        int first = (start == null || start < 0) ? 0 : start;
-
-        List<NativeTaskScheduleRecord> rows;
-        if (filtered || windowed || first > 0) {
-            KfAgentPagedReader<NativeTaskScheduleRecord> reader = new KfAgentPagedReader<>(
-                    source::fetchPage, parser::parse, PLUGIN_MAX_PAGE, INTERNAL_PAGE_SIZE);
-            // start without limit reads from the offset to the end; the skipped rows are never fetched.
-            rows = filtered
-                    ? reader.filtered(r -> matches(r, filters), first, windowed ? limit : null)
-                    : reader.window(first, windowed ? limit : Integer.MAX_VALUE);
-        } else {
-            rows = collectAll(source); // no filters, no start, no limit: the full snapshot
+        List<NativeTaskScheduleRecord> matched = new ArrayList<>();
+        for (NativeTaskScheduleRecord r : readAllSchedules(source)) {
+            if (matches(r, filters)) {
+                matched.add(r);
+            }
         }
-        List<Map<String, Object>> out = new ArrayList<>(rows.size());
-        for (NativeTaskScheduleRecord r : rows) {
+
+        int from = (start == null || start < 0) ? 0 : Math.min(start, matched.size());
+        int to = (limit == null || limit < 0) ? matched.size() : (int) Math.min(matched.size(), (long) from + limit);
+
+        List<Map<String, Object>> out = new ArrayList<>(Math.max(0, to - from));
+        for (NativeTaskScheduleRecord r : matched.subList(from, Math.max(from, to))) {
             out.add(toJson(r));
         }
         return out;
+    }
+
+    /**
+     * Every schedule, each once, in the plugin's (name) order. Pages are read until one is short or adds no schedule
+     * not already seen (by {@code source_id}, the schedule name): IIQ returns the whole set on every call, so the
+     * second call adds nothing and reading stops — and if a future IIQ does honour paging, this still reads every page.
+     */
+    private List<NativeTaskScheduleRecord> readAllSchedules(NativeTaskSchedulePageSource source) {
+        Map<String, NativeTaskScheduleRecord> byId = new LinkedHashMap<>();
+        int start = 0;
+        while (true) {
+            List<NativeTaskScheduleRecord> page = parser.parse(source.fetchPage(start, INTERNAL_PAGE_SIZE));
+            int added = 0;
+            for (NativeTaskScheduleRecord r : page) {
+                // TaskSchedule names are required and unique in IIQ; source_id is the name
+                String key = String.valueOf(r.sourceId != null ? r.sourceId : r.name);
+                if (byId.putIfAbsent(key, r) == null) {
+                    added++;
+                }
+            }
+            if (page.size() < INTERNAL_PAGE_SIZE || added == 0) {
+                return new ArrayList<>(byId.values());
+            }
+            start += page.size();
+        }
     }
 
     private static boolean matches(NativeTaskScheduleRecord r, Map<String, String> filters) {
@@ -100,17 +117,6 @@ public final class NativeTaskScheduleRestService {
         return true;
     }
 
-    /** Walks the native source to completion via the EXISTING import; collecting sink = no DB. */
-    private List<NativeTaskScheduleRecord> collectAll(NativeTaskSchedulePageSource source) {
-        CollectingSink sink = new CollectingSink();
-        try {
-            // sweepDeletions=false -> the sink's sweep() is never invoked; no PostgreSQL is touched.
-            new NativeTaskScheduleImportService(source, sink, INTERNAL_PAGE_SIZE, false).importAll();
-        } catch (SQLException e) {
-            throw new NativeImportException("native task-schedule extraction failed: " + e.getMessage(), e);
-        }
-        return sink.records;
-    }
 
     /** The SailPoint-facing fields, keyed by our DB column names (kf_task_schedule order). */
     private Map<String, Object> toJson(NativeTaskScheduleRecord r) {
@@ -172,26 +178,5 @@ public final class NativeTaskScheduleRestService {
 
     private static String iso(Instant i) {
         return i == null ? null : i.toString();
-    }
-
-    /** In-memory sink: reuses the import loop but persists nothing (DB bypass for the REST path). */
-    private static final class CollectingSink implements NativeTaskScheduleSink {
-        final List<NativeTaskScheduleRecord> records = new ArrayList<>();
-
-        @Override
-        public void ensure() {
-            // no-op: no table, no PostgreSQL
-        }
-
-        @Override
-        public NativeTaskScheduleRepository.UpsertOutcome upsert(NativeTaskScheduleRecord record) {
-            records.add(record);
-            return NativeTaskScheduleRepository.UpsertOutcome.INSERTED;
-        }
-
-        @Override
-        public SoftDeleteSweeper.SweepResult sweep(Collection<String> keepTaskScheduleIds) {
-            throw new UnsupportedOperationException("REST path never sweeps (sweepDeletions=false)");
-        }
     }
 }

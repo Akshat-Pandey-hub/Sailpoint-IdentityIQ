@@ -73,8 +73,9 @@ public final class NativeSyslogEventRestService {
      * ({@code ORDER BY created, id}; {@code firstRow=start}, {@code resultLimit<=}{@value #PLUGIN_MAX_PAGE}): it reads
      * only the requested window, so successive pages cost one plugin call each instead of a full scan each. The
      * window is the same slice of the same ordered population the full scan would return, so the response body is
-     * unchanged. A filtered request (filters must apply BEFORE start/limit) or one without a {@code limit} ("all")
-     * keeps the existing full scan via {@link #fetch}.
+     * unchanged. {@code start} without {@code limit} reads from the offset to the end. A filtered request (filters
+     * apply BEFORE start/limit) reads pages in order, keeps only matches and stops once the window is filled. Only a
+     * request with no filters, no {@code start} and no {@code limit} reads the whole population.
      *
      * @throws IllegalArgumentException if a filter names a field that is not filterable
      * @throws NativeImportException    on a plugin error envelope, a malformed response, or a source count that
@@ -94,7 +95,7 @@ public final class NativeSyslogEventRestService {
             return filteredScan(source, filters, first, windowed ? limit : null);
         }
         int[] baseline = {-1};
-        List<Map<String, Object>> rows = fullScan(source, filters, start, limit, baseline);
+        List<Map<String, Object>> rows = fullScan(source, baseline); // no filters, no start, no limit
         return new Page(rows, baseline[0]);
     }
 
@@ -159,14 +160,15 @@ public final class NativeSyslogEventRestService {
     }
 
     /**
-     * Collect → filter → window → serialize.
+     * The rows of {@link #fetchPage} without the source count: the same bounded reads (only the requested window, or
+     * matching rows until the window is filled); the whole population is read only when there are no filters, no
+     * {@code start} and no {@code limit}.
      *
      * @throws IllegalArgumentException if a filter names a field that is not filterable
      */
     public List<Map<String, Object>> fetch(NativeSyslogEventPageSource source,
                                            Map<String, String> filters, Integer start, Integer limit) {
-        validateFilters(filters);
-        return fullScan(source, filters, start, limit, null);
+        return fetchPage(source, filters, start, limit).rows();
     }
 
     private static void validateFilters(Map<String, String> filters) {
@@ -180,24 +182,11 @@ public final class NativeSyslogEventRestService {
         }
     }
 
-    private List<Map<String, Object>> fullScan(NativeSyslogEventPageSource source, Map<String, String> filters,
-                                               Integer start, Integer limit, int[] baselineOut) {
+    /** The whole population (the full snapshot), with the scan's baseline source count reported in {@code baselineOut}. */
+    private List<Map<String, Object>> fullScan(NativeSyslogEventPageSource source, int[] baselineOut) {
         List<NativeSyslogEventRecord> all = collectAll(source, baselineOut);
-
-        List<NativeSyslogEventRecord> matched = new ArrayList<>();
+        List<Map<String, Object>> out = new ArrayList<>(all.size());
         for (NativeSyslogEventRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
-        }
-
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativeSyslogEventRecord r : matched.subList(from, to)) {
             out.add(toJson(r));
         }
         return out;

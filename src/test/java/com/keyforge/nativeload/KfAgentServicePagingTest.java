@@ -85,8 +85,7 @@ class KfAgentServicePagingTest {
                         (p, f, s, l) -> new NativeViolationRestService().fetch(p::fetchPage, f, s, l)),
                 new Service("task-results", "TaskResult",
                         (p, f, s, l) -> new NativeTaskResultRestService().fetch(p::fetchPage, f, s, l)),
-                new Service("task-schedules", "TaskSchedule",
-                        (p, f, s, l) -> new NativeTaskScheduleRestService().fetch(p::fetchPage, f, s, l)),
+                // task-schedules is not here: IIQ ignores paging for TaskSchedule (see NativeTaskScheduleRestServiceTest)
                 new Service("group-definitions", "GroupDefinition",
                         (p, f, s, l) -> new NativeGroupDefinitionRestService().fetch(p::fetchPage, f, s, l)),
                 new Service("audit-events", "AuditEvent",

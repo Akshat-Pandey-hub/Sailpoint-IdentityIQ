@@ -171,4 +171,58 @@ class NativeTaskScheduleRestServiceTest {
     void emptySourceReturnsEmptyArray() {
         assertEquals(List.of(), svc.fetch(emptySource(), null, null, null));
     }
+
+    /** Like live IIQ for TaskSchedule: every call returns every schedule, whatever start/limit say. */
+    private static final class IgnoresPaging implements NativeTaskSchedulePageSource {
+        final int schedules;
+        final List<int[]> calls = new java.util.ArrayList<>();
+
+        IgnoresPaging(int schedules) {
+            this.schedules = schedules;
+        }
+
+        @Override
+        public String fetchPage(int start, int limit) {
+            calls.add(new int[]{start, limit});
+            StringBuilder rows = new StringBuilder();
+            for (int i = 0; i < schedules; i++) {
+                if (rows.length() > 0) rows.append(',');
+                String name = String.format("schedule-%04d", i);
+                rows.append("{\"sourceId\":\"").append(name).append("\",\"name\":\"").append(name)
+                        .append("\",\"definitionName\":\"").append(i % 2 == 0 ? "Even" : "Odd").append("\"}");
+            }
+            return "{\"limit\":" + limit + ",\"rows\":[" + rows + "]}";
+        }
+    }
+
+    private static List<Object> names(List<Map<String, Object>> rows) {
+        List<Object> out = new java.util.ArrayList<>();
+        rows.forEach(r -> out.add(r.get("source_id")));
+        return out;
+    }
+
+    @Test
+    void startAndLimitAreAppliedEvenThoughIiqIgnoresPaging() {
+        IgnoresPaging iiq = new IgnoresPaging(6);
+        assertEquals(List.of("schedule-0000", "schedule-0001", "schedule-0002"), names(svc.fetch(iiq, null, null, 3)));
+        assertEquals(List.of("schedule-0001", "schedule-0002"), names(svc.fetch(iiq, null, 1, 2)));
+        assertEquals(List.of("schedule-0005"), names(svc.fetch(iiq, null, 5, null)));
+        assertEquals(List.of(), names(svc.fetch(iiq, null, 6, 2)), "past the end -> []");
+        assertEquals(6, svc.fetch(iiq, null, null, null).size(), "no parameters -> every schedule");
+        assertEquals(6, svc.fetch(iiq, null, null, -1).size(), "limit=-1 -> every schedule");
+    }
+
+    @Test
+    void filterThenWindowOverTheSchedules() {
+        IgnoresPaging iiq = new IgnoresPaging(6);
+        assertEquals(List.of("schedule-0003", "schedule-0005"),
+                names(svc.fetch(iiq, Map.of("definition_name", "Odd"), 1, 5)));
+    }
+
+    @Test
+    void readStopsWhenIiqReturnsTheSameSchedulesAgain() {
+        IgnoresPaging iiq = new IgnoresPaging(700); // more than one 500-row page, all returned on every call
+        assertEquals(700, svc.fetch(iiq, null, null, null).size(), "each schedule once");
+        assertEquals(2, iiq.calls.size(), "the second call adds nothing new, so reading stops");
+    }
 }
