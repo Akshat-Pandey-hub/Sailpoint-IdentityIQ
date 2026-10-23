@@ -115,18 +115,16 @@ public final class RestAuthFilter extends Filter {
                         ? "direct" : "proxy (X-Forwarded-For " + ex.getRequestHeaders().getFirst("X-Forwarded-For") + ")");
         try {
             String denied = denyReason(header);
-            logAuth(header, denied);
+            logAuth(header, denied, ex.getRequestMethod() + " " + ex.getRequestURI().getPath(), from);
             if (denied != null) {
-                LOG.warn("[auth] 401 " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
-                        + " from " + from + " (" + denied + ")");
                 ex.getResponseHeaders().set("WWW-Authenticate", "Basic realm=\"" + REALM + "\", charset=\"UTF-8\"");
                 send(ex, 401, UNAUTHORIZED);
                 return;
             }
             chain.doFilter(ex);
         } catch (Throwable t) {
-            LOG.error("[rest] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath() + " failed", t);
-            DebugLog.error(t, "path", ex.getRequestURI().getPath());
+            DebugLog.failure(LOG, ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
+                    + " failed (caller gets HTTP 500)", t);
             if (ex.getResponseCode() == -1) { // nothing sent yet: answer this caller, keep the server serving
                 try {
                     send(ex, 500, INTERNAL);
@@ -135,7 +133,8 @@ public final class RestAuthFilter extends Filter {
                 }
             }
         } finally {
-            DebugLog.log("RESPONSE", "path", ex.getRequestURI().getPath(), "status", ex.getResponseCode(),
+            // The outcome is usually logged already (RESULT, a rejection or a failure); then this is a debug detail.
+            DebugLog.response("path", ex.getRequestURI().getPath(), "status", ex.getResponseCode(),
                     "ms", DebugLog.elapsedMs());
             DebugLog.end();
             ex.close();
@@ -144,7 +143,15 @@ public final class RestAuthFilter extends Filter {
 
     /** Debug line: what the caller sent, what the service expects, and the decision with its reason. */
     void logAuth(String header, String denied) {
-        if (!DebugLog.enabled()) {
+        logAuth(header, denied, null, null);
+    }
+
+    /**
+     * A rejected request is logged as ONE warning at every level (method, path, caller and the exact reason; the
+     * credentials that were sent only at debug). An accepted one is a debug detail.
+     */
+    void logAuth(String header, String denied, String request, String from) {
+        if (denied == null && !DebugLog.debugEnabled()) {
             return;
         }
         String sentUser = null;
@@ -156,9 +163,15 @@ public final class RestAuthFilter extends Filter {
             sentUser = colon < 0 ? pair : pair.substring(0, colon);
             sentPassword = colon < 0 ? null : pair.substring(colon + 1);
         }
-        DebugLog.log("AUTH", "scheme", scheme, "sentUser", sentUser, "sentPassword", sentPassword,
-                "expectedUser", DebugLog.setting(KEY_USERNAME), "expectedPassword", DebugLog.setting(KEY_PASSWORD),
-                "result", denied == null ? "ALLOW" : "DENY 401", "reason", denied == null ? "credentials match" : denied);
+        Object[] kv = {"request", request, "from", from, "scheme", scheme, "sentUser", sentUser,
+                "sentPassword", sentPassword, "expectedUser", DebugLog.setting(KEY_USERNAME),
+                "expectedPassword", DebugLog.setting(KEY_PASSWORD),
+                "result", denied == null ? "ALLOW" : "DENY 401", "reason", denied == null ? "credentials match" : denied};
+        if (denied != null) {
+            DebugLog.warn("AUTH", kv);
+        } else {
+            DebugLog.log("AUTH", kv);
+        }
     }
 
     /** Why a request is rejected, or null when it is allowed. */

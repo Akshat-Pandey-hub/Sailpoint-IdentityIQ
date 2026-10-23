@@ -189,8 +189,8 @@ public final class NativeParquetService {
                 map.put(rs.getString(1), new Prior(rs.getString(2), capturedAt, rs.getString(4)));
             }
         } catch (SQLException unreadable) {
-            LOG.warn("[native-parquet] prior file " + file.toAbsolutePath() + " is unreadable ("
-                    + unreadable.getMessage() + "); rebuilding it from the source");
+            LOG.warn("[native-parquet] prior file {} is unreadable ({}); rebuilding it from the source",
+                    file.toAbsolutePath(), unreadable.getMessage());
             map.clear();
         }
         return map;

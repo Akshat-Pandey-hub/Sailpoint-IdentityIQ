@@ -392,16 +392,13 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -449,20 +446,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -530,20 +523,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -600,20 +589,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -647,20 +632,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -717,20 +698,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -776,20 +753,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -840,20 +813,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -961,8 +930,7 @@ public final class Main {
                         + " marked deleted=" + sw.marked() + " revived=" + sw.revived());
             }
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.info("  soft-delete sweep [" + table + "]: ERROR — " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.warning(LOG, "Soft-delete sweep [" + table + "] failed; rows removed from IdentityIQ were not marked deleted this run", e);
         }
     }
 
@@ -984,7 +952,7 @@ public final class Main {
                     ids.add(pk);
                 }
             } catch (RuntimeException unmappable) {
-                com.keyforge.iiq.debug.DebugLog.error(unmappable);
+                LOG.debug("Record left out of the deletion keep-set (no valid key): {}", unmappable.getMessage());
                 // record that cannot form a valid PK was never persisted -> safe to exclude from keep-set
             }
         }
@@ -998,8 +966,7 @@ public final class Main {
                         + " marked deleted=" + sw.marked() + " revived=" + sw.revived());
             }
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.info("  soft-delete sweep [" + table + "]: ERROR — " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.warning(LOG, "Soft-delete sweep [" + table + "] failed; rows removed from IdentityIQ were not marked deleted this run", e);
         }
     }
 
@@ -1084,20 +1051,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -1229,9 +1192,8 @@ public final class Main {
             try {
                 code = RunLedger.run(job.command(), job.runner());
             } catch (RuntimeException e) {
-                com.keyforge.iiq.debug.DebugLog.error(e);
                 code = 1;
-                LOG.error("Unexpected error in " + job.command() + ": " + e.getMessage());
+                com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error in " + job.command() + ": " + e.getMessage(), e);
             }
             if (code == 0) {
                 ok++;
@@ -1282,24 +1244,19 @@ public final class Main {
                 return result.isTruncated() ? 6 : 0;
             }
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native SQL-report error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native SQL-report error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -1344,24 +1301,19 @@ public final class Main {
                 return result.isTruncated() ? 6 : 0;
             }
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native SQL-report error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native SQL-report error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -1407,24 +1359,19 @@ public final class Main {
                 return result.isTruncated() ? 6 : 0;
             }
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native SQL-report error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native SQL-report error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -1472,24 +1419,19 @@ public final class Main {
                 return result.isTruncated() ? 6 : 0;
             }
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native SQL-report error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native SQL-report error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -1527,24 +1469,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native payload error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -1561,7 +1498,7 @@ public final class Main {
             int n = Integer.parseInt(v.trim());
             return n > 0 ? n : 100;
         } catch (NumberFormatException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
+            LOG.warn("IIQ_NATIVE_PAGE_SIZE '{}' is not a number; using the default page size 100", v);
             return 100;
         }
     }
@@ -1623,24 +1560,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native payload error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -1708,9 +1640,9 @@ public final class Main {
                         + " unchanged=" + totalUnchanged + " datasets-failed=" + failed);
                 return failed > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3; }
-        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL/Parquet error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL/Parquet error: " + e.getMessage(), e); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractNativeSyslogEventsDb() {
@@ -1747,11 +1679,11 @@ public final class Main {
                 }
                 return result.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractNativePolicyConstraintsDb() {
@@ -1792,11 +1724,11 @@ public final class Main {
                 }
                 return result.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractNativeAuditEventsDb() {
@@ -1833,11 +1765,11 @@ public final class Main {
                 }
                 return result.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     /**
@@ -1901,11 +1833,11 @@ public final class Main {
             }
             LOG.info("  append-only: no deletion sweep (immutable historical evidence); re-run is idempotent");
             return totalFailed > 0 ? 6 : 0;
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     /** {@code schema.kf_table} -> {@code kf_table} for the run-ledger entity name. */
@@ -1940,11 +1872,11 @@ public final class Main {
                         result.getFailures(), repository.targetTable());
                 return result.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractNativePoliciesDb() {
@@ -1973,11 +1905,11 @@ public final class Main {
                         result.getFailures(), repository.targetTable());
                 return result.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3; }
-        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4; }
-        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4; }
-        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5; }
-        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3; }
+        catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4; }
+        catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4; }
+        catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5; }
+        catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static void printNativeCurrentStateSummary(String label, int persisted, int extracted, int inserted,
@@ -2030,24 +1962,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native payload error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -2101,24 +2028,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native payload error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -2175,24 +2097,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native payload error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -2255,24 +2172,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native payload error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -2339,11 +2251,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractNativeRoleRelationshipsDb() {
@@ -2380,20 +2292,15 @@ public final class Main {
                 return r.failed > 0 ? 6 : 0;
             }
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage()); return 3;
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native payload error: " + e.getMessage()); return 4;
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage()); return 1;
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1;
         }
     }
 
@@ -2428,24 +2335,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native payload error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -2504,24 +2406,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native payload error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -2561,10 +2458,10 @@ public final class Main {
                         + ", deletion sweep=" + (result.sweepSkipped ? "skipped (empty source or failed rows)" : "marked " + result.marked + " deleted"));
                 return result.failed == 0 ? 0 : 6;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException | IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native Workflow extraction error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException | IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native Workflow extraction error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractNativeWorkgroupMembershipsDb() {
@@ -2583,10 +2480,10 @@ public final class Main {
                         + ", deletion sweep=" + (result.sweepSkipped ? "skipped (empty source or failed rows)" : "marked " + result.deleted + " deleted"));
                 return result.failed == 0 ? 0 : 6;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException | IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native membership extraction error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException | IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native membership extraction error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     /**
@@ -2624,24 +2521,19 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native payload error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e);
             return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -2705,20 +2597,15 @@ public final class Main {
                 return r.getFailed() > 0 ? 6 : 0;
             }
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage()); return 3;
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
         } catch (NativeImportException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Native payload error: " + e.getMessage()); return 4;
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage()); return 1;
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1;
         }
     }
 
@@ -2759,11 +2646,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     /** Native current-state account↔entitlement edges (from Link entitlement attributes). */
@@ -2804,11 +2691,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     /** Native current-state Certification (campaign/cert container). */
@@ -2838,11 +2725,11 @@ public final class Main {
                         r.getMarkedDeleted(), r.getRevived(), repository.targetTable(), r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     /** Native current-state CertificationEntity (who/what was reviewed + entity action). */
@@ -2873,11 +2760,11 @@ public final class Main {
                         r.isSweepSkipped(), r.getMarkedDeleted(), r.getRevived(), repository.targetTable(), r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     /** Native current-state CertificationItem (reviewed item + folded decision/action). */
@@ -2908,11 +2795,11 @@ public final class Main {
                         r.isSweepSkipped(), r.getMarkedDeleted(), r.getRevived(), repository.targetTable(), r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     /** Native append-only CertificationArchive (immutable historical certifications; no deletion sweep). */
@@ -2947,11 +2834,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     /** Shared summary printer for the native current-state relationship/certification imports. */
@@ -2998,11 +2885,11 @@ public final class Main {
                         r.getMarkedDeleted(), r.getRevived(), repository.targetTable(), r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     /** Native current-state IdentityRequest (+ derived items + request-time approval summaries) into iiq_native. */
@@ -3052,11 +2939,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractNativeProvisioningTxnDb() {
@@ -3101,11 +2988,11 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Native payload error: " + e.getMessage()); return 4;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ plugin API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (NativeImportException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Native payload error: " + e.getMessage(), e); return 4;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractUsersDb() {
@@ -3138,20 +3025,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3192,16 +3075,13 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3233,16 +3113,13 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3324,16 +3201,13 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3391,16 +3265,13 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3529,16 +3400,13 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3576,20 +3444,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3638,20 +3502,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3689,16 +3549,13 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3742,20 +3599,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3791,16 +3644,13 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3847,20 +3697,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3895,16 +3741,13 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -3952,20 +3795,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -4000,16 +3839,13 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -4066,20 +3902,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -4105,9 +3937,9 @@ public final class Main {
                         + " (" + a.roleId() + ")");
             }
             return 0;
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractIdentityRolesDb() {
@@ -4143,10 +3975,10 @@ public final class Main {
                         rels, a -> com.keyforge.iiq.identityrole.IdentityRoleRowMapper.map(a).id());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     // ---- Parquet workstream (Phase 1): direct IIQ -> Parquet (independent of PostgreSQL) ----
@@ -4173,7 +4005,8 @@ public final class Main {
                 java.nio.file.Files.createDirectories(duckTmp);
                 System.setProperty("java.io.tmpdir", duckTmp.toString());
             } catch (Exception ignore) {
-                com.keyforge.iiq.debug.DebugLog.error(ignore);
+                LOG.warn("Could not prepare the DuckDB temp folder under the Parquet output folder ({}); using the"
+                        + " default temp folder", ignore.getMessage());
                 // fall back to the default temp dir
             }
             boolean debugHttp = !"false".equalsIgnoreCase(System.getenv("IIQ_DEBUG_HTTP"));
@@ -4202,12 +4035,10 @@ public final class Main {
             LOG.info("Total rows written: " + totalWritten + "  (datasets with errors: " + failedDatasets + ")");
             return failedDatasets > 0 ? 6 : 0;
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -4261,20 +4092,16 @@ public final class Main {
             printInspectSummary(tree, out);
             return 0;
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ plugin API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ plugin API error: " + e.getMessage(), e);
             return 4;
         } catch (java.io.IOException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Could not read response or write output file: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Could not read response or write output file: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -4310,7 +4137,8 @@ public final class Main {
                 java.nio.file.Files.createDirectories(duckTmp);
                 System.setProperty("java.io.tmpdir", duckTmp.toString());
             } catch (Exception ignore) {
-                com.keyforge.iiq.debug.DebugLog.error(ignore);
+                LOG.warn("Could not prepare the DuckDB temp folder under the Parquet output folder ({}); using the"
+                        + " default temp folder", ignore.getMessage());
                 // fall back to the default temp dir
             }
             ParquetRestServer server = new ParquetRestServer(rest, pq);
@@ -4318,11 +4146,10 @@ public final class Main {
             server.start();
             Thread.currentThread().join(); // keep the process running while serving requests
         } catch (InterruptedException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
+            LOG.info("Service interrupted; stopping");
             Thread.currentThread().interrupt();
         } catch (Exception e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Failed to start REST service: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Failed to start REST service: " + e.getMessage(), e);
             System.exit(1);
         }
     }
@@ -4380,11 +4207,10 @@ public final class Main {
             Runtime.getRuntime().addShutdownHook(new Thread(() -> httpFinal.stop(0)));
             Thread.currentThread().join(); // keep the process running while serving requests
         } catch (InterruptedException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
+            LOG.info("Service interrupted; stopping");
             Thread.currentThread().interrupt();
         } catch (Exception e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Failed to start KF Agent REST service: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Failed to start KF Agent REST service: " + e.getMessage(), e);
             System.exit(1);
         }
     }
@@ -4404,14 +4230,14 @@ public final class Main {
                 java.nio.file.Files.createDirectories(duckTmp);
                 System.setProperty("java.io.tmpdir", duckTmp.toString());
             } catch (Exception ignore) {
-                com.keyforge.iiq.debug.DebugLog.error(ignore);
+                LOG.warn("Could not prepare the DuckDB temp folder under the Parquet output folder ({}); using the"
+                        + " default temp folder", ignore.getMessage());
                 // fall back to the default temp dir
             }
             return new ParquetRestServer(new RestConfig("0.0.0.0", 0), pq, restAuth); // host/port unused when co-mounted
         } catch (Throwable t) {
-            com.keyforge.iiq.debug.DebugLog.error(t);
-            LOG.error("[WARN] Parquet query endpoints not mounted (" + t.getClass().getSimpleName()
-                    + ": " + t.getMessage() + "). KF Agent continues; run 'start-rest' separately to serve them.");
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "[WARN] Parquet query endpoints not mounted (" + t.getClass().getSimpleName()
+                    + ": " + t.getMessage() + "). KF Agent continues; run 'start-rest' separately to serve them.", t);
             return null;
         }
     }
@@ -4432,7 +4258,7 @@ public final class Main {
         try {
             return Integer.parseInt(v.trim());
         } catch (NumberFormatException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
+            LOG.warn("{} '{}' is not a number; using the default {}", key, v, def);
             return def;
         }
     }
@@ -4469,16 +4295,13 @@ public final class Main {
             return res.anyFailed() ? 4 : 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -4540,20 +4363,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -4605,16 +4424,13 @@ public final class Main {
             return 0;
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -4662,20 +4478,16 @@ public final class Main {
             }
 
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (IiqApiException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("IdentityIQ API error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e);
             return 4;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -4701,9 +4513,9 @@ public final class Main {
                         + " approvals=" + (r.interactions() == null ? 0 : r.interactions().size()));
             }
             return 0;
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractAccessRequestsDb() {
@@ -4738,10 +4550,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     // ---- Phase 5: Audit Events (kf_audit_event) ----
@@ -4761,9 +4573,9 @@ public final class Main {
                         + " | target=" + e.target() + " | created=" + e.created() + " | id=" + e.id());
             }
             return 0;
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractAuditEventsDb() {
@@ -4791,10 +4603,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     // ---- Phase 4d (audit side): derived kf_event_link (audit event -> identity/account/entitlement) ----
@@ -4833,9 +4645,9 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static List<String> distinctSorted(List<String> values) {
@@ -4853,7 +4665,8 @@ public final class Main {
                 java.nio.file.Files.createDirectories(duckTmp);
                 System.setProperty("java.io.tmpdir", duckTmp.toString());
             } catch (Exception ignore) {
-                com.keyforge.iiq.debug.DebugLog.error(ignore);
+                LOG.warn("Could not prepare the DuckDB temp folder under the Parquet output folder ({}); using the"
+                        + " default temp folder", ignore.getMessage());
                 // fall back to default temp dir
             }
             LOG.info("PostgreSQL: " + pgConfig.getJdbcUrl()
@@ -4883,9 +4696,9 @@ public final class Main {
                 LOG.info("Written to " + repo.targetTable() + " (persist failures: " + r.persistFailures() + ")");
                 return r.persistFailures() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runDeriveRecordLineageDb() {
@@ -4915,9 +4728,9 @@ public final class Main {
                         + " (failed tables: " + r.failedTables() + ")");
                 return r.failedTables() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runDeriveEventsDb() {
@@ -4945,9 +4758,9 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runDeriveNativeEventsDb() {
@@ -4992,16 +4805,13 @@ public final class Main {
                 return 0;
             }
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -5046,16 +4856,13 @@ public final class Main {
                 return 0;
             }
         } catch (ConfigException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Configuration error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e);
             return 3;
         } catch (SQLException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("PostgreSQL error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e);
             return 5;
         } catch (RuntimeException e) {
-            com.keyforge.iiq.debug.DebugLog.error(e);
-            LOG.error("Unexpected error: " + e.getMessage());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e);
             return 1;
         }
     }
@@ -5095,9 +4902,9 @@ public final class Main {
                         + " (persist failures: " + r.persistFailures() + ")");
                 return r.persistFailures() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runReconcileCanonicalViewsDb() {
@@ -5125,9 +4932,9 @@ public final class Main {
                 }
                 return conflict ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     // ---- Domain 15: TaskResult (kf_task_result — extraction-provenance ledger) ----
@@ -5146,9 +4953,9 @@ public final class Main {
                         + ", launcher=" + t.launcher() + ", completed=" + t.completed() + "]");
             }
             return 0;
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractTaskResultsDb() {
@@ -5194,10 +5001,10 @@ public final class Main {
                 }
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     // ---- Certification campaigns: kf_certification_campaign (POST rest/certificationGroups) ----
@@ -5221,9 +5028,9 @@ public final class Main {
             LOG.info("(campaign type/phase/start-end/sign-off and the item-decision hierarchy are NOT "
                     + "exposed by this endpoint -> stored NULL / out of scope; see report)");
             return 0;
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractCertificationsDb() {
@@ -5250,10 +5057,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     // ---- Phase 4d (provisioning side): kf_event_link (ProvisioningTransaction -> Request / Certification) ----
@@ -5279,9 +5086,9 @@ public final class Main {
                         + " certificationName=" + t.certificationName());
             }
             return 0;
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractProvisioningTransactionsDb() {
@@ -5311,10 +5118,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     // ---- Provisioning items: kf_provisioning_item (GET rest/provisioningTransactions/{id} detail plan) ----
@@ -5339,9 +5146,9 @@ public final class Main {
                         + "=" + it.value() + " result=" + it.result() + " txn=" + it.parentTransactionId());
             }
             return 0;
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractProvisioningItemsDb() {
@@ -5366,10 +5173,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runDeriveProvisioningLinksDb() {
@@ -5411,10 +5218,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     // ---- Phase 3: Governance configuration (kf_workflow_definition, kf_violation, kf_policy) ----
@@ -5434,9 +5241,9 @@ public final class Main {
             LOG.info("(approval scheme/mode/levels/escalation/e-signature are NULL: not exposed by SCIM "
                     + "- authoritative source is the workflow XML (JDBC/plugin), deferred)");
             return 0;
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractWorkflowsDb() {
@@ -5464,10 +5271,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractPolicyViolations() {
@@ -5486,9 +5293,9 @@ public final class Main {
                         + " identity=" + (v.identity() == null ? null : v.identity().displayName()));
             }
             return 0;
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractPolicyViolationsDb() {
@@ -5511,10 +5318,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractPolicies() {
@@ -5533,9 +5340,9 @@ public final class Main {
             }
             LOG.info("(per-constraint detail is not in the list grid; deferred to the policy-editor/JDBC source)");
             return 0;
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     private static int runExtractPoliciesDb() {
@@ -5559,10 +5366,10 @@ public final class Main {
                 printLines(r.getFailures());
                 return r.getFailed() > 0 ? 6 : 0;
             }
-        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Configuration error: " + e.getMessage()); return 3;
-        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("IdentityIQ API error: " + e.getMessage()); return 4;
-        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("PostgreSQL error: " + e.getMessage()); return 5;
-        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.error(e); LOG.error("Unexpected error: " + e.getMessage()); return 1; }
+        } catch (ConfigException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Configuration error: " + e.getMessage(), e); return 3;
+        } catch (IiqApiException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "IdentityIQ API error: " + e.getMessage(), e); return 4;
+        } catch (SQLException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "PostgreSQL error: " + e.getMessage(), e); return 5;
+        } catch (RuntimeException e) { com.keyforge.iiq.debug.DebugLog.failure(LOG, "Unexpected error: " + e.getMessage(), e); return 1; }
     }
 
     /** A username for a startup line: shown at debug log level only (KF_LOG_LEVEL). */

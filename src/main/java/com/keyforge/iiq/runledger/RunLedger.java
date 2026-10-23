@@ -43,9 +43,6 @@ public final class RunLedger {
         try {
             exitCode = runner.getAsInt();
             return exitCode;
-        } catch (RuntimeException | Error escaped) {
-            com.keyforge.iiq.debug.DebugLog.error(escaped, "command", command);
-            throw escaped;
         } finally {
             com.keyforge.iiq.debug.DebugLog.log("COMMAND-END", "name", command, "exitCode", exitCode,
                     "result", exitCode == 0 ? "SUCCESS" : "FAILED (see ERROR lines above)",
@@ -68,8 +65,7 @@ public final class RunLedger {
             ExtractionRun run = buildRun(ctx, exitCode, Instant.now());
             persist(run, ctx.command());
         } catch (RuntimeException unexpected) {
-            LOG.warn("[run-ledger] failed to build/record run for '" + ctx.command()
-                    + "': " + unexpected.getMessage());
+            LOG.warn("[run-ledger] failed to build/record run for '{}': {}", ctx.command(), unexpected.getMessage());
         } finally {
             CURRENT.remove();
         }
@@ -145,8 +141,8 @@ public final class RunLedger {
             }
         } catch (Exception e) {
             // Best-effort: never mask the command's own exit code (e.g. PG unreachable on a failed run).
-            LOG.warn("[run-ledger] could not record extraction run " + run.extractionRunId()
-                    + " (" + command + "): " + e.getMessage());
+            LOG.warn("[run-ledger] could not record extraction run {} ({}): {}", run.extractionRunId(), command,
+                    e.getMessage());
         }
     }
 

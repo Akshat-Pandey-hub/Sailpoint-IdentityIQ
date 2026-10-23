@@ -43,7 +43,7 @@ class DebugLogTest {
     @Test
     void neverPrintsTheIiqPassword() {
         for (DebugLog.Level level : new DebugLog.Level[]{DebugLog.Level.DEBUG, DebugLog.Level.NORMAL}) {
-            String line = DebugLog.render(level, "IIQ-LOGIN", "step", "result", "IIQ_USERNAME", "spadmin",
+            String line = DebugLog.render(level, "IIQ-LOGIN", false, "step", "result", "IIQ_USERNAME", "spadmin",
                     "IIQ_PASSWORD", "Secret@123");
             assertTrue(line.contains("IIQ_PASSWORD=" + DebugLog.HIDDEN), level + ": " + line);
             assertFalse(line.contains("Secret@123"), level + ": " + line);
@@ -54,11 +54,11 @@ class DebugLogTest {
     void debugShowsCredentialsNormalDoesNot() {
         Object[] kv = {"scheme", "Basic", "sentUser", "client-a", "sentPassword", "pw-a", "expectedUser", "client-b",
                 "expectedPassword", "pw-b", "result", "DENY 401", "reason", "WRONG_USERNAME"};
-        String debug = DebugLog.render(DebugLog.Level.DEBUG, "AUTH", kv);
+        String debug = DebugLog.render(DebugLog.Level.DEBUG, "AUTH", false, kv);
         assertTrue(debug.contains("AUTH") && debug.contains("sentUser=client-a")
                 && debug.contains("expectedPassword=pw-b"), debug);
 
-        String normal = DebugLog.render(DebugLog.Level.NORMAL, "AUTH", kv);
+        String normal = DebugLog.render(DebugLog.Level.NORMAL, "AUTH", true, kv); // a rejection is always shown
         assertTrue(normal.contains("AUTH") && normal.contains("result=DENY 401")
                 && normal.contains("reason=WRONG_USERNAME"), normal);
         assertFalse(normal.contains("client-a") || normal.contains("pw-a") || normal.contains("pw-b"), normal);
@@ -66,17 +66,25 @@ class DebugLogTest {
 
     @Test
     void normalDropsDetailLinesAndOffDropsEverything() {
-        assertNull(DebugLog.render(DebugLog.Level.NORMAL, "SETTING", "name", "IIQ_USERNAME", "value", "spadmin"));
-        assertNull(DebugLog.render(DebugLog.Level.NORMAL, "REQUEST", "path", "/health"));
-        assertNull(DebugLog.render(DebugLog.Level.NORMAL, "IIQ-CALL", "url", "https://h/x"));
-        assertNull(DebugLog.render(DebugLog.Level.NORMAL, "IIQ-LOGIN", "step", "start"));
-        assertNotNull(DebugLog.render(DebugLog.Level.NORMAL, "RESULT", "status", 200));
-        assertNull(DebugLog.render(DebugLog.Level.OFF, "ERROR", "error", "x"));
+        assertNull(DebugLog.render(DebugLog.Level.NORMAL, "SETTING", false, "name", "IIQ_USERNAME", "value", "spadmin"));
+        assertNull(DebugLog.render(DebugLog.Level.NORMAL, "REQUEST", false, "path", "/health"));
+        assertNull(DebugLog.render(DebugLog.Level.NORMAL, "IIQ-CALL", false, "url", "https://h/x"));
+        assertNull(DebugLog.render(DebugLog.Level.NORMAL, "IIQ-LOGIN", false, "step", "start"));
+        assertNotNull(DebugLog.render(DebugLog.Level.NORMAL, "RESULT", false, "status", 200));
+        assertNull(DebugLog.render(DebugLog.Level.NORMAL, "AUTH", false, "result", "ALLOW"), "accepted login: debug only");
+        assertNull(DebugLog.render(DebugLog.Level.OFF, "SERVICE", false, "endpoint", "/x"), "off: no routine lines");
+        assertNotNull(DebugLog.render(DebugLog.Level.OFF, "FAILED", true, "what", "x"), "off: failures still shown");
+        assertNotNull(DebugLog.render(DebugLog.Level.OFF, "AUTH", true, "result", "DENY 401"), "off: 401 reason shown");
     }
 
     @Test
     void parsesTheLevelSetting() {
-        assertEquals(DebugLog.Level.DEBUG, DebugLog.parseLevel(null, null));
+        assertEquals(DebugLog.Level.NORMAL, DebugLog.parseLevel(null, null), "default is normal, never debug");
+        assertEquals(DebugLog.Level.NORMAL, DebugLog.parseLevel("", null));
+        assertEquals(DebugLog.Level.NORMAL, DebugLog.parseLevel("verbose-typo", null), "unknown -> normal");
+        assertEquals(DebugLog.Level.DEBUG, DebugLog.parseLevel(null, "true"), "legacy KF_DEBUG=true");
+        assertEquals(DebugLog.Level.OFF, DebugLog.parseLevel("quiet", null));
+        assertEquals(DebugLog.Level.OFF, DebugLog.parseLevel("error", null));
         assertEquals(DebugLog.Level.NORMAL, DebugLog.parseLevel("normal", null));
         assertEquals(DebugLog.Level.NORMAL, DebugLog.parseLevel(" NORMAL ", null));
         assertEquals(DebugLog.Level.DEBUG, DebugLog.parseLevel("debug", "false"));

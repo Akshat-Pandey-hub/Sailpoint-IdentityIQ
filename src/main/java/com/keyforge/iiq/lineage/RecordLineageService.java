@@ -80,7 +80,7 @@ public final class RecordLineageService {
             } catch (SQLException e) {
                 result.tables().add(new TableResult(s.table(), TableResult.FAILED, 0, e.getMessage()));
                 result.failed++;
-                LOG.warn("[lineage] failed to backfill '" + s.table() + "': " + e.getMessage());
+                LOG.warn("[lineage] failed to backfill '{}': {}", s.table(), e.getMessage());
             }
         }
         return result;

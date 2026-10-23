@@ -63,7 +63,7 @@ public final class CountReconciliationService {
                 repo.upsert(conn, runId, pair, pg, pq, status, now);
             } catch (SQLException e) {
                 result.persistFailures++;
-                LOG.warn("[count-reconcile] failed to persist '" + pair.domain() + "': " + e.getMessage());
+                LOG.warn("[count-reconcile] failed to persist '{}': {}", pair.domain(), e.getMessage());
             }
         }
         return result;

@@ -1,0 +1,4 @@
+2026-10-23 16:19:15.133 | INFO  | main | c.k.audit | [cmd-ffdb7609] START          | command=start-kfagent | purpose=KF Agent REST service: answers /health and /kfagent/* by reading live from IdentityIQ (logs in with IIQ_USERNAME/IIQ_PASSWORD, reads through the KeyForge IIQ plugin); callers must send KFAGENT_USERNAME/KFAGENT_PASSWORD; also mounts the Parquet query API | javaVersion=17.0.20 | logLevel=normal (KF_LOG_LEVEL=debug to also print settings, requests and credentials)
+2026-10-23 16:19:15.133 | INFO  | main | c.k.i.Main | IdentityIQ: https://preview.keyforge.ai/identityiq (user 'hidden at normal log level')
+2026-10-23 16:19:15.199 | INFO  | main | c.k.i.Main | REST API authentication: HTTP Basic (KFAGENT_USERNAME / KFAGENT_PASSWORD, client 'hidden at normal log level')
+2026-10-23 16:19:15.734 | INFO  | main | c.k.i.Main | KF Agent REST listening on http://127.0.0.1:8100  (GET /health, /kfagent/*, /iiq_parquet/*, /native_parquet/*)

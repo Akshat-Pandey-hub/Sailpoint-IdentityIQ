@@ -365,16 +365,14 @@ public final class KfAgentRestServer {
             }
         } catch (Exception e) {
             // generic message to the caller; the details stay in the server log (never credentials/headers)
-            LOG.error("[kfagent] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath() + " failed", e);
-            com.keyforge.iiq.debug.DebugLog.error(e, "endpoint", ex.getRequestURI().getPath(),
-                    "query/filters", ex.getRequestURI().getRawQuery());
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
+                    + " failed (caller gets HTTP 500)", e, "query/filters", ex.getRequestURI().getRawQuery());
             writeJson(ex, 500, error("Internal Server Error"));
         } catch (Error fatal) {
-            com.keyforge.iiq.debug.DebugLog.error(fatal, "endpoint", ex.getRequestURI().getPath(),
-                    "query/filters", ex.getRequestURI().getRawQuery());
             // e.g. OutOfMemoryError on an oversized request: answer this caller with a JSON 500 (best effort)
             // instead of dropping the connection; the worker pool and the server keep serving other requests.
-            LOG.error("[kfagent] " + ex.getRequestMethod() + " " + ex.getRequestURI().getPath() + " failed", fatal);
+            com.keyforge.iiq.debug.DebugLog.failure(LOG, ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
+                    + " failed (caller gets HTTP 500)", fatal, "query/filters", ex.getRequestURI().getRawQuery());
             try {
                 writeJson(ex, 500, error("Internal Server Error"));
             } catch (Throwable ignored) {

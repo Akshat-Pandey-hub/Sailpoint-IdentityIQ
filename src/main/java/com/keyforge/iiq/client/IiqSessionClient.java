@@ -46,7 +46,6 @@ public class IiqSessionClient extends IiqApiClient {
 
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
-    private static final int MAX_ERROR_BODY = 2000;
 
     /** IdentityIQ 8.4 JSF login page — GET to seed the session, POST to authenticate. */
     static final String LOGIN_PATH = "login.jsf";
@@ -135,11 +134,9 @@ public class IiqSessionClient extends IiqApiClient {
 
         int status = response.statusCode();
         if (debug) {
-            LOG.debug("[IIQ] GET " + uri + " -> HTTP " + status);
+            LOG.debug("[IIQ] GET {} -> HTTP {}", uri, status);
             if (status < 200 || status >= 300) {
-                LOG.debug("[IIQ]   Location: "
-                        + response.headers().firstValue("Location").orElse("<none>"));
-                LOG.debug("[IIQ]   body: " + truncate(response.body()));
+                LOG.debug("[IIQ]   Location: {}", response.headers().firstValue("Location").orElse("<none>"));
             }
         }
         if (isRedirect(status)) {
@@ -149,7 +146,7 @@ public class IiqSessionClient extends IiqApiClient {
         }
         if (status < 200 || status >= 300) {
             throw new IiqApiException("IdentityIQ request to " + uri + " failed with HTTP "
-                    + status + ": " + truncate(response.body()), status);
+                    + status + ": " + errorSummary(response.body()), status);
         }
         return response.body();
     }
@@ -182,10 +179,7 @@ public class IiqSessionClient extends IiqApiClient {
         HttpResponse<String> response = send(builder.build(), uri);
         int status = response.statusCode();
         if (debug) {
-            LOG.debug("[IIQ] POST " + uri + " -> HTTP " + status);
-            if (status < 200 || status >= 300) {
-                LOG.debug("[IIQ]   body: " + truncate(response.body()));
-            }
+            LOG.debug("[IIQ] POST {} -> HTTP {}", uri, status);
         }
         if (isRedirect(status)) {
             throw new IiqApiException("IdentityIQ redirected POST " + uri + " to "
@@ -194,7 +188,7 @@ public class IiqSessionClient extends IiqApiClient {
         }
         if (status < 200 || status >= 300) {
             throw new IiqApiException("IdentityIQ POST to " + uri + " failed with HTTP "
-                    + status + ": " + truncate(response.body()), status);
+                    + status + ": " + errorSummary(response.body()), status);
         }
         return response.body();
     }
@@ -228,10 +222,7 @@ public class IiqSessionClient extends IiqApiClient {
         HttpResponse<String> response = send(builder.build(), uri);
         int status = response.statusCode();
         if (debug) {
-            LOG.debug("[IIQ] POST(form->json) " + uri + " -> HTTP " + status);
-            if (status < 200 || status >= 300) {
-                LOG.debug("[IIQ]   body: " + truncate(response.body()));
-            }
+            LOG.debug("[IIQ] POST(form->json) {} -> HTTP {}", uri, status);
         }
         if (isRedirect(status)) {
             throw new IiqApiException("IdentityIQ redirected POST " + uri + " to "
@@ -240,7 +231,7 @@ public class IiqSessionClient extends IiqApiClient {
         }
         if (status < 200 || status >= 300) {
             throw new IiqApiException("IdentityIQ POST to " + uri + " failed with HTTP "
-                    + status + ": " + truncate(response.body()), status);
+                    + status + ": " + errorSummary(response.body()), status);
         }
         return response.body();
     }
@@ -268,8 +259,8 @@ public class IiqSessionClient extends IiqApiClient {
         HttpResponse<String> response = send(request, uri);
         int status = response.statusCode();
         if (debug) {
-            LOG.debug("[IIQ] POST(form) " + uri + " -> HTTP " + status
-                    + " (Location: " + response.headers().firstValue("Location").orElse("<none>") + ")");
+            LOG.debug("[IIQ] POST(form) {} -> HTTP {} (Location: {})", uri, status,
+                    response.headers().firstValue("Location").orElse("<none>"));
         }
         if (isRedirect(status)) {
             String location = response.headers().firstValue("Location").orElse(null);
@@ -278,14 +269,14 @@ public class IiqSessionClient extends IiqApiClient {
                 HttpResponse<String> followed = send(HttpRequest.newBuilder(target)
                         .timeout(REQUEST_TIMEOUT).header("Accept", "text/html").GET().build(), target);
                 if (debug) {
-                    LOG.debug("[IIQ]   -> follow GET " + target + " -> HTTP " + followed.statusCode());
+                    LOG.debug("[IIQ]   -> follow GET {} -> HTTP {}", target, followed.statusCode());
                 }
                 return followed.body();
             }
         }
         if (status < 200 || status >= 400) {
             throw new IiqApiException("IdentityIQ form POST to " + uri + " failed with HTTP "
-                    + status + ": " + truncate(response.body()), status);
+                    + status + ": " + errorSummary(response.body()), status);
         }
         return response.body();
     }
@@ -320,8 +311,8 @@ public class IiqSessionClient extends IiqApiClient {
                     .timeout(REQUEST_TIMEOUT).header("Accept", "text/html").GET().build(), page);
             this.csrfTokenValue = extractCsrfToken(resp.body());
             if (debug) {
-                LOG.debug("[IIQ] GET " + page + " -> HTTP " + resp.statusCode()
-                        + " (CSRF token " + (csrfTokenValue == null ? "NOT found" : "acquired") + ")");
+                LOG.debug("[IIQ] GET {} -> HTTP {} (CSRF token {})", page, resp.statusCode(),
+                        csrfTokenValue == null ? "NOT found" : "acquired");
             }
         } catch (IiqApiException warmUpFailure) {
             // Non-fatal: the POST below surfaces the real error if the token is truly missing.
@@ -354,7 +345,7 @@ public class IiqSessionClient extends IiqApiClient {
         HttpResponse<String> page = send(HttpRequest.newBuilder(loginUri)
                 .timeout(REQUEST_TIMEOUT).GET().build(), loginUri);
         if (debug) {
-            LOG.debug("[IIQ] GET " + loginUri + " -> HTTP " + page.statusCode() + " (login seed)");
+            LOG.debug("[IIQ] GET {} -> HTTP {} (login seed)", loginUri, page.statusCode());
         }
         String html = page.body();
         String viewState = extractHiddenValue(html, FIELD_VIEWSTATE);
@@ -387,8 +378,7 @@ public class IiqSessionClient extends IiqApiClient {
         int status = response.statusCode();
         String location = response.headers().firstValue("Location").orElse("");
         if (debug) {
-            LOG.debug("[IIQ] POST " + loginUri + " -> HTTP " + status
-                    + " (Location: " + (location.isEmpty() ? "<none>" : location) + ")");
+            LOG.debug("[IIQ] POST {} -> HTTP {} (Location: {})", loginUri, status, location.isEmpty() ? "<none>" : location);
         }
 
         // Login is REJECTED when IdentityIQ redirects back to the login page, or answers
@@ -535,12 +525,5 @@ public class IiqSessionClient extends IiqApiClient {
 
     private static String firstNonBlank(String a, String b) {
         return a != null && !a.isBlank() ? a : b;
-    }
-
-    private static String truncate(String body) {
-        if (body == null) {
-            return "<no body>";
-        }
-        return body.length() <= MAX_ERROR_BODY ? body : body.substring(0, MAX_ERROR_BODY) + "... (truncated)";
     }
 }
