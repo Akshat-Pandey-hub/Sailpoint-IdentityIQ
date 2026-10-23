@@ -124,7 +124,7 @@ public final class RestAuthFilter extends Filter {
             chain.doFilter(ex);
         } catch (Throwable t) {
             DebugLog.failure(LOG, ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
-                    + " failed (caller gets HTTP 500)", t);
+                    + " failed; returned HTTP 500", t);
             if (ex.getResponseCode() == -1) { // nothing sent yet: answer this caller, keep the server serving
                 try {
                     send(ex, 500, INTERNAL);
@@ -177,17 +177,14 @@ public final class RestAuthFilter extends Filter {
     /** Why a request is rejected, or null when it is allowed. */
     String denyReason(String header) {
         if (credentials == null) {
-            return "NOT_CONFIGURED: KFAGENT_USERNAME / KFAGENT_PASSWORD are not set for this service, so every request"
-                    + " is rejected";
+            return "NOT_CONFIGURED: KFAGENT_USERNAME and KFAGENT_PASSWORD are not set on the server";
         }
         if (header == null) {
-            return "NO_CREDENTIALS: the request has no Authorization header (Postman 'No Auth'/'Inherit', a health"
-                    + " monitor, or a proxy removed it)";
+            return "NO_CREDENTIALS: the request has no Authorization header";
         }
         String h = header.trim();
         if (h.length() < 6 || !h.regionMatches(true, 0, "Basic ", 0, 6)) {
-            return "NOT_BASIC: Authorization is '" + h.split("\\s+")[0] + "', but only Basic Auth is accepted"
-                    + " (not OAuth/Bearer)";
+            return "NOT_BASIC: the request uses '" + h.split("\\s+")[0] + "' authentication; only Basic is accepted";
         }
         String pair = decodeBasic(header);
         if (pair == null) {
@@ -200,8 +197,9 @@ public final class RestAuthFilter extends Filter {
         if (credentials.matches(pair.substring(0, colon), pair.substring(colon + 1))) {
             return null;
         }
-        return credentials.userMatches(pair.substring(0, colon)) ?"WRONG_PASSWORD: the username matches KFAGENT_USERNAME but the password is not KFAGENT_PASSWORD"
-                : "WRONG_USERNAME: the username sent is not KFAGENT_USERNAME (IIQ login or a swapped/old client ID?)";
+        return credentials.userMatches(pair.substring(0, colon))
+                ? "WRONG_PASSWORD: supplied password does not match the configured KFAGENT_PASSWORD"
+                : "WRONG_USERNAME: supplied username does not match the configured KFAGENT_USERNAME";
     }
 
     private static String decodeBasic(String header) {

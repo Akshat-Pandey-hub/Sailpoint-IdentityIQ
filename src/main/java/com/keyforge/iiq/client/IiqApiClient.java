@@ -106,10 +106,10 @@ public class IiqApiClient {
                 "Basic (IIQ_USERNAME/IIQ_PASSWORD)", "IIQ_USERNAME", com.keyforge.iiq.debug.DebugLog.setting("IIQ_USERNAME"),
                 "IIQ_PASSWORD", com.keyforge.iiq.debug.DebugLog.setting("IIQ_PASSWORD"), "status", status,
                 "meaning", status >= 200 && status < 300 ? "OK"
-                        : status == 401 ? "IIQ REJECTED IIQ_USERNAME/IIQ_PASSWORD"
-                        : status == 403 ? "IIQ REFUSED - user lacks rights"
-                        : status == 404 ? "NOT FOUND - endpoint missing or wrong path"
-                        : status >= 500 ? "IIQ SERVER ERROR - see IdentityIQ log" : "HTTP " + status,
+                        : status == 401 ? "authentication failed"
+                        : status == 403 ? "access denied"
+                        : status == 404 ? "not found"
+                        : status >= 500 ? "server error" : "HTTP " + status,
                 "responseBytes", response.body() == null ? 0 : response.body().length(),
                 "ms", (System.nanoTime() - t0) / 1_000_000);
         if (status < 200 || status >= 300) {
@@ -217,7 +217,7 @@ public class IiqApiClient {
         } catch (Exception notJson) {
             // fall through: not a JSON error body
         }
-        return "response body of " + body.length() + " chars (not logged; KF_LOG_LEVEL=debug shows an excerpt)";
+        return "response body not logged (" + body.length() + " chars)";
     }
 
 }

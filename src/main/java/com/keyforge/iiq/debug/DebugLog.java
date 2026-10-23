@@ -368,50 +368,47 @@ public final class DebugLog {
         String rootMsg = (root.getMessage() == null ? "" : root.getMessage()).toLowerCase();
         String type = t.getClass().getSimpleName();
         if (msg.contains("login failed")) {
-            return "IIQ_LOGIN_REJECTED: IdentityIQ did not accept IIQ_USERNAME / IIQ_PASSWORD";
+            return "IIQ_LOGIN_REJECTED: IdentityIQ rejected IIQ_USERNAME / IIQ_PASSWORD";
         }
         if (msg.contains("redirected") && msg.contains("not accepted")) {
-            return "IIQ_SESSION_REJECTED: IdentityIQ sent the request back to its login page - the session expired"
-                    + " (idle timeout / IIQ restart) or the IIQ login is no longer valid; restart the service or check"
-                    + " IIQ_USERNAME / IIQ_PASSWORD";
+            return "IIQ_SESSION_REJECTED: IdentityIQ redirected to its login page; the session expired or the login is"
+                    + " no longer valid";
         }
         if (inChain(t, UnknownHostException.class)) {
-            return "IIQ_HOST_UNKNOWN: the host in IIQ_BASE_URL cannot be resolved (DNS / typo)";
+            return "IIQ_HOST_UNKNOWN: the IIQ_BASE_URL host name cannot be resolved";
         }
         if (inChain(t, ConnectException.class)) {
-            return "IIQ_UNREACHABLE: nothing answered at IIQ_BASE_URL (server down, wrong port, firewall or proxy)";
+            return "IIQ_UNREACHABLE: could not connect to IIQ_BASE_URL (connection refused)";
         }
         if (inChain(t, HttpTimeoutException.class) || rootMsg.contains("timed out")) {
-            return "IIQ_TIMEOUT: IdentityIQ did not answer in time (slow server or network)";
+            return "IIQ_TIMEOUT: IdentityIQ did not respond in time";
         }
         if (msg.contains("i/o error calling identityiq")) {
-            return "IIQ_IO_ERROR: the connection to IIQ_BASE_URL failed (network, TLS/certificate or proxy)";
+            return "IIQ_IO_ERROR: the connection to IIQ_BASE_URL failed";
         }
         if (msg.contains("http 404")) {
-            return "IIQ_NOT_FOUND: the IdentityIQ endpoint does not exist - plugin not installed / older plugin"
-                    + " version, or IIQ_BASE_URL path wrong";
+            return "IIQ_NOT_FOUND: IdentityIQ endpoint not found (HTTP 404); check the KeyForge plugin and IIQ_BASE_URL";
         }
         if (msg.contains("http 401") || msg.contains("http 403")) {
-            return "IIQ_FORBIDDEN: IdentityIQ refused the call - the IIQ user lacks the needed rights";
+            return "IIQ_FORBIDDEN: IdentityIQ denied access (HTTP 401/403) for IIQ_USERNAME";
         }
         if (msg.contains("http 5")) {
-            return "IIQ_SERVER_ERROR: IdentityIQ or the plugin failed internally - check the IdentityIQ server log";
+            return "IIQ_SERVER_ERROR: IdentityIQ returned a server error (HTTP 5xx); see the IdentityIQ log";
         }
         if (t instanceof SQLException || root instanceof SQLException) {
-            return "POSTGRES_ERROR: PostgreSQL rejected the connection or statement - check PG_HOST / PG_PORT /"
-                    + " PG_DATABASE / PG_USERNAME / PG_PASSWORD / PG_SCHEMA";
+            return "POSTGRES_ERROR: PostgreSQL connection or statement failed; check the PG_* settings";
         }
         if (type.contains("Config")) {
-            return "CONFIGURATION_ERROR: a required setting is missing or invalid (see the SETTING lines at START)";
+            return "CONFIGURATION_ERROR: a required setting is missing or invalid";
         }
         if (t instanceof OutOfMemoryError) {
-            return "OUT_OF_MEMORY: the JVM ran out of memory - use a smaller limit or raise -Xmx";
+            return "OUT_OF_MEMORY: the Java process ran out of memory";
         }
         if (t instanceof IllegalArgumentException) {
-            return "BAD_INPUT: a parameter or filter value is not valid";
+            return "BAD_INPUT: a request parameter or filter is not valid";
         }
         if (t instanceof InterruptedException) {
-            return "INTERRUPTED: the process was stopped while working";
+            return "INTERRUPTED: the operation was interrupted";
         }
         return "UNEXPECTED: " + type;
     }
@@ -476,7 +473,7 @@ public final class DebugLog {
         String v = raw(key, file);
         if (v == null) {
             if (key.startsWith("KFAGENT_USERNAME") || key.startsWith("KFAGENT_PASSWORD")) {
-                return "MISSING - every REST request (incl. /health) will be rejected with 401";
+                return "not set: every REST request will be rejected with 401";
             }
             return "-";
         }

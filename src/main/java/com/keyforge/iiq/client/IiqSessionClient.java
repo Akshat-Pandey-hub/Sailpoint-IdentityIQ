@@ -392,8 +392,8 @@ public class IiqSessionClient extends IiqApiClient {
         boolean transportOk = status >= 200 && status < 400;
         if (redirectedToLogin || stillOnLoginPage || !transportOk) {
             com.keyforge.iiq.debug.DebugLog.log("IIQ-LOGIN", "step", "result", "result", "FAILED",
-                    "reason", !transportOk ? "IdentityIQ answered HTTP " + status
-                            : "IdentityIQ rejected the username/password (returned to the login page)",
+                    "reason", !transportOk ? "IdentityIQ returned HTTP " + status
+                            : "IdentityIQ rejected IIQ_USERNAME / IIQ_PASSWORD",
                     "IIQ_BASE_URL", baseUrl, "IIQ_USERNAME", username, "IIQ_PASSWORD", password);
             throw new IiqApiException("IdentityIQ login failed for user '" + username + "' (HTTP "
                     + status + (location.isEmpty() ? "" : ", redirect " + location)
@@ -477,15 +477,15 @@ public class IiqSessionClient extends IiqApiClient {
             meaning = "OK";
         } else if (isRedirect(status) && location != null && location.toLowerCase().contains(LOGIN_PATH)
                 && !uri.getPath().endsWith(LOGIN_PATH)) {
-            meaning = "SENT TO LOGIN PAGE - IIQ session expired or not accepted";
+            meaning = "redirected to login (session not valid)";
         } else if (isRedirect(status)) {
             meaning = "REDIRECT";
         } else if (status == 401 || status == 403) {
-            meaning = "IIQ REFUSED - user lacks rights";
+            meaning = "access denied";
         } else if (status == 404) {
-            meaning = "NOT FOUND - plugin endpoint missing or wrong path";
+            meaning = "not found";
         } else if (status >= 500) {
-            meaning = "IIQ SERVER ERROR - see IdentityIQ log";
+            meaning = "server error";
         } else {
             meaning = "HTTP " + status;
         }

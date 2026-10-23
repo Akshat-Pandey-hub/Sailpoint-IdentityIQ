@@ -265,8 +265,7 @@ public final class KfAgentRestServer {
                 }
                 com.keyforge.iiq.debug.DebugLog.log("SERVICE", "endpoint", "/kfagent/" + sub,
                         "purpose", KfAgentServiceCatalog.purpose(sub),
-                        "how", "log into IdentityIQ (session reused if already logged in) and read through the KeyForge"
-                                + " IIQ plugin; nothing is written",
+                        "source", "IdentityIQ via the KeyForge plugin (read-only)",
                         "filters", filters.isEmpty() ? "none" : filters, "start", q.get("start"), "limit", q.get("limit"),
                         "modifiedAfter", q.get("modifiedAfter"),
                         "IIQ_BASE_URL", com.keyforge.iiq.debug.DebugLog.setting("IIQ_BASE_URL"),
@@ -366,13 +365,13 @@ public final class KfAgentRestServer {
         } catch (Exception e) {
             // generic message to the caller; the details stay in the server log (never credentials/headers)
             com.keyforge.iiq.debug.DebugLog.failure(LOG, ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
-                    + " failed (caller gets HTTP 500)", e, "query/filters", ex.getRequestURI().getRawQuery());
+                    + " failed; returned HTTP 500", e, "query/filters", ex.getRequestURI().getRawQuery());
             writeJson(ex, 500, error("Internal Server Error"));
         } catch (Error fatal) {
             // e.g. OutOfMemoryError on an oversized request: answer this caller with a JSON 500 (best effort)
             // instead of dropping the connection; the worker pool and the server keep serving other requests.
             com.keyforge.iiq.debug.DebugLog.failure(LOG, ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
-                    + " failed (caller gets HTTP 500)", fatal, "query/filters", ex.getRequestURI().getRawQuery());
+                    + " failed; returned HTTP 500", fatal, "query/filters", ex.getRequestURI().getRawQuery());
             try {
                 writeJson(ex, 500, error("Internal Server Error"));
             } catch (Throwable ignored) {
