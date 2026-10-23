@@ -4195,13 +4195,7 @@ public final class Main {
             }
 
             http.start();
-            LOG.info("KF Agent REST listening on http://" + host + ":" + port
-                    + "  (GET /health, /kfagent/*"
-                    + (parquet != null ? ", /iiq_parquet/*, /native_parquet/*" : "") + ")");
-            if (parquet == null) {
-                LOG.info("Parquet query endpoints are NOT mounted (see the [WARN] above); "
-                        + "run 'start-rest' separately or fix the Parquet configuration to enable them.");
-            }
+            LOG.info("KF Agent REST listening on http://" + host + ":" + port + "  (GET /health, /kfagent/*)");
 
             final com.sun.net.httpserver.HttpServer httpFinal = http;
             Runtime.getRuntime().addShutdownHook(new Thread(() -> httpFinal.stop(0)));
@@ -4230,14 +4224,14 @@ public final class Main {
                 java.nio.file.Files.createDirectories(duckTmp);
                 System.setProperty("java.io.tmpdir", duckTmp.toString());
             } catch (Exception ignore) {
-                LOG.warn("Could not prepare the DuckDB temp folder under the Parquet output folder ({}); using the"
+                LOG.debug("Could not prepare the DuckDB temp folder under the Parquet output folder ({}); using the"
                         + " default temp folder", ignore.getMessage());
                 // fall back to the default temp dir
             }
             return new ParquetRestServer(new RestConfig("0.0.0.0", 0), pq, restAuth); // host/port unused when co-mounted
         } catch (Throwable t) {
-            com.keyforge.iiq.debug.DebugLog.failure(LOG, "[WARN] Parquet query endpoints not mounted (" + t.getClass().getSimpleName()
-                    + ": " + t.getMessage() + "). KF Agent continues; run 'start-rest' separately to serve them.", t);
+            LOG.debug("Parquet query endpoints not mounted ({}: {}); KF Agent continues; run 'start-rest' separately"
+                    + " to serve them.", t.getClass().getSimpleName(), t.getMessage(), t);
             return null;
         }
     }
@@ -5386,7 +5380,7 @@ public final class Main {
             case "start-kfagent":
                 return "KF Agent REST service: answers /health and /kfagent/* by reading live from IdentityIQ"
                         + " (logs in with IIQ_USERNAME/IIQ_PASSWORD, reads through the KeyForge IIQ plugin);"
-                        + " callers must send KFAGENT_USERNAME/KFAGENT_PASSWORD; also mounts the Parquet query API";
+                        + " callers must send KFAGENT_USERNAME/KFAGENT_PASSWORD";
             case "start-rest":
                 return "Parquet query REST service over the files in PARQUET_OUT_DIR; callers must send"
                         + " KFAGENT_USERNAME/KFAGENT_PASSWORD";

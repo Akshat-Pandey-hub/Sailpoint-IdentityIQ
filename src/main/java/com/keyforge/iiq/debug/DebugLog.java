@@ -335,10 +335,7 @@ public final class DebugLog {
             return;
         }
         log("START", "command", command, "purpose", purpose, "javaVersion", System.getProperty("java.version"),
-                "logLevel", debugEnabled()
-                        ? "debug (KF_LOG_LEVEL=normal for results only; usernames and KF Agent credentials are printed;"
-                        + " IIQ_PASSWORD is always hidden)"
-                        : "normal (KF_LOG_LEVEL=debug to also print settings, requests and credentials)");
+                "logLevel", debugEnabled() ? "debug" : "normal");
         if (!debugEnabled()) {
             return;
         }
