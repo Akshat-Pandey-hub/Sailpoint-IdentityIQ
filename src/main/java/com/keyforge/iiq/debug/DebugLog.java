@@ -52,6 +52,8 @@ public final class DebugLog {
             "IIQ_CONFIG_FILE", "IIQ_BASE_URL", "IIQ_USERNAME", "IIQ_PASSWORD",
             "KFAGENT_USERNAME", "KFAGENT_PASSWORD", "KFAGENT_HOST", "KFAGENT_PORT", "REST_HOST", "REST_PORT",
             "PARQUET_OUT_DIR", "RAW_OUT_DIR", "IIQ_DEBUG_HTTP", KEY_LEVEL);
+    /** Optional settings printed at startup only when they are set. */
+    private static final List<String> SHOWN_ONLY_WHEN_SET = List.of("PARQUET_OUT_DIR", "RAW_OUT_DIR", "IIQ_DEBUG_HTTP");
     /** Values never printed, at any level. */
     private static final List<String> ALWAYS_HIDDEN = List.of("IIQ_PASSWORD", "PG_PASSWORD");
     /** Values printed only in debug: usernames, the KF Agent credentials, and what a caller sent. */
@@ -342,6 +344,9 @@ public final class DebugLog {
         Properties file = configFile();
         for (String key : SETTINGS) {
             Object value = raw(key, file);
+            if (value == null && SHOWN_ONLY_WHEN_SET.contains(key)) {
+                continue; // optional settings the KF Agent does not use: not worth a "<not set>" line
+            }
             if (ALWAYS_HIDDEN.contains(key) && value != null) {
                 value = HIDDEN;
             }
