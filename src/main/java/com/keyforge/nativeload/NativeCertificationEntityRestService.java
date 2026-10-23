@@ -57,14 +57,15 @@ public final class NativeCertificationEntityRestService {
             }
         }
 
-        boolean hasFilters = filters != null && !filters.isEmpty();
-        if (hasFilters || start != null || limit != null) {
+        boolean filtered = filters != null && !filters.isEmpty();
+        boolean windowed = limit != null && limit >= 0;
+        int first = Math.max(0, start == null ? 0 : start);
+        if (filtered || windowed || first > 0) {
             KfAgentPagedReader<NativeCertificationEntityRecord> reader = new KfAgentPagedReader<>(
                     source::fetchPage, parser::parse, INTERNAL_PAGE_SIZE, INTERNAL_PAGE_SIZE);
-            int offset = Math.max(0, start == null ? 0 : start);
-            List<NativeCertificationEntityRecord> selected = hasFilters
-                    ? reader.filtered(r -> matches(r, filters), offset, limit)
-                    : (limit == null ? reader.filtered(r -> true, offset, null) : reader.window(offset, limit));
+            List<NativeCertificationEntityRecord> selected = filtered
+                    ? reader.filtered(r -> matches(r, filters), first, windowed ? limit : null)
+                    : reader.window(first, windowed ? limit : Integer.MAX_VALUE);
             List<Map<String, Object>> out = new ArrayList<>(selected.size());
             for (NativeCertificationEntityRecord r : selected) out.add(toJson(r));
             return out;

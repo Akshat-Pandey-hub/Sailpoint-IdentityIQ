@@ -98,7 +98,27 @@ class KfAgentServicePagingTest {
                 new Service("workflow-definitions", "Workflow",
                         (p, f, s, l) -> new NativeWorkflowDefinitionRestService().fetch(p::fetchPage, f, s, l)),
                 new Service("identity-requests", "IdentityRequest",
-                        (p, f, s, l) -> new NativeIdentityRequestRestService().fetch(p::fetchPage, f, s, l)));
+                        (p, f, s, l) -> new NativeIdentityRequestRestService().fetch(p::fetchPage, f, s, l)),
+                new Service("identity-entitlements", "IdentityEntitlement",
+                        (p, f, s, l) -> new NativeIdentityEntitlementRestService().fetch(p::fetchPage, f, s, l)),
+                new Service("certifications", "Certification",
+                        (p, f, s, l) -> new NativeCertificationRestService().fetch(p::fetchPage, f, s, l)),
+                new Service("certification-entities", "CertificationEntity",
+                        (p, f, s, l) -> new NativeCertificationEntityRestService().fetch(p::fetchPage, f, s, l)),
+                new Service("certification-items", "CertificationItem",
+                        (p, f, s, l) -> new NativeCertificationItemRestService().fetch(p::fetchPage, f, s, l)),
+                new Service("provisioning-transactions", "ProvisioningTransaction",
+                        (p, f, s, l) -> new NativeProvisioningTransactionRestService().fetch(p::fetchPage, f, s, l)),
+                new Service("work-items", "WorkItem",
+                        (p, f, s, l) -> new NativeWorkItemRestService().fetch(p::fetchPage, f, s, l)),
+                new Service("access-history-certifications", "HistoricalCertification",
+                        (p, f, s, l) -> new NativeAccessHistoryCertificationRestService().fetch(p::fetchPage, f, s, l)),
+                new Service("access-history-entitlements", "HistoricalEntitlementCapture",
+                        (p, f, s, l) -> new NativeAccessHistoryEntitlementRestService().fetch(p::fetchPage, f, s, l)),
+                new Service("access-history-identity-events", "HistoricalIdentityEvent",
+                        (p, f, s, l) -> new NativeAccessHistoryIdentityEventRestService().fetch(p::fetchPage, f, s, l)),
+                new Service("access-history-role-events", "HistoricalRoleEvent",
+                        (p, f, s, l) -> new NativeAccessHistoryRoleEventRestService().fetch(p::fetchPage, f, s, l)));
     }
 
     /** Services whose import refuses a source count that changes mid-scan; their bounded reads must too. */
@@ -170,6 +190,28 @@ class KfAgentServicePagingTest {
         Plugin plugin = new Plugin(svc.entity(), 1_234);
         assertEquals(1_234, svc.fetch().fetch(plugin, null, null, null).size());
         assertEquals(1_234, plugin.rowsRead());
+    }
+
+    @ParameterizedTest
+    @MethodSource("services")
+    void negativeLimitMeansNoLimit(Service svc) {
+        Plugin plugin = new Plugin(svc.entity(), 1_234);
+        List<Map<String, Object>> rows = svc.fetch().fetch(plugin, null, null, -1);
+
+        assertEquals(1_234, rows.size());
+        assertEquals(id(0), rows.get(0).get("source_id"));
+        assertEquals(id(1_233), rows.get(1_233).get("source_id"));
+        assertEquals(1_234, plugin.rowsRead());
+    }
+
+    @ParameterizedTest
+    @MethodSource("services")
+    void negativeLimitWithFilterReturnsAllMatches(Service svc) {
+        Plugin plugin = new Plugin(svc.entity(), 1_500);
+        List<Map<String, Object>> rows = svc.fetch().fetch(plugin, Map.of("source_id", id(1_234)), null, -1);
+
+        assertEquals(List.of(id(1_234)), ids(rows));
+        assertEquals(1_500, plugin.rowsRead());
     }
 
     @ParameterizedTest
