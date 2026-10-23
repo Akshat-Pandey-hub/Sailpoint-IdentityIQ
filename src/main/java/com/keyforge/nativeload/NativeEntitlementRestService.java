@@ -35,7 +35,11 @@ public final class NativeEntitlementRestService {
     /** Page size used internally to walk the native source to completion (separate from the output window). */
     private static final int INTERNAL_PAGE_SIZE = 500;
 
+    /** The plugin's per-call maximum ({@code NativeManagedAttributeResource.MAX_LIMIT}); larger windows are chunked. */
+    static final int PLUGIN_MAX_PAGE = 1000;
+
     private final ObjectMapper mapper = new ObjectMapper();
+    private final NativeManagedAttributeParser parser = new NativeManagedAttributeParser();
 
     /** Scalar response field name -> value extractor. Order mirrors the response. Nested jsonb fields are
      *  intentionally NOT filterable (exact-matching a JSON object/array by string is meaningless). */
@@ -46,8 +50,16 @@ public final class NativeEntitlementRestService {
             Collections.unmodifiableSet(new LinkedHashSet<>(SCALARS.keySet()));
 
     /**
-     * Collect → filter → window → serialize. {@code source} is injected so the caller decides the
-     * server-side {@code modifiedAfter} bound (and so this is unit-testable with a canned page source).
+     * One {@code /kfagent/entitlements} response. {@code source} is injected so the caller decides the server-side
+     * {@code modifiedAfter} bound (and so this is unit-testable with a canned page source). The rows are always the
+     * window {@code [start, start+limit)} of the filtered population, in the plugin's id order; how much is read
+     * depends on the request:
+     * <ul>
+     *   <li>no filters, with {@code limit}: only that window is read from the plugin (no full scan);</li>
+     *   <li>with filters: pages are read in order, only matches are kept, and reading stops once the window is
+     *       filled (a match on any later page is still found);</li>
+     *   <li>no filters, no {@code limit}: the whole population (Part 2 snapshot), unchanged.</li>
+     * </ul>
      *
      * @param filters response-field-name → exact value (AND-combined); keys must be in {@link #FILTERABLE_FIELDS}
      * @param start   output offset (0-based; null/negative = 0)
@@ -63,6 +75,22 @@ public final class NativeEntitlementRestService {
                             + "'; filterable fields are: " + FILTERABLE_FIELDS);
                 }
             }
+        }
+        boolean filtered = filters != null && !filters.isEmpty();
+        boolean windowed = limit != null && limit >= 0;
+        int first = (start == null || start < 0) ? 0 : start;
+
+        if (filtered || windowed) {
+            KfAgentPagedReader<NativeManagedAttributeRecord> reader = new KfAgentPagedReader<>(
+                    source::fetchPage, parser::parse, PLUGIN_MAX_PAGE, INTERNAL_PAGE_SIZE);
+            List<NativeManagedAttributeRecord> rows = filtered
+                    ? reader.filtered(r -> matches(r, filters), first, windowed ? limit : null)
+                    : reader.window(first, limit);
+            List<Map<String, Object>> out = new ArrayList<>(rows.size());
+            for (NativeManagedAttributeRecord r : rows) {
+                out.add(toJson(r));
+            }
+            return out;
         }
 
         List<NativeManagedAttributeRecord> all = collectAll(source);

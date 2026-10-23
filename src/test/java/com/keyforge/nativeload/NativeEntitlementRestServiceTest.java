@@ -37,16 +37,19 @@ class NativeEntitlementRestServiceTest {
         return s == null ? "null" : "\"" + s + "\"";
     }
 
-    /** Fake source: the whole population on page 0 (size < internal page size -> loop completes). */
+    /** Fake source that honours start/limit like the plugin (firstRow/resultLimit over a fixed order). */
     private static NativeManagedAttributePageSource source() {
         // Mirrors the live data: Entra groups have name=null, group=false, but type="group"/groupType=true.
-        String envelope = "{\"entity\":\"ManagedAttribute\",\"rows\":["
-                + row("e1", null, "EntraTarget", "group", true, false) + ","
-                + row("e2", null, "EntraTarget", "group", true, false) + ","
-                + row("e3", "Finance", "Workday", "Entitlement", false, false)
-                + "]}";
-        String empty = "{\"entity\":\"ManagedAttribute\",\"rows\":[]}";
-        return (start, limit) -> start == 0 ? envelope : empty;
+        List<String> rows = List.of(
+                row("e1", null, "EntraTarget", "group", true, false),
+                row("e2", null, "EntraTarget", "group", true, false),
+                row("e3", "Finance", "Workday", "Entitlement", false, false));
+        return (start, limit) -> {
+            int from = Math.min(Math.max(0, start), rows.size());
+            int to = Math.min(rows.size(), from + (limit <= 0 ? 100 : limit));
+            return "{\"entity\":\"ManagedAttribute\",\"limit\":" + limit + ",\"rows\":["
+                    + String.join(",", rows.subList(from, to)) + "]}";
+        };
     }
 
     private static Map<String, String> f(String... kv) {
