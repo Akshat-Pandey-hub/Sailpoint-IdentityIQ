@@ -50,9 +50,14 @@ class NativeRoleRestServiceTest {
     }
 
     private static NativeRolePageSource source() {
-        String envelope = "{\"entity\":\"Role\",\"rows\":[" + engBase() + "," + itAdmin() + "]}";
-        String empty = "{\"entity\":\"Role\",\"rows\":[]}";
-        return (start, limit) -> start == 0 ? envelope : empty;
+        // honours start/limit like the plugin (firstRow/resultLimit over a fixed order)
+        List<String> rows = List.of(engBase(), itAdmin());
+        return (start, limit) -> {
+            int from = Math.min(Math.max(0, start), rows.size());
+            int to = Math.min(rows.size(), from + (limit <= 0 ? 100 : limit));
+            return "{\"entity\":\"Role\",\"limit\":" + limit + ",\"rows\":["
+                    + String.join(",", rows.subList(from, to)) + "]}";
+        };
     }
 
     private static Map<String, String> f(String... kv) {

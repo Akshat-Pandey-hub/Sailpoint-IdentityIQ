@@ -71,7 +71,13 @@ class NativeCertificationRestServiceTest {
     }
 
     private static NativeCertificationPageSource source() {
-        return (start, limit) -> start == 0 ? "{\"rows\":[" + cert1() + "," + cert2() + "]}" : "{\"rows\":[]}";
+        return (start, limit) -> page(start, limit, cert1(), cert2());
+    }
+
+    private static String page(int start, int limit, String... rows) {
+        StringBuilder json = new StringBuilder("{\"rows\":[");
+        for (int i = start; i < Math.min(rows.length, start + limit); i++) { if (i > start) json.append(','); json.append(rows[i]); }
+        return json.append("]}").toString();
     }
 
     private static NativeCertificationPageSource emptySource() {

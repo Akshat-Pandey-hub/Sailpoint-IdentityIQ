@@ -65,7 +65,9 @@ class RestAuthFilterTest {
         assertFalse(f.authorized(basic("other-client", CLIENT_SECRET)));
         assertFalse(f.authorized(basic(IIQ_USER, IIQ_PASS)), "the IdentityIQ login is not a REST credential");
         assertTrue(f.describe().contains("KFAGENT_USERNAME / KFAGENT_PASSWORD"), f.describe());
-        assertTrue(f.describe().contains("'" + CLIENT_ID + "'"));
+        // the client ID is shown at debug only; at the default (normal) level it is hidden
+        assertTrue(f.describe().contains(com.keyforge.iiq.debug.DebugLog.debugEnabled()
+                ? "'" + CLIENT_ID + "'" : "hidden at normal log level"), f.describe());
         assertFalse(f.describe().contains(CLIENT_SECRET), "the secret is never printed");
     }
 

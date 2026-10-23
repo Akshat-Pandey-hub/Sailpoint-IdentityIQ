@@ -74,9 +74,16 @@ class NativeAccessHistoryRoleEventRestServiceTest {
     }
 
     private static NativeAccessHistoryRoleEventRestService.PageSource source() {
-        return (start, limit) -> start == 0
-                ? "{\"sourceCount\":3,\"rows\":[" + ev1() + "," + ev2() + "," + ev3() + "]}"
-                : "{\"sourceCount\":3,\"rows\":[]}";
+        return (start, limit) -> page(start, limit, ev1(), ev2(), ev3());
+    }
+
+    private static String page(int start, int limit, String... rows) {
+        StringBuilder json = new StringBuilder("{\"sourceCount\":").append(rows.length).append(",\"rows\":[");
+        for (int i = start; i < Math.min(rows.length, start + limit); i++) {
+            if (i > start) json.append(',');
+            json.append(rows[i]);
+        }
+        return json.append("]}").toString();
     }
 
     private static NativeAccessHistoryRoleEventRestService.PageSource emptySource() {

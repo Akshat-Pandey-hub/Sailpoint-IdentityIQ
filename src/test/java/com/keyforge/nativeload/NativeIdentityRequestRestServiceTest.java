@@ -45,9 +45,13 @@ class NativeIdentityRequestRestServiceTest {
     }
 
     private static NativeIdentityRequestPageSource source() {
-        return (start, limit) -> start == 0
-                ? "{\"rows\":[" + executing() + "," + completed() + "]}"
-                : "{\"rows\":[]}";
+        List<String> rows = List.of(executing(), completed());
+        return (start, limit) -> {
+            int from = Math.min(Math.max(0, start), rows.size());
+            int to = Math.min(rows.size(), from + (limit <= 0 ? 100 : limit));
+            return "{\"limit\":" + limit + ",\"sourceCount\":" + rows.size() + ",\"rows\":["
+                    + String.join(",", rows.subList(from, to)) + "]}";
+        };
     }
 
     private static NativeIdentityRequestPageSource emptySource() {

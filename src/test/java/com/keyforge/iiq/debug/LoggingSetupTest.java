@@ -25,7 +25,7 @@ class LoggingSetupTest {
     void mapsApplicationLevelsToLog4jLevels() {
         assertEquals("DEBUG", LoggingSetup.log4jLevel(DebugLog.Level.DEBUG));
         assertEquals("INFO", LoggingSetup.log4jLevel(DebugLog.Level.NORMAL));
-        assertEquals("OFF", LoggingSetup.log4jLevel(DebugLog.Level.OFF));
+        assertEquals("WARN", LoggingSetup.log4jLevel(DebugLog.Level.OFF), "off still writes errors and warnings");
     }
 
     @Test
@@ -66,6 +66,27 @@ class LoggingSetupTest {
             assertEquals(new File(logDir, "kfagent.log").getPath(), new File(file.getFileName()).getPath(),
                     "log file goes to kf.log.dir");
             assertTrue(file.getFilePattern().endsWith("kfagent-%d{yyyy-MM-dd}-%i.log.gz"), file.getFilePattern());
+
+            // rotation: daily + 10 MB, at most 10 rolled files per day, rolled files deleted after 30 days
+            org.apache.logging.log4j.core.appender.rolling.CompositeTriggeringPolicy policies =
+                    (org.apache.logging.log4j.core.appender.rolling.CompositeTriggeringPolicy) file.getTriggeringPolicy();
+            boolean daily = false;
+            long maxBytes = -1;
+            for (org.apache.logging.log4j.core.appender.rolling.TriggeringPolicy p : policies.getTriggeringPolicies()) {
+                if (p instanceof org.apache.logging.log4j.core.appender.rolling.TimeBasedTriggeringPolicy) {
+                    daily = true;
+                }
+                if (p instanceof org.apache.logging.log4j.core.appender.rolling.SizeBasedTriggeringPolicy) {
+                    maxBytes = ((org.apache.logging.log4j.core.appender.rolling.SizeBasedTriggeringPolicy) p).getMaxFileSize();
+                }
+            }
+            assertTrue(daily, "rolls daily");
+            assertEquals(10L * 1024 * 1024, maxBytes, "rolls at 10 MB");
+            org.apache.logging.log4j.core.appender.rolling.DefaultRolloverStrategy strategy =
+                    (org.apache.logging.log4j.core.appender.rolling.DefaultRolloverStrategy) file.getManager().getRolloverStrategy();
+            assertEquals(10, strategy.getMaxIndex(), "at most 10 rolled files per day");
+            String actions = java.util.Arrays.toString(strategy.getCustomActions().toArray());
+            assertTrue(actions.contains("kfagent-*.log.gz") && actions.contains("age=PT720H"), "30-day (720 h) delete: " + actions);
 
             String layout = String.valueOf(file.getLayout().getContentFormat());
             assertTrue(layout.contains("%d{yyyy-MM-dd HH:mm:ss.SSS}") && layout.contains("%-5level")

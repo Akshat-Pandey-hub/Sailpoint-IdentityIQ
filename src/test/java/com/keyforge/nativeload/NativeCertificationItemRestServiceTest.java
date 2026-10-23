@@ -69,7 +69,13 @@ class NativeCertificationItemRestServiceTest {
     }
 
     private static NativeCertificationItemPageSource source() {
-        return (start, limit) -> start == 0 ? "{\"rows\":[" + decided() + "," + open() + "]}" : "{\"rows\":[]}";
+        return (start, limit) -> page(start, limit, decided(), open());
+    }
+
+    private static String page(int start, int limit, String... rows) {
+        StringBuilder json = new StringBuilder("{\"rows\":[");
+        for (int i = start; i < Math.min(rows.length, start + limit); i++) { if (i > start) json.append(','); json.append(rows[i]); }
+        return json.append("]}").toString();
     }
 
     private static NativeCertificationItemPageSource emptySource() {

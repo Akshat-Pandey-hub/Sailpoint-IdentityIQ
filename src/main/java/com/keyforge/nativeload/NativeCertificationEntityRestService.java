@@ -33,6 +33,7 @@ import java.util.function.Function;
 public final class NativeCertificationEntityRestService {
 
     private static final int INTERNAL_PAGE_SIZE = 500;
+    private final NativeCertificationEntityParser parser = new NativeCertificationEntityParser();
 
     /** Response field name -> value extractor (all scalar, all filterable). */
     private static final Map<String, Function<NativeCertificationEntityRecord, String>> SCALARS = buildScalars();
@@ -54,6 +55,19 @@ public final class NativeCertificationEntityRestService {
                             + "'; filterable fields are: " + FILTERABLE_FIELDS);
                 }
             }
+        }
+
+        boolean hasFilters = filters != null && !filters.isEmpty();
+        if (hasFilters || start != null || limit != null) {
+            KfAgentPagedReader<NativeCertificationEntityRecord> reader = new KfAgentPagedReader<>(
+                    source::fetchPage, parser::parse, INTERNAL_PAGE_SIZE, INTERNAL_PAGE_SIZE);
+            int offset = Math.max(0, start == null ? 0 : start);
+            List<NativeCertificationEntityRecord> selected = hasFilters
+                    ? reader.filtered(r -> matches(r, filters), offset, limit)
+                    : (limit == null ? reader.filtered(r -> true, offset, null) : reader.window(offset, limit));
+            List<Map<String, Object>> out = new ArrayList<>(selected.size());
+            for (NativeCertificationEntityRecord r : selected) out.add(toJson(r));
+            return out;
         }
 
         List<NativeCertificationEntityRecord> all = collectAll(source);

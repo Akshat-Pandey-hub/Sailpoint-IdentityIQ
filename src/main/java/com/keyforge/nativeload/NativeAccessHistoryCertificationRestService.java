@@ -66,6 +66,20 @@ public final class NativeAccessHistoryCertificationRestService {
             }
         }
 
+        boolean hasFilters = filters != null && !filters.isEmpty();
+        if (hasFilters || start != null || limit != null) {
+            KfAgentPagedReader<JsonNode> reader = new KfAgentPagedReader<>(source::fetchPage,
+                    json -> KfAgentJsonRows.parse(json, "Access-History certification"),
+                    INTERNAL_PAGE_SIZE, INTERNAL_PAGE_SIZE);
+            int offset = Math.max(0, start == null ? 0 : start);
+            List<JsonNode> selected = hasFilters
+                    ? reader.filtered(r -> matches(r, filters), offset, limit)
+                    : (limit == null ? reader.filtered(r -> true, offset, null) : reader.window(offset, limit));
+            List<Map<String, Object>> out = new ArrayList<>(selected.size());
+            for (JsonNode r : selected) out.add(toJson(r));
+            return out;
+        }
+
         List<JsonNode> all = collectAll(source);
 
         List<JsonNode> matched = new ArrayList<>();

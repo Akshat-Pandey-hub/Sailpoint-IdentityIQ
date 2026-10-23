@@ -28,11 +28,13 @@ KFAGENT_USERNAME=
 KFAGENT_PASSWORD=
 
 # -----------------------------------------------------------------------------
-# Logging level (optional; default debug):
-#   debug  : everything - settings, each request with the credentials sent/expected, every IdentityIQ call
-#            (usernames and the KF Agent credentials are printed; IIQ_PASSWORD is always hidden)
-#   normal : only what ran and its result - service, result, login OK/failed, errors with their reason
-#            (no usernames, passwords or settings)
-#   off    : nothing
+# Logging level (optional; default normal):
+#   normal : (default) for each call: what was called (endpoint, purpose, filters) and its outcome
+#            (status, rows, time), plus every error, warning and rejected request (e.g. 401) with the reason.
+#            No usernames, passwords or settings.
+#   debug  : everything in normal plus the settings that were loaded, each request with the credentials
+#            sent/expected and every IdentityIQ call. Usernames and the KF Agent client ID/secret are
+#            printed; IIQ_PASSWORD is never printed. Use only while troubleshooting.
+#   off    : no routine lines; errors, warnings and rejected requests are STILL logged with their reason.
 # -----------------------------------------------------------------------------
-KF_LOG_LEVEL=debug
+KF_LOG_LEVEL=normal

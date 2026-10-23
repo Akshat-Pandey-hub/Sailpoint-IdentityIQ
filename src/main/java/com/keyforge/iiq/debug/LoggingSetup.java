@@ -6,7 +6,8 @@ package com.keyforge.iiq.debug;
  * application settings onto them:
  * <ul>
  *   <li>{@code KF_LOG_LEVEL} (environment, {@code -D}, or the {@code IIQ_CONFIG_FILE} file):
- *       {@code debug} → DEBUG, {@code normal} → INFO, {@code off} → OFF (unset → debug, as before)</li>
+ *       {@code normal} → INFO (also the default when unset), {@code debug} → DEBUG,
+ *       {@code off} → WARN (no routine lines; errors and rejected requests are still logged with their reason)</li>
  *   <li>{@code KF_LOG_DIR} (environment or {@code -D}): the log folder (default {@code logs})</li>
  * </ul>
  * A value already given on the command line ({@code -Dkf.log.level=...}, {@code -Dkf.log.dir=...}) is kept.
@@ -40,7 +41,7 @@ public final class LoggingSetup {
     static String log4jLevel(DebugLog.Level level) {
         switch (level) {
             case OFF:
-                return "OFF";
+                return "WARN"; // never silent: failures and their reasons are always written
             case NORMAL:
                 return "INFO";
             default:

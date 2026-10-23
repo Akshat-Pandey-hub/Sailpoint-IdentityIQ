@@ -45,9 +45,14 @@ class NativeWorkgroupRestServiceTest {
     }
 
     private static NativeWorkgroupPageSource source() {
-        String envelope = "{\"entity\":\"Workgroup\",\"rows\":[" + adminq() + "," + adminCap() + "]}";
-        String empty = "{\"entity\":\"Workgroup\",\"rows\":[]}";
-        return (start, limit) -> start == 0 ? envelope : empty;
+        // honours start/limit like the plugin (firstRow/resultLimit over a fixed order)
+        List<String> rows = List.of(adminq(), adminCap());
+        return (start, limit) -> {
+            int from = Math.min(Math.max(0, start), rows.size());
+            int to = Math.min(rows.size(), from + (limit <= 0 ? 100 : limit));
+            return "{\"entity\":\"Workgroup\",\"limit\":" + limit + ",\"rows\":["
+                    + String.join(",", rows.subList(from, to)) + "]}";
+        };
     }
 
     private static Map<String, String> f(String... kv) {

@@ -30,8 +30,12 @@ so nothing else needs to be uploaded beside it.
 /opt/kfagent/
 ├── iiq-migration-tool.jar
 ├── kfagent.env              # from kfagent.env.example, real values, chmod 600
+├── logs/                    # kfagent.log + rotated kfagent-YYYY-MM-DD-N.log.gz (KF_LOG_DIR)
 └── parquet-data/            # (optional) only if you use the Parquet query endpoints
 ```
+
+Create the log folder once and let the service user write to it:
+`mkdir -p /opt/kfagent/logs && chown <service-user> /opt/kfagent/logs`
 
 ## 4. Load the settings, then run
 
@@ -77,6 +81,18 @@ For production the admin typically runs `start-kfagent` as a **systemd service**
 the password never appears in the shell history or `ps`. If systemd isn't available, `nohup`/`tmux`
 works for a manual run. The extraction jobs are usually run on demand or on a schedule (cron), not as
 a long-running service.
+
+## 6a. Logs
+
+- **Where:** the console (`journalctl -u <service>` under systemd) and `KF_LOG_DIR/kfagent.log`.
+- **Level:** `KF_LOG_LEVEL=normal` (default) | `debug` | `off`. `normal` logs each call and its outcome plus
+  every error and rejected request with its reason; `debug` adds settings, credentials sent/expected and every
+  IdentityIQ call (IIQ_PASSWORD is never printed); `off` drops routine lines but still logs errors with reasons.
+- **Rotation:** the file rolls daily and at 10 MB into `kfagent-YYYY-MM-DD-N.log.gz`; at most 10 per day are kept
+  and rolled files older than 30 days are deleted (checked whenever a roll happens).
+- **Own configuration:** to change format, sizes or retention without rebuilding, copy `log4j2.properties` out
+  of the jar and start with `-Dlog4j2.configurationFile=/opt/kfagent/log4j2.properties`
+  (or `LOG4J_CONFIGURATION_FILE=...`).
 
 ## 7. Updating later
 

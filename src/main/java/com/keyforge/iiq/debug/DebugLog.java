@@ -58,7 +58,7 @@ public final class DebugLog {
             "IIQ_USERNAME", "KFAGENT_USERNAME", "KFAGENT_PASSWORD",
             "sentUser", "sentPassword", "expectedUser", "expectedPassword");
     /** Whole lines printed only in debug. */
-    private static final List<String> DEBUG_ONLY_STEPS = List.of("SETTING", "REQUEST", "IIQ-CALL");
+    private static final List<String> DEBUG_ONLY_STEPS = List.of("SETTING", "REQUEST", "IIQ-CALL", "AUTH");
 
     private static volatile Level cachedLevel;
     private static volatile Properties cachedFile;
@@ -78,26 +78,43 @@ public final class DebugLog {
         return l;
     }
 
+    /**
+     * {@code KF_LOG_LEVEL}: {@code debug} → DEBUG; {@code normal}/{@code info} → NORMAL; {@code off}/{@code quiet}/
+     * {@code error}/{@code warn} → OFF (errors and warnings only). Unset or unrecognised → NORMAL: DEBUG is never
+     * the default. When KF_LOG_LEVEL is unset, the legacy {@code KF_DEBUG=true|false} is honoured.
+     */
     static Level parseLevel(String levelSetting, String legacyDebug) {
         if (levelSetting != null && !levelSetting.isBlank()) {
             switch (levelSetting.trim().toLowerCase()) {
+                case "debug":
+                case "trace":
+                    return Level.DEBUG;
                 case "off":
                 case "none":
+                case "quiet":
+                case "error":
+                case "warn":
                     return Level.OFF;
-                case "normal":
-                case "info":
-                    return Level.NORMAL;
                 default:
-                    return Level.DEBUG;
+                    return Level.NORMAL;
             }
         }
-        if (legacyDebug != null && "false".equalsIgnoreCase(legacyDebug.trim())) {
-            return Level.OFF;
+        if (legacyDebug != null) {
+            if ("false".equalsIgnoreCase(legacyDebug.trim())) {
+                return Level.OFF;
+            }
+            if ("true".equalsIgnoreCase(legacyDebug.trim())) {
+                return Level.DEBUG;
+            }
         }
-        return Level.DEBUG;
+        return Level.NORMAL;
     }
 
-    /** True unless the level is off. Guard for building log lines. */
+    /**
+     * True when routine lines (start, service, result) are written, i.e. not at {@code off}. Guard for building
+     * routine lines. Errors and warnings ({@link #failure}, {@link #warning}, {@link #warn}) are written at every
+     * level and do not check this.
+     */
     public static boolean enabled() {
         return level() != Level.OFF;
     }
@@ -114,8 +131,19 @@ public final class DebugLog {
         String id = prefix + "-" + UUID.randomUUID().toString().substring(0, 8);
         CONTEXT.set(id);
         STARTED.set(System.nanoTime());
+        OUTCOME.remove();
         return id;
     }
+
+    /**
+     * True once this request's outcome has been logged (a RESULT line, a warning or a failure), so the closing
+     * RESPONSE line can drop to debug instead of repeating it.
+     */
+    public static boolean outcomeLogged() {
+        return Boolean.TRUE.equals(OUTCOME.get());
+    }
+
+    private static final ThreadLocal<Boolean> OUTCOME = new ThreadLocal<>();
 
     /** Milliseconds since {@link #begin} on this thread, or -1. */
     public static long elapsedMs() {
@@ -126,6 +154,7 @@ public final class DebugLog {
     public static void end() {
         CONTEXT.remove();
         STARTED.remove();
+        OUTCOME.remove();
     }
 
     // --- writing -----------------------------------------------------------
@@ -136,17 +165,112 @@ public final class DebugLog {
      * rest at info. Time, level and thread come from the log4j2 pattern.
      */
     public static void log(String step, Object... keyValues) {
-        String line = render(level(), step, keyValues);
+        String line = render(level(), step, false, keyValues);
         if (line == null) {
             return;
         }
-        if (step.startsWith("ERROR")) {
-            Audit.LOG.error(line);
-        } else if (isDebugOnly(step, keyValues)) {
+        if ("RESULT".equals(step)) {
+            OUTCOME.set(Boolean.TRUE);
+        }
+        if (isDebugOnly(step, keyValues)) {
             Audit.LOG.debug(line);
         } else {
             Audit.LOG.info(line);
         }
+    }
+
+    /**
+     * The closing line of a request: INFO when nothing has reported its outcome yet (e.g. /health, Parquet
+     * queries), otherwise a DEBUG detail so the same outcome is not logged twice.
+     */
+    public static void response(Object... keyValues) {
+        boolean already = outcomeLogged();
+        String line = render(level(), "RESPONSE", false, keyValues);
+        if (line == null) {
+            return;
+        }
+        if (already) {
+            Audit.LOG.debug(line);
+        } else if (level() != Level.OFF) {
+            Audit.LOG.info(line);
+        }
+    }
+
+    /** A WARN line written at every level (e.g. a rejected request and its reason). */
+    public static void warn(String step, Object... keyValues) {
+        String line = render(level(), step, true, keyValues);
+        if (line != null) {
+            OUTCOME.set(Boolean.TRUE);
+            Audit.LOG.warn(line);
+        }
+    }
+
+    /**
+     * Logs ONE error line for a failure, at every level: {@code what} failed, the plain-language reason, the root
+     * cause, where in our code it happened, any {@code context} key/values, and the settings the reason depends on
+     * (IIQ_PASSWORD always hidden). The stack trace is attached for unexpected errors, and for every error at debug.
+     *
+     * @param log  the caller's logger (so the line carries the caller's class)
+     * @param what short description of what failed, e.g. "Configuration error: PG_HOST is missing"
+     */
+    public static void failure(org.slf4j.Logger log, String what, Throwable t, Object... context) {
+        write(log, true, what, t, context);
+    }
+
+    /** Like {@link #failure} but at WARN, for a problem the run recovers from. */
+    public static void warning(org.slf4j.Logger log, String what, Throwable t, Object... context) {
+        write(log, false, what, t, context);
+    }
+
+    private static void write(org.slf4j.Logger log, boolean error, String what, Throwable t, Object... context) {
+        OUTCOME.set(Boolean.TRUE);
+        if (t == null) {
+            String line = render(level(), error ? "FAILED" : "WARNING", true, concat(new Object[]{"what", what}, context));
+            if (error) {
+                log.error(line);
+            } else {
+                log.warn(line);
+            }
+            return;
+        }
+        Throwable root = rootCause(t);
+        String reason = reason(t, root);
+        StackTraceElement where = firstOwnFrame(t);
+        Object[] head = {
+                "what", what,
+                "reason", reason,
+                "cause", root == t ? t.getClass().getSimpleName() : root.getClass().getSimpleName() + ": "
+                        + firstLine(root.getMessage()),
+                "at", where == null ? "-" : where.toString()};
+        String line = render(level(), error ? "FAILED" : "WARNING", true,
+                concat(concat(head, context), valuesFor(reason)));
+        boolean withStack = debugEnabled() || reason.startsWith("UNEXPECTED");
+        if (error) {
+            if (withStack) {
+                log.error(line, t);
+            } else {
+                log.error(line);
+            }
+        } else if (withStack) {
+            log.warn(line, t);
+        } else {
+            log.warn(line);
+        }
+    }
+
+    private static Throwable rootCause(Throwable t) {
+        Throwable root = t;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        return root;
+    }
+
+    private static Object[] concat(Object[] a, Object[] b) {
+        Object[] all = new Object[a.length + b.length];
+        System.arraycopy(a, 0, all, 0, a.length);
+        System.arraycopy(b, 0, all, a.length, b.length);
+        return all;
     }
 
     /** SLF4J logger name for these lines (configurable on its own in log4j2.properties). */
@@ -171,12 +295,12 @@ public final class DebugLog {
      * it. IIQ_PASSWORD is always masked; in normal, debug-only lines are dropped and usernames/passwords/sent
      * credentials are left out.
      */
-    static String render(Level level, String step, Object... keyValues) {
-        if (level == Level.OFF) {
+    static String render(Level level, String step, boolean alwaysShown, Object... keyValues) {
+        if (level == Level.OFF && !alwaysShown) {
             return null;
         }
         boolean debug = level == Level.DEBUG;
-        if (!debug && isDebugOnly(step, keyValues)) {
+        if (!debug && !alwaysShown && isDebugOnly(step, keyValues)) {
             return null;
         }
         StringBuilder sb = new StringBuilder(256);
@@ -201,29 +325,10 @@ public final class DebugLog {
      * An error line with the exception, its root cause, a plain-language reason, and the settings/credentials that
      * reason depends on (so the log shows exactly which values were used when it failed).
      */
+    /** One error line for a failure with no caller message (uncaught errors, background threads). */
     public static void error(Throwable t, Object... context) {
-        if (!enabled() || t == null) {
-            return;
-        }
-        Throwable root = t;
-        while (root.getCause() != null && root.getCause() != root) {
-            root = root.getCause();
-        }
-        String reason = reason(t, root);
-        Object[] head = {
-                "error", t.getClass().getSimpleName(),
-                "message", firstLine(t.getMessage()),
-                "rootCause", root == t ? "-" : root.getClass().getSimpleName() + ": " + firstLine(root.getMessage()),
-                "reason", reason};
-        Object[] values = valuesFor(reason);
-        Object[] all = new Object[head.length + context.length + values.length];
-        System.arraycopy(head, 0, all, 0, head.length);
-        System.arraycopy(context, 0, all, head.length, context.length);
-        System.arraycopy(values, 0, all, head.length + context.length, values.length);
-        log("ERROR", all);
-        StackTraceElement where = firstOwnFrame(t);
-        if (where != null) {
-            log("ERROR-AT", "at", where.toString());
+        if (t != null) {
+            failure(Audit.LOG, t.getClass().getSimpleName() + ": " + firstLine(t.getMessage()), t, context);
         }
     }
 
@@ -263,50 +368,47 @@ public final class DebugLog {
         String rootMsg = (root.getMessage() == null ? "" : root.getMessage()).toLowerCase();
         String type = t.getClass().getSimpleName();
         if (msg.contains("login failed")) {
-            return "IIQ_LOGIN_REJECTED: IdentityIQ did not accept IIQ_USERNAME / IIQ_PASSWORD";
+            return "IIQ_LOGIN_REJECTED: IdentityIQ rejected IIQ_USERNAME / IIQ_PASSWORD";
         }
         if (msg.contains("redirected") && msg.contains("not accepted")) {
-            return "IIQ_SESSION_REJECTED: IdentityIQ sent the request back to its login page - the session expired"
-                    + " (idle timeout / IIQ restart) or the IIQ login is no longer valid; restart the service or check"
-                    + " IIQ_USERNAME / IIQ_PASSWORD";
+            return "IIQ_SESSION_REJECTED: IdentityIQ redirected to its login page; the session expired or the login is"
+                    + " no longer valid";
         }
         if (inChain(t, UnknownHostException.class)) {
-            return "IIQ_HOST_UNKNOWN: the host in IIQ_BASE_URL cannot be resolved (DNS / typo)";
+            return "IIQ_HOST_UNKNOWN: the IIQ_BASE_URL host name cannot be resolved";
         }
         if (inChain(t, ConnectException.class)) {
-            return "IIQ_UNREACHABLE: nothing answered at IIQ_BASE_URL (server down, wrong port, firewall or proxy)";
+            return "IIQ_UNREACHABLE: could not connect to IIQ_BASE_URL (connection refused)";
         }
         if (inChain(t, HttpTimeoutException.class) || rootMsg.contains("timed out")) {
-            return "IIQ_TIMEOUT: IdentityIQ did not answer in time (slow server or network)";
+            return "IIQ_TIMEOUT: IdentityIQ did not respond in time";
         }
         if (msg.contains("i/o error calling identityiq")) {
-            return "IIQ_IO_ERROR: the connection to IIQ_BASE_URL failed (network, TLS/certificate or proxy)";
+            return "IIQ_IO_ERROR: the connection to IIQ_BASE_URL failed";
         }
         if (msg.contains("http 404")) {
-            return "IIQ_NOT_FOUND: the IdentityIQ endpoint does not exist - plugin not installed / older plugin"
-                    + " version, or IIQ_BASE_URL path wrong";
+            return "IIQ_NOT_FOUND: IdentityIQ endpoint not found (HTTP 404); check the KeyForge plugin and IIQ_BASE_URL";
         }
         if (msg.contains("http 401") || msg.contains("http 403")) {
-            return "IIQ_FORBIDDEN: IdentityIQ refused the call - the IIQ user lacks the needed rights";
+            return "IIQ_FORBIDDEN: IdentityIQ denied access (HTTP 401/403) for IIQ_USERNAME";
         }
         if (msg.contains("http 5")) {
-            return "IIQ_SERVER_ERROR: IdentityIQ or the plugin failed internally - check the IdentityIQ server log";
+            return "IIQ_SERVER_ERROR: IdentityIQ returned a server error (HTTP 5xx); see the IdentityIQ log";
         }
         if (t instanceof SQLException || root instanceof SQLException) {
-            return "POSTGRES_ERROR: PostgreSQL rejected the connection or statement - check PG_HOST / PG_PORT /"
-                    + " PG_DATABASE / PG_USERNAME / PG_PASSWORD / PG_SCHEMA";
+            return "POSTGRES_ERROR: PostgreSQL connection or statement failed; check the PG_* settings";
         }
         if (type.contains("Config")) {
-            return "CONFIGURATION_ERROR: a required setting is missing or invalid (see the SETTING lines at START)";
+            return "CONFIGURATION_ERROR: a required setting is missing or invalid";
         }
         if (t instanceof OutOfMemoryError) {
-            return "OUT_OF_MEMORY: the JVM ran out of memory - use a smaller limit or raise -Xmx";
+            return "OUT_OF_MEMORY: the Java process ran out of memory";
         }
         if (t instanceof IllegalArgumentException) {
-            return "BAD_INPUT: a parameter or filter value is not valid";
+            return "BAD_INPUT: a request parameter or filter is not valid";
         }
         if (t instanceof InterruptedException) {
-            return "INTERRUPTED: the process was stopped while working";
+            return "INTERRUPTED: the operation was interrupted";
         }
         return "UNEXPECTED: " + type;
     }
@@ -371,7 +473,7 @@ public final class DebugLog {
         String v = raw(key, file);
         if (v == null) {
             if (key.startsWith("KFAGENT_USERNAME") || key.startsWith("KFAGENT_PASSWORD")) {
-                return "MISSING - every REST request (incl. /health) will be rejected with 401";
+                return "not set: every REST request will be rejected with 401";
             }
             return "-";
         }

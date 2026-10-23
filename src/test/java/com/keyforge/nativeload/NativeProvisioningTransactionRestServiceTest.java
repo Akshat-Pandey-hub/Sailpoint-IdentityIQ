@@ -57,7 +57,13 @@ class NativeProvisioningTransactionRestServiceTest {
 
     /** Two transactions; the import breaks after the first short page (<internal page size). */
     private static NativeProvisioningTxnPageSource source() {
-        return (start, limit) -> start == 0 ? "{\"rows\":[" + txnA() + "," + txnB() + "]}" : "{\"rows\":[]}";
+        return (start, limit) -> page(start, limit, txnA(), txnB());
+    }
+
+    private static String page(int start, int limit, String... rows) {
+        StringBuilder json = new StringBuilder("{\"rows\":[");
+        for (int i = start; i < Math.min(rows.length, start + limit); i++) { if (i > start) json.append(','); json.append(rows[i]); }
+        return json.append("]}").toString();
     }
 
     private static NativeProvisioningTxnPageSource emptySource() {

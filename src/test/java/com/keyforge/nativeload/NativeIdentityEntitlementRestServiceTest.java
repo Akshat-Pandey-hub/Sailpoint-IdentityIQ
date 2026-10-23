@@ -43,9 +43,16 @@ class NativeIdentityEntitlementRestServiceTest {
     }
 
     private static NativeIdentityEntitlementPageSource source() {
-        String envelope = "{\"entity\":\"IdentityEntitlement\",\"rows\":[" + groupMember() + "," + assignedRole() + "]}";
-        String empty = "{\"entity\":\"IdentityEntitlement\",\"rows\":[]}";
-        return (start, limit) -> start == 0 ? envelope : empty;
+        return (start, limit) -> page(start, limit, groupMember(), assignedRole());
+    }
+
+    private static String page(int start, int limit, String... rows) {
+        StringBuilder json = new StringBuilder("{\"entity\":\"IdentityEntitlement\",\"rows\":[");
+        for (int i = start; i < Math.min(rows.length, start + limit); i++) {
+            if (i > start) json.append(',');
+            json.append(rows[i]);
+        }
+        return json.append("]}").toString();
     }
 
     private static Map<String, String> f(String... kv) {

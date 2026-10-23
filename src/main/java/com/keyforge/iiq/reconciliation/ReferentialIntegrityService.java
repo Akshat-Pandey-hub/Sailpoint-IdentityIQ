@@ -76,7 +76,7 @@ public final class ReferentialIntegrityService {
                 repo.upsert(conn, runId, finding, now);
             } catch (SQLException e) {
                 result.persistFailures++;
-                LOG.warn("[reconcile] failed to persist finding '" + c.name() + "': " + e.getMessage());
+                LOG.warn("[reconcile] failed to persist finding '{}': {}", c.name(), e.getMessage());
             }
         }
         return result;

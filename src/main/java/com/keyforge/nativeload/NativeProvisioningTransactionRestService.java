@@ -38,6 +38,7 @@ public final class NativeProvisioningTransactionRestService {
     private static final int INTERNAL_PAGE_SIZE = 500;
 
     private final ObjectMapper mapper = new ObjectMapper();
+    private final NativeProvisioningTxnParser parser = new NativeProvisioningTxnParser();
 
     /** Scalar response field name -> value extractor. The {@code plan_result_errors} jsonb field is NOT filterable. */
     private static final Map<String, Function<NativeProvisioningTxnRecord, String>> SCALARS = buildScalars();
@@ -59,6 +60,19 @@ public final class NativeProvisioningTransactionRestService {
                             + "'; filterable fields are: " + FILTERABLE_FIELDS);
                 }
             }
+        }
+
+        boolean hasFilters = filters != null && !filters.isEmpty();
+        if (hasFilters || start != null || limit != null) {
+            KfAgentPagedReader<NativeProvisioningTxnRecord> reader = new KfAgentPagedReader<>(
+                    source::fetchPage, parser::parse, INTERNAL_PAGE_SIZE, INTERNAL_PAGE_SIZE);
+            int offset = Math.max(0, start == null ? 0 : start);
+            List<NativeProvisioningTxnRecord> selected = hasFilters
+                    ? reader.filtered(r -> matches(r, filters), offset, limit)
+                    : (limit == null ? reader.filtered(r -> true, offset, null) : reader.window(offset, limit));
+            List<Map<String, Object>> out = new ArrayList<>(selected.size());
+            for (NativeProvisioningTxnRecord r : selected) out.add(toJson(r));
+            return out;
         }
 
         List<NativeProvisioningTxnRecord> all = collectAll(source);

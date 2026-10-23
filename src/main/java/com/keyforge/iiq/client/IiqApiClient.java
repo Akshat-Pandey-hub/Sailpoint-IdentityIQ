@@ -37,8 +37,6 @@ public class IiqApiClient {
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
-    /** Max chars of a failing response body echoed into an exception message. */
-    private static final int MAX_ERROR_BODY = 2000;
 
     private final String baseUrl;
     private final String authorizationHeader;
@@ -108,16 +106,16 @@ public class IiqApiClient {
                 "Basic (IIQ_USERNAME/IIQ_PASSWORD)", "IIQ_USERNAME", com.keyforge.iiq.debug.DebugLog.setting("IIQ_USERNAME"),
                 "IIQ_PASSWORD", com.keyforge.iiq.debug.DebugLog.setting("IIQ_PASSWORD"), "status", status,
                 "meaning", status >= 200 && status < 300 ? "OK"
-                        : status == 401 ? "IIQ REJECTED IIQ_USERNAME/IIQ_PASSWORD"
-                        : status == 403 ? "IIQ REFUSED - user lacks rights"
-                        : status == 404 ? "NOT FOUND - endpoint missing or wrong path"
-                        : status >= 500 ? "IIQ SERVER ERROR - see IdentityIQ log" : "HTTP " + status,
+                        : status == 401 ? "authentication failed"
+                        : status == 403 ? "access denied"
+                        : status == 404 ? "not found"
+                        : status >= 500 ? "server error" : "HTTP " + status,
                 "responseBytes", response.body() == null ? 0 : response.body().length(),
                 "ms", (System.nanoTime() - t0) / 1_000_000);
         if (status < 200 || status >= 300) {
             throw new IiqApiException(
                     "IdentityIQ request to " + safeUri(uri) + " failed with HTTP " + status
-                    + ": " + truncate(response.body()),
+                    + ": " + errorSummary(response.body()),
                     status);
         }
         return response.body();
@@ -181,13 +179,45 @@ public class IiqApiClient {
         return uri.toString();
     }
 
-    private static String truncate(String body) {
-        if (body == null) {
-            return "<no body>";
+
+    /** Longest IIQ error text taken into an exception message, and the debug-only excerpt length. */
+    private static final int MAX_ERROR_TEXT = 200;
+    private static final int MAX_DEBUG_EXCERPT = 500;
+    private static final org.slf4j.Logger BODY_LOG = org.slf4j.LoggerFactory.getLogger(IiqApiClient.class);
+
+    /**
+     * What an error response is allowed to put into an exception message (and so into ERROR logs): IIQ's own
+     * error text when the body is a JSON error ({@code message} or {@code error.message}), otherwise only the body
+     * length. The raw body is never copied into the message; a short excerpt is logged at DEBUG only.
+     */
+    protected static String errorSummary(String body) {
+        if (body == null || body.isBlank()) {
+            return "empty response body";
         }
-        if (body.length() <= MAX_ERROR_BODY) {
-            return body;
+        if (BODY_LOG.isDebugEnabled()) {
+            String excerpt = body.length() <= MAX_DEBUG_EXCERPT ? body : body.substring(0, MAX_DEBUG_EXCERPT) + "...";
+            BODY_LOG.debug("IdentityIQ error response excerpt ({} chars): {}", body.length(),
+                    excerpt.replaceAll("\\s+", " "));
         }
-        return body.substring(0, MAX_ERROR_BODY) + "... (truncated)";
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(body);
+            if (root != null && root.isObject()) {
+                String text = root.path("message").asText("");
+                if (text.isEmpty()) {
+                    text = root.path("error").path("message").asText("");
+                }
+                if (text.isEmpty() && root.path("error").isTextual()) {
+                    text = root.path("error").asText("");
+                }
+                if (!text.isEmpty()) {
+                    text = text.replaceAll("\\s+", " ").trim();
+                    return "IdentityIQ says: " + (text.length() <= MAX_ERROR_TEXT ? text : text.substring(0, MAX_ERROR_TEXT) + "...");
+                }
+            }
+        } catch (Exception notJson) {
+            // fall through: not a JSON error body
+        }
+        return "response body not logged (" + body.length() + " chars)";
     }
+
 }

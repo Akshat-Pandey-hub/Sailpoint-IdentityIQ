@@ -54,7 +54,13 @@ class NativeWorkflowDefinitionRestServiceTest {
     }
 
     private static NativeWorkflowDefinitionRestService.PageSource source() {
-        return (start, limit) -> start == 0 ? "{\"rows\":[" + workflow1() + "," + workflow2() + "]}" : "{\"rows\":[]}";
+        // honours start/limit like the plugin (firstRow/resultLimit over a fixed order)
+        List<String> rows = List.of(workflow1(), workflow2());
+        return (start, limit) -> {
+            int from = Math.min(Math.max(0, start), rows.size());
+            int to = Math.min(rows.size(), from + (limit <= 0 ? 100 : limit));
+            return "{\"limit\":" + limit + ",\"rows\":[" + String.join(",", rows.subList(from, to)) + "]}";
+        };
     }
 
     private static NativeWorkflowDefinitionRestService.PageSource emptySource() {

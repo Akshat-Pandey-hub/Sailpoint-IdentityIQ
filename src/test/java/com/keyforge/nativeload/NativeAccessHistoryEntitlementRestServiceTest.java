@@ -83,9 +83,16 @@ class NativeAccessHistoryEntitlementRestServiceTest {
     }
 
     private static NativeAccessHistoryEntitlementRestService.PageSource source() {
-        return (start, limit) -> start == 0
-                ? "{\"sourceCount\":2,\"rows\":[" + cap1() + "," + cap2() + "]}"
-                : "{\"sourceCount\":2,\"rows\":[]}";
+        return (start, limit) -> page(start, limit, cap1(), cap2());
+    }
+
+    private static String page(int start, int limit, String... rows) {
+        StringBuilder json = new StringBuilder("{\"sourceCount\":").append(rows.length).append(",\"rows\":[");
+        for (int i = start; i < Math.min(rows.length, start + limit); i++) {
+            if (i > start) json.append(',');
+            json.append(rows[i]);
+        }
+        return json.append("]}").toString();
     }
 
     private static NativeAccessHistoryEntitlementRestService.PageSource emptySource() {

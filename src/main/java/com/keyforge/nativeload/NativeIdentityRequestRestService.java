@@ -38,8 +38,10 @@ import java.util.function.Function;
 public final class NativeIdentityRequestRestService {
 
     private static final int INTERNAL_PAGE_SIZE = 500;
+    private static final int PLUGIN_MAX_PAGE = 1000;
 
     private final ObjectMapper mapper = new ObjectMapper();
+    private final NativeIdentityRequestParser parser = new NativeIdentityRequestParser();
 
     /** Scalar response field name -> value extractor. The {@code errors} jsonb field is NOT filterable. */
     private static final Map<String, Function<NativeIdentityRequestRecord, String>> SCALARS = buildScalars();
@@ -48,7 +50,9 @@ public final class NativeIdentityRequestRestService {
             Collections.unmodifiableSet(new LinkedHashSet<>(SCALARS.keySet()));
 
     /**
-     * Collect → filter → window → serialize.
+     * Read only the requested source window when unfiltered. Filtered requests scan upstream pages in order,
+     * retain matches, then apply the requested window. A full scan is reserved for an unfiltered request with
+     * no start or limit.
      *
      * @throws IllegalArgumentException if a filter names a field that is not filterable
      */
@@ -63,22 +67,23 @@ public final class NativeIdentityRequestRestService {
             }
         }
 
-        List<NativeIdentityRequestRecord> all = collectAll(source);
+        boolean filtered = filters != null && !filters.isEmpty();
+        boolean windowed = limit != null && limit >= 0;
+        int first = (start == null || start < 0) ? 0 : start;
 
-        List<NativeIdentityRequestRecord> matched = new ArrayList<>();
-        for (NativeIdentityRequestRecord r : all) {
-            if (matches(r, filters)) {
-                matched.add(r);
-            }
+        List<NativeIdentityRequestRecord> rows;
+        if (filtered || windowed || first > 0) {
+            KfAgentPagedReader<NativeIdentityRequestRecord> reader = new KfAgentPagedReader<>(
+                    source::fetchPage, parser::parse, PLUGIN_MAX_PAGE, INTERNAL_PAGE_SIZE);
+            rows = filtered
+                    ? reader.filtered(r -> matches(r, filters), first, windowed ? limit : null)
+                    : reader.window(first, windowed ? limit : Integer.MAX_VALUE);
+        } else {
+            rows = collectAll(source);
         }
 
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (NativeIdentityRequestRecord r : matched.subList(from, to)) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (NativeIdentityRequestRecord r : rows) {
             out.add(toJson(r));
         }
         return out;

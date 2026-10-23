@@ -66,7 +66,13 @@ class NativeWorkItemRestServiceTest {
     }
 
     private static NativeWorkItemPageSource source() {
-        return (start, limit) -> start == 0 ? "{\"rows\":[" + workItem39() + "," + workItem40() + "]}" : "{\"rows\":[]}";
+        return (start, limit) -> page(start, limit, workItem39(), workItem40());
+    }
+
+    private static String page(int start, int limit, String... rows) {
+        StringBuilder json = new StringBuilder("{\"rows\":[");
+        for (int i = start; i < Math.min(rows.length, start + limit); i++) { if (i > start) json.append(','); json.append(rows[i]); }
+        return json.append("]}").toString();
     }
 
     private static NativeWorkItemPageSource emptySource() {

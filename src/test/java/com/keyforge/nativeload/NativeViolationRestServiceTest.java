@@ -56,7 +56,13 @@ class NativeViolationRestServiceTest {
     }
 
     private static NativeViolationPageSource source() {
-        return (start, limit) -> start == 0 ? "{\"rows\":[" + sodViolation() + "," + mitigated() + "]}" : "{\"rows\":[]}";
+        // honours start/limit like the plugin (firstRow/resultLimit over a fixed order)
+        List<String> rows = List.of(sodViolation(), mitigated());
+        return (start, limit) -> {
+            int from = Math.min(Math.max(0, start), rows.size());
+            int to = Math.min(rows.size(), from + (limit <= 0 ? 100 : limit));
+            return "{\"limit\":" + limit + ",\"rows\":[" + String.join(",", rows.subList(from, to)) + "]}";
+        };
     }
 
     /** The real live state of the preview instance: 0 policy violations. */

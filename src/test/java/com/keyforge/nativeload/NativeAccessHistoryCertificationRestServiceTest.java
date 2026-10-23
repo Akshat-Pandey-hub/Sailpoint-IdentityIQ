@@ -57,9 +57,16 @@ class NativeAccessHistoryCertificationRestServiceTest {
     }
 
     private static NativeAccessHistoryCertificationRestService.PageSource source() {
-        return (start, limit) -> start == 0
-                ? "{\"sourceCount\":2,\"rows\":[" + cert1() + "," + cert2() + "]}"
-                : "{\"sourceCount\":2,\"rows\":[]}";
+        return (start, limit) -> page(start, limit, cert1(), cert2());
+    }
+
+    private static String page(int start, int limit, String... rows) {
+        StringBuilder json = new StringBuilder("{\"sourceCount\":").append(rows.length).append(",\"rows\":[");
+        for (int i = start; i < Math.min(rows.length, start + limit); i++) {
+            if (i > start) json.append(',');
+            json.append(rows[i]);
+        }
+        return json.append("]}").toString();
     }
 
     /** The real live state today: no certification history → empty rows. */
