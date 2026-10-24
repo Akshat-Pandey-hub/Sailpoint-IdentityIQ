@@ -65,6 +65,11 @@ public final class NativeIncrementalQuery {
                 Filter.and(Filter.isnull(MODIFIED_PROPERTY), Filter.gt(CREATED_PROPERTY, bound)));
     }
 
+    /** Same changed-after rule for objects already loaded in memory (used for TaskSchedule). */
+    public static boolean changedAfter(Date modified, Date created, Date bound) {
+        return bound == null || (modified != null ? modified.after(bound) : created != null && created.after(bound));
+    }
+
     /**
      * Adds a server-side {@code created > createdAfter} filter to {@code qo} when a bound is supplied (same
      * strict {@code >} and overlap convention as {@link #applyModifiedAfter}). A {@code null} {@code qo} or

@@ -11,6 +11,7 @@ import sailpoint.object.QueryOptions;
 import sailpoint.tools.GeneralException;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.Iterator;
 
 /**
@@ -29,8 +30,13 @@ public final class NativeViolationExtractor {
     }
 
     public NativeViolationExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    public NativeViolationExtractionResult extract(int start, int limit, Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("id", true);
+        NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         if (start > 0) {
             qo.setFirstRow(start);
         }

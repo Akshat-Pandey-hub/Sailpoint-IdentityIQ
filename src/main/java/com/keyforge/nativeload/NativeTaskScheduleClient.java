@@ -16,9 +16,15 @@ public final class NativeTaskScheduleClient implements NativeTaskSchedulePageSou
     public static final String TASK_SCHEDULES_PATH = "plugin/rest/keyForgeNativeIIQ/task-schedules";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativeTaskScheduleClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    public NativeTaskScheduleClient withModifiedAfter(String modifiedAfter) {
+        this.modifiedAfter = (modifiedAfter == null || modifiedAfter.isBlank()) ? null : modifiedAfter.trim();
+        return this;
     }
 
     @Override
@@ -27,6 +33,7 @@ public final class NativeTaskScheduleClient implements NativeTaskSchedulePageSou
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) params.put("modifiedAfter", modifiedAfter);
         return session.get(TASK_SCHEDULES_PATH, params);
     }
 }

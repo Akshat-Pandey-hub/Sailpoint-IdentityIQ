@@ -11,6 +11,7 @@ import sailpoint.object.QueryOptions;
 import sailpoint.tools.GeneralException;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.Iterator;
 
 /**
@@ -28,8 +29,13 @@ public final class NativeCertificationExtractor {
     }
 
     public NativeCertificationExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    public NativeCertificationExtractionResult extract(int start, int limit, Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("id", true);
+        NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         if (start > 0) {
             qo.setFirstRow(start);
         }
@@ -38,7 +44,7 @@ public final class NativeCertificationExtractor {
         }
         NativeCertificationExtractionResult result = new NativeCertificationExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "Certification", Instant.now());
-        result.setSourceCount(context.countObjects(Certification.class, new QueryOptions()));
+        result.setSourceCount(context.countObjects(Certification.class, NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
 
         Iterator<Object[]> ids = context.search(Certification.class, qo, "id");
         while (ids != null && ids.hasNext()) {

@@ -34,8 +34,7 @@ import java.util.function.Function;
  * SailPoint ids (bound directly from the record — not KeyForge canonical UUIDs). Excluded as technical: the
  * KeyForge {@code violationid} PK (a canonical UUID), {@code record_hash}, and the lineage envelope
  * ({@code source_system}/{@code source_interface}/{@code source_object_type}/{@code extraction_run_id}/
- * {@code extracted_at}). No native {@code modifiedAfter} (the client has no server-side modified filter →
- * full-scan only). The preview instance currently has 0 policy violations, so the live response is {@code []}
+ * {@code extracted_at}). The agent passes {@code modifiedAfter} through to the plugin for server-side filtering. The preview instance currently has 0 policy violations, so the live response is {@code []}
  * until a violation exists.
  */
 public final class NativeViolationRestService {

@@ -42,7 +42,12 @@ public class NativeViolationResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getViolations(@QueryParam("start") @DefaultValue("0") int start,
-                                  @QueryParam("limit") @DefaultValue("100") int limit) {
+                                  @QueryParam("limit") @DefaultValue("100") int limit,
+                                  @QueryParam("modifiedAfter") String modifiedAfter) {
+        java.util.Date bound = com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+        if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return error(Response.Status.BAD_REQUEST, com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
+        }
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         String stage = "start";
@@ -51,7 +56,7 @@ public class NativeViolationResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeViolationExtractionResult result =
-                    new NativeViolationExtractionService().extract(context, safeStart, safeLimit);
+                    new NativeViolationExtractionService().extract(context, safeStart, safeLimit, bound);
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeViolationWire.envelope(result, safeStart, safeLimit);
             return Response.ok(envelope).build();

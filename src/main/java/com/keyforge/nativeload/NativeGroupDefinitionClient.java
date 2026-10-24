@@ -16,9 +16,15 @@ public final class NativeGroupDefinitionClient implements NativeGroupDefinitionP
     public static final String GROUP_DEFINITIONS_PATH = "plugin/rest/keyForgeNativeIIQ/group-definitions";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativeGroupDefinitionClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    public NativeGroupDefinitionClient withModifiedAfter(String modifiedAfter) {
+        this.modifiedAfter = (modifiedAfter == null || modifiedAfter.isBlank()) ? null : modifiedAfter.trim();
+        return this;
     }
 
     @Override
@@ -27,6 +33,7 @@ public final class NativeGroupDefinitionClient implements NativeGroupDefinitionP
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) params.put("modifiedAfter", modifiedAfter);
         return session.get(GROUP_DEFINITIONS_PATH, params);
     }
 }

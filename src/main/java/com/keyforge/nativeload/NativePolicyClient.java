@@ -14,9 +14,15 @@ public final class NativePolicyClient implements NativePolicyPageSource {
     public static final String POLICIES_PATH = "plugin/rest/keyForgeNativeIIQ/policies";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativePolicyClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    public NativePolicyClient withModifiedAfter(String modifiedAfter) {
+        this.modifiedAfter = (modifiedAfter == null || modifiedAfter.isBlank()) ? null : modifiedAfter.trim();
+        return this;
     }
 
     @Override
@@ -25,6 +31,7 @@ public final class NativePolicyClient implements NativePolicyPageSource {
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) params.put("modifiedAfter", modifiedAfter);
         return session.get(POLICIES_PATH, params);
     }
 }

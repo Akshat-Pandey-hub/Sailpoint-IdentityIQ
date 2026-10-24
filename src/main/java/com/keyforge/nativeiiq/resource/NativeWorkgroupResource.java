@@ -48,7 +48,12 @@ public class NativeWorkgroupResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getWorkgroups(@QueryParam("start") @DefaultValue("0") int start,
-                                  @QueryParam("limit") @DefaultValue("100") int limit) {
+                                  @QueryParam("limit") @DefaultValue("100") int limit,
+                                  @QueryParam("modifiedAfter") String modifiedAfter) {
+        java.util.Date bound = com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+        if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return error(Response.Status.BAD_REQUEST, com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
+        }
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         String stage = "start";
@@ -60,7 +65,7 @@ public class NativeWorkgroupResource extends BasePluginResource {
 
             stage = "extract";
             NativeWorkgroupExtractionResult result =
-                    new NativeWorkgroupExtractionService().extract(context, safeStart, safeLimit);
+                    new NativeWorkgroupExtractionService().extract(context, safeStart, safeLimit, bound);
 
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeWorkgroupWire.envelope(result, safeStart, safeLimit);

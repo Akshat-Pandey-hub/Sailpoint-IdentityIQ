@@ -43,7 +43,12 @@ public class NativeCertificationResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getCertifications(@QueryParam("start") @DefaultValue("0") int start,
-                                      @QueryParam("limit") @DefaultValue("100") int limit) {
+                                      @QueryParam("limit") @DefaultValue("100") int limit,
+                                      @QueryParam("modifiedAfter") String modifiedAfter) {
+        java.util.Date bound = com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+        if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return error(Response.Status.BAD_REQUEST, com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
+        }
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         String stage = "start";
@@ -52,7 +57,7 @@ public class NativeCertificationResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeCertificationExtractionResult result =
-                    new NativeCertificationExtractionService().extract(context, safeStart, safeLimit);
+                    new NativeCertificationExtractionService().extract(context, safeStart, safeLimit, bound);
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeCertificationWire.envelope(result, safeStart, safeLimit);
             LOG.fine("KeyForgeNativeIIQ certifications: returning " + result.getCount() + " record(s)");

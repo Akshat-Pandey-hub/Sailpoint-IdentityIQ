@@ -14,9 +14,15 @@ public final class NativeCertificationClient implements NativeCertificationPageS
     public static final String CERTIFICATIONS_PATH = "plugin/rest/keyForgeNativeIIQ/certifications";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativeCertificationClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    public NativeCertificationClient withModifiedAfter(String modifiedAfter) {
+        this.modifiedAfter = (modifiedAfter == null || modifiedAfter.isBlank()) ? null : modifiedAfter.trim();
+        return this;
     }
 
     @Override
@@ -25,6 +31,7 @@ public final class NativeCertificationClient implements NativeCertificationPageS
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) params.put("modifiedAfter", modifiedAfter);
         return session.get(CERTIFICATIONS_PATH, params);
     }
 }

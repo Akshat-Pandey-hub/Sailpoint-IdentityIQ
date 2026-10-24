@@ -33,4 +33,16 @@ class ChangedAfterFilterTest {
         assertTrue(s.toLowerCase().contains("isnull") || s.toLowerCase().contains("is null"), s);
         assertTrue(s.contains("||") || s.toLowerCase().contains(" or "), s);
     }
+
+    @Test
+    void inMemoryChangedAfterIncludesModifiedAndNeverModifiedCreatedSchedules() {
+        Date bound = Date.from(Instant.parse("2026-10-12T10:00:00Z"));
+        Date after = Date.from(Instant.parse("2026-10-12T10:01:00Z"));
+        Date before = Date.from(Instant.parse("2026-10-12T09:59:00Z"));
+        assertTrue(NativeIncrementalQuery.changedAfter(after, before, bound));
+        assertTrue(NativeIncrementalQuery.changedAfter(null, after, bound));
+        assertTrue(!NativeIncrementalQuery.changedAfter(null, before, bound));
+        assertTrue(!NativeIncrementalQuery.changedAfter(before, after, bound));
+    }
+
 }

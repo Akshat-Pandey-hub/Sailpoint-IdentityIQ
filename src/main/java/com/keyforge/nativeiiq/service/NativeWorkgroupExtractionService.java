@@ -27,8 +27,13 @@ public final class NativeWorkgroupExtractionService {
 
     public NativeWorkgroupExtractionResult extract(SailPointContext context, int start, int limit)
             throws GeneralException {
+        return extract(context, start, limit, null);
+    }
+
+    public NativeWorkgroupExtractionResult extract(SailPointContext context, int start, int limit, java.util.Date modifiedAfter)
+            throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeWorkgroupExtractor(context, config).extract(Math.max(0, start), limit);
+        return new NativeWorkgroupExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
     }
 
     public NativeWorkgroupExtractionResult extractAll(SailPointContext context) throws GeneralException {

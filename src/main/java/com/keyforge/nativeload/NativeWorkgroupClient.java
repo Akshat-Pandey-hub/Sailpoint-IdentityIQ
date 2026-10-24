@@ -16,9 +16,15 @@ public final class NativeWorkgroupClient implements NativeWorkgroupPageSource {
     public static final String WORKGROUPS_PATH = "plugin/rest/keyForgeNativeIIQ/workgroups";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativeWorkgroupClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    public NativeWorkgroupClient withModifiedAfter(String modifiedAfter) {
+        this.modifiedAfter = (modifiedAfter == null || modifiedAfter.isBlank()) ? null : modifiedAfter.trim();
+        return this;
     }
 
     @Override
@@ -27,6 +33,7 @@ public final class NativeWorkgroupClient implements NativeWorkgroupPageSource {
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) params.put("modifiedAfter", modifiedAfter);
         return session.get(WORKGROUPS_PATH, params);
     }
 }

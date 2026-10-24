@@ -22,7 +22,12 @@ public final class NativeViolationExtractionService {
 
     public NativeViolationExtractionResult extract(SailPointContext context, int start, int limit)
             throws GeneralException {
+        return extract(context, start, limit, null);
+    }
+
+    public NativeViolationExtractionResult extract(SailPointContext context, int start, int limit, java.util.Date modifiedAfter)
+            throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeViolationExtractor(context, config).extract(Math.max(0, start), limit);
+        return new NativeViolationExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
     }
 }

@@ -492,9 +492,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // The native Workgroup client has no server-side modifiedAfter support (full-scan only);
-        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
-        NativeWorkgroupPageSource source = new NativeWorkgroupClient(session);
+        // optional incremental bound (changed after); absent = full population
+        NativeWorkgroupPageSource source = new NativeWorkgroupClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = workgroupService.fetch(source, filters, start, limit);
@@ -647,9 +646,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // Existing native GroupDefinition extraction; the service collects records in memory (no DB). No
-        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
-        NativeGroupDefinitionPageSource source = new NativeGroupDefinitionClient(session);
+        // Existing native GroupDefinition extraction; modifiedAfter is passed through to the plugin.
+        NativeGroupDefinitionPageSource source = new NativeGroupDefinitionClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = groupDefinitionService.fetch(source, filters, start, limit);
@@ -715,9 +713,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // Existing native PolicyViolation extraction; the service collects records in memory (no DB). No
-        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
-        NativeViolationPageSource source = new NativeViolationClient(session);
+        // Existing native PolicyViolation extraction; modifiedAfter is passed through to the plugin.
+        NativeViolationPageSource source = new NativeViolationClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = violationService.fetch(source, filters, start, limit);
@@ -1009,9 +1006,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // The native Policy client has no server-side modifiedAfter support (full-scan only);
-        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
-        NativePolicyPageSource source = new NativePolicyClient(session);
+        // optional incremental bound (changed after); absent = full population
+        NativePolicyPageSource source = new NativePolicyClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = policyService.fetch(source, filters, start, limit);
@@ -1100,10 +1096,9 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // Reuse the existing native Workflow client + parser (the import service is DB-coupled, so it is not
-        // used here); runId is a plugin lineage query param, not a DB handle. No modifiedAfter support
-        // (full-scan only); modifiedAfter stays reserved. No PostgreSQL on this path.
-        NativeWorkflowClient client = new NativeWorkflowClient(session, java.util.UUID.randomUUID().toString());
+        // Reuse the existing native Workflow client + parser; runId is a plugin lineage query param.
+        // No PostgreSQL on this path; modifiedAfter is passed through to the plugin.
+        NativeWorkflowClient client = new NativeWorkflowClient(session, java.util.UUID.randomUUID().toString()).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = workflowDefinitionService.fetch(client::fetch, filters, start, limit);
@@ -1123,9 +1118,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // Existing native Certification extraction; the service collects records in memory (no DB). No
-        // modifiedAfter support on the certification client (full-scan only); modifiedAfter stays reserved.
-        NativeCertificationPageSource source = new NativeCertificationClient(session);
+        // Existing native Certification extraction; modifiedAfter is passed through to the plugin.
+        NativeCertificationPageSource source = new NativeCertificationClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = certificationService.fetch(source, filters, start, limit);
@@ -1259,9 +1253,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // Existing native TaskSchedule extraction; the service collects records in memory (no DB). No
-        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
-        NativeTaskSchedulePageSource source = new NativeTaskScheduleClient(session);
+        // Existing native TaskSchedule extraction; modifiedAfter is passed through to the plugin.
+        NativeTaskSchedulePageSource source = new NativeTaskScheduleClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = taskScheduleService.fetch(source, filters, start, limit);

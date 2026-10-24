@@ -11,6 +11,7 @@ import sailpoint.object.TaskSchedule;
 import sailpoint.tools.GeneralException;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.Iterator;
 
 /**
@@ -30,29 +31,42 @@ public final class NativeTaskScheduleExtractor {
     }
 
     public NativeTaskScheduleExtractionResult extract(int start, int limit) throws GeneralException {
-        QueryOptions qo = new QueryOptions();
-        qo.addOrdering("name", true);
-        if (start > 0) {
-            qo.setFirstRow(start);
-        }
-        if (limit > 0) {
-            qo.setResultLimit(limit);
-        }
-        return extract(qo);
+        return extract(start, limit, null);
     }
 
-    private NativeTaskScheduleExtractionResult extract(QueryOptions qo) throws GeneralException {
+    /**
+     * IIQ ignores firstRow/resultLimit (and so cannot filter before paging) for TaskSchedule, so the
+     * changed-after filter and the start/limit window are both applied here in code, filter first.
+     */
+    public NativeTaskScheduleExtractionResult extract(int start, int limit, Date modifiedAfter) throws GeneralException {
+        QueryOptions qo = new QueryOptions();
+        qo.addOrdering("name", true);
+        return extract(qo, Math.max(0, start), limit, modifiedAfter);
+    }
+
+    private NativeTaskScheduleExtractionResult extract(QueryOptions qo, int start, int limit, Date modifiedAfter)
+            throws GeneralException {
         NativeTaskScheduleExtractionResult result = new NativeTaskScheduleExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "TaskSchedule", Instant.now());
 
+        int matched = 0;
         Iterator<Object[]> ids = context.search(TaskSchedule.class, qo, "id");
         while (ids != null && ids.hasNext()) {
+            if (limit > 0 && result.getTaskSchedules().size() >= limit) {
+                break;
+            }
             String id = (String) ids.next()[0];
             TaskSchedule ts = context.getObjectById(TaskSchedule.class, id);
             if (ts == null) {
                 continue;
             }
             try {
+                if (!NativeIncrementalQuery.changedAfter(ts.getModified(), ts.getCreated(), modifiedAfter)) {
+                    continue;
+                }
+                if (matched++ < start) {
+                    continue;
+                }
                 NativeTaskScheduleRow row = NativeTaskScheduleMapper.map(
                         ts, config.getSourceSystem(), config.getExtractionRunId());
                 result.getTaskSchedules().add(row);

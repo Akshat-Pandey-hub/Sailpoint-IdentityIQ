@@ -90,4 +90,35 @@ class ChangedAfterClientTest {
     void accountEntitlementClient() {
         check((s, b) -> new NativeAccountEntitlementClient(s).withModifiedAfter(b).fetchPage(0, 50));
     }
+
+    @Test
+    void certificationClient() { check((s, b) -> new NativeCertificationClient(s).withModifiedAfter(b).fetchPage(0, 50)); }
+
+    @Test
+    void groupDefinitionClient() { check((s, b) -> new NativeGroupDefinitionClient(s).withModifiedAfter(b).fetchPage(0, 50)); }
+
+    @Test
+    void policyClient() { check((s, b) -> new NativePolicyClient(s).withModifiedAfter(b).fetchPage(0, 50)); }
+
+    @Test
+    void violationClient() { check((s, b) -> new NativeViolationClient(s).withModifiedAfter(b).fetchPage(0, 50)); }
+
+    @Test
+    void workgroupClient() { check((s, b) -> new NativeWorkgroupClient(s).withModifiedAfter(b).fetchPage(0, 50)); }
+
+    @Test
+    void taskScheduleClient() { check((s, b) -> new NativeTaskScheduleClient(s).withModifiedAfter(b).fetchPage(0, 50)); }
+
+    @Test
+    void workflowClient() {
+        for (String none : new String[]{null, "", "  "}) {
+            RecordingSession plain = new RecordingSession();
+            new NativeWorkflowClient(plain, "run-1").withModifiedAfter(none).fetch(0, 50);
+            assertEquals(Map.of("start", "0", "limit", "50", "runId", "run-1"), plain.params.get(0));
+        }
+        RecordingSession bounded = new RecordingSession();
+        new NativeWorkflowClient(bounded, "run-1").withModifiedAfter(BOUND).fetch(0, 50);
+        assertEquals(Map.of("start", "0", "limit", "50", "runId", "run-1", "modifiedAfter", BOUND), bounded.params.get(0));
+    }
+
 }
