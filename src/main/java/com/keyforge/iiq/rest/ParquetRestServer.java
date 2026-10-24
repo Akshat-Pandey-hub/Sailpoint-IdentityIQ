@@ -170,42 +170,107 @@ public final class ParquetRestServer {
         }
 
         void handle(HttpExchange ex) throws IOException {
+            String path = ex.getRequestURI().getPath();
+            String rest = path.length() > prefix.length() ? path.substring(prefix.length()) : "";
+            while (rest.startsWith("/")) {
+                rest = rest.substring(1);
+            }
+            String[] segs = rest.isEmpty() ? new String[0] : rest.split("/");
+            logService(path, segs, ex);
+
+            int status = 200;
+            Object body;
             try {
                 if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) {
                     throw new ApiException(405, "Method Not Allowed", "Only GET is supported");
                 }
-                String path = ex.getRequestURI().getPath();
-                String rest = path.length() > prefix.length() ? path.substring(prefix.length()) : "";
-                while (rest.startsWith("/")) {
-                    rest = rest.substring(1);
-                }
-                String[] segs = rest.isEmpty() ? new String[0] : rest.split("/");
-
                 if (segs.length == 0) {
                     throw ApiException.notFound("Use " + prefix + "/datasets or " + prefix + "/{dataset}");
                 }
                 if (segs.length == 1 && segs[0].equals("datasets")) {
-                    Map<String, Object> body = new LinkedHashMap<>();
-                    body.put("datasets", catalog.datasets());
-                    Http.send(json, ex, 200, body);
-                    return;
+                    Map<String, Object> datasets = new LinkedHashMap<>();
+                    datasets.put("datasets", catalog.datasets());
+                    body = datasets;
+                } else if (segs.length == 2 && segs[1].equals("schema")) {
+                    body = schemaBody(segs[0]);
+                } else if (segs.length == 1) {
+                    body = queryBody(segs[0], parseQuery(ex));
+                } else {
+                    throw ApiException.notFound("Unknown path: " + path);
                 }
-                String dataset = segs[0];
-                if (segs.length == 2 && segs[1].equals("schema")) {
-                    Http.send(json, ex, 200, schemaBody(dataset));
-                    return;
-                }
-                if (segs.length == 1) {
-                    Http.send(json, ex, 200, queryBody(dataset, parseQuery(ex)));
-                    return;
-                }
-                throw ApiException.notFound("Unknown path: " + path);
             } catch (ApiException e) {
-                Http.sendError(json, ex, e);
+                status = e.status();
+                body = Http.errorBody(e);
             } catch (Exception e) {
                 LOG.error("[rest] unexpected error", e);
-                Http.sendError(json, ex, new ApiException(500, "Internal Server Error", "Unexpected server error"));
+                ApiException internal = new ApiException(500, "Internal Server Error", "Unexpected server error");
+                status = internal.status();
+                body = Http.errorBody(internal);
             }
+            Http.send(json, ex, status, body);
+            logResult(path, status, body);
+        }
+
+        /** SERVICE line, same as the KF Agent routes: what is being read, from where. */
+        private void logService(String path, String[] segs, HttpExchange ex) {
+            if (!com.keyforge.iiq.debug.DebugLog.enabled()) {
+                return;
+            }
+            String family = NATIVE_PREFIX.equals(prefix)
+                    ? "native datasets exported from IdentityIQ" : "REST/SCIM datasets";
+            String purpose;
+            if (segs.length == 1 && segs[0].equals("datasets")) {
+                purpose = "Parquet query: list the available " + family;
+            } else if (segs.length == 2 && segs[1].equals("schema")) {
+                purpose = "Parquet query: columns of dataset '" + segs[0] + "' (" + family + ")";
+            } else if (segs.length == 1) {
+                purpose = "Parquet query: rows of dataset '" + segs[0] + "' (" + family + ")";
+            } else {
+                purpose = "Parquet query: unknown path";
+            }
+            Map<String, List<String>> q;
+            try {
+                q = parseQuery(ex);
+            } catch (RuntimeException malformed) {
+                q = Map.of(); // the request itself reports the bad query; logging never fails it
+            }
+            com.keyforge.iiq.debug.DebugLog.log("SERVICE", "endpoint", path, "purpose", purpose,
+                    "source", "local Parquet files in PARQUET_OUT_DIR (read-only)",
+                    "limit", first(q, "limit"), "offset", first(q, "offset"),
+                    "PARQUET_OUT_DIR", com.keyforge.iiq.debug.DebugLog.setting("PARQUET_OUT_DIR"));
+        }
+
+        /** RESULT line, same as the KF Agent routes; a rejected request (4xx) is a WARN at every level. */
+        private static void logResult(String path, int status, Object body) {
+            boolean rejected = status >= 400 && status < 500;
+            if (!rejected && !com.keyforge.iiq.debug.DebugLog.enabled()) {
+                return;
+            }
+            Object detail = "-";
+            if (body instanceof Map<?, ?> m) {
+                if (m.containsKey("error")) {
+                    detail = "error: " + m.get("message");
+                } else if (m.containsKey("rows")) {
+                    detail = m.get("returned") + " rows (of " + m.get("total") + ")"
+                            + (m.containsKey("note") ? "; " + m.get("note") : "");
+                } else if (m.get("datasets") instanceof List<?> l) {
+                    detail = l.size() + " datasets";
+                } else if (m.get("columns") instanceof List<?> l) {
+                    detail = l.size() + " columns";
+                }
+            }
+            if (rejected) {
+                com.keyforge.iiq.debug.DebugLog.warn("RESULT", "endpoint", path, "status", status,
+                        "returned", detail, "ms", com.keyforge.iiq.debug.DebugLog.elapsedMs());
+            } else {
+                com.keyforge.iiq.debug.DebugLog.log("RESULT", "endpoint", path, "status", status,
+                        "returned", detail, "ms", com.keyforge.iiq.debug.DebugLog.elapsedMs());
+            }
+        }
+
+        private static String first(Map<String, List<String>> q, String key) {
+            List<String> v = q.get(key);
+            return v == null || v.isEmpty() ? null : v.get(0);
         }
 
         private Map<String, Object> schemaBody(String dataset) {
@@ -291,10 +356,14 @@ public final class ParquetRestServer {
         }
 
         static void sendError(ObjectMapper json, HttpExchange ex, ApiException e) throws IOException {
+            send(json, ex, e.status(), errorBody(e));
+        }
+
+        static Map<String, Object> errorBody(ApiException e) {
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("error", e.error());
             body.put("message", e.getMessage());
-            send(json, ex, e.status(), body);
+            return body;
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.keyforge.iiq.parquet;
 
 import java.nio.file.Path;
+import java.util.Optional;
 
 /**
  * Runtime configuration for the Parquet workstream. Output directory is resolved from the environment
@@ -28,6 +29,17 @@ public final class ParquetConfig {
             v = DEFAULT_OUT_DIR;
         }
         return new ParquetConfig(Path.of(v.trim()));
+    }
+
+    /** Explicit output setting only; unlike {@link #load()}, this never selects the default directory. */
+    public static Optional<Path> explicitOutputDir() {
+        return explicitOutputDir(System.getenv(KEY_OUT_DIR), System.getProperty(KEY_OUT_DIR));
+    }
+
+    static Optional<Path> explicitOutputDir(String environment, String systemProperty) {
+        String value = environment;
+        if (value == null || value.isBlank()) value = systemProperty;
+        return value == null || value.isBlank() ? Optional.empty() : Optional.of(Path.of(value.trim()));
     }
 
     public Path outputDir() {

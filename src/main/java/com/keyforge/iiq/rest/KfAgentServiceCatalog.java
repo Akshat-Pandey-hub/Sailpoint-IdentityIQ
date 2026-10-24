@@ -59,7 +59,26 @@ final class KfAgentServiceCatalog {
     }
 
     static String purpose(String sub) {
+        if (isParquetExport(sub)) {
+            String dataset = sub.length() > PARQUET_EXPORT.length() ? sub.substring(PARQUET_EXPORT.length() + 1) : null;
+            return dataset == null
+                    ? "Parquet export: read the native datasets from IdentityIQ and write them as Parquet files"
+                    : "Parquet export: read native dataset '" + dataset + "' from IdentityIQ and write it as a Parquet file";
+        }
         String p = PURPOSE.get(sub);
         return p == null ? "unknown endpoint '" + sub + "'" : p;
+    }
+
+    /** Where an endpoint's data comes from (and goes to), for the SERVICE line. */
+    static String source(String sub) {
+        return isParquetExport(sub)
+                ? "IdentityIQ via the KeyForge plugin (read-only); writes Parquet files to PARQUET_OUT_DIR"
+                : "IdentityIQ via the KeyForge plugin (read-only)";
+    }
+
+    static final String PARQUET_EXPORT = "parquet/export";
+
+    static boolean isParquetExport(String sub) {
+        return PARQUET_EXPORT.equals(sub) || (sub != null && sub.startsWith(PARQUET_EXPORT + "/"));
     }
 }

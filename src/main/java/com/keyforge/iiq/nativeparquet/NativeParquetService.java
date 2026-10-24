@@ -8,13 +8,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -98,11 +96,33 @@ public final class NativeParquetService {
     }
 
     public List<Result> run(Connection pg, Path outputDir, String runId) {
+        return run(new PostgresParquetRowSource(pg, schema), outputDir, runId, NativeParquetDatasets.all());
+    }
+
+    /** Full current-state export using the KF Agent services as the source. */
+    public List<Result> runAgent(com.keyforge.iiq.client.IiqSessionClient session, Path outputDir,
+                                 String runId, String onlyDataset) {
+        List<NativeParquetDatasets.Def> selected = NativeParquetDatasets.all();
+        if (onlyDataset != null) {
+            selected = selected.stream().filter(d -> d.parquetName().equals(onlyDataset)).toList();
+            if (selected.isEmpty()) {
+                return List.of(new Result(onlyDataset, 0, 0, 0, 0, null, "unknown dataset"));
+            }
+        }
+        return run(new AgentParquetRowSource(session), outputDir, runId, selected);
+    }
+
+    public List<Result> run(ParquetRowSource source, Path outputDir, String runId) {
+        return run(source, outputDir, runId, NativeParquetDatasets.all());
+    }
+
+    private List<Result> run(ParquetRowSource source, Path outputDir, String runId,
+                             List<NativeParquetDatasets.Def> datasets) {
         Instant extractedAt = Instant.now();
         List<Result> results = new ArrayList<>();
-        for (NativeParquetDatasets.Def d : NativeParquetDatasets.all()) {
+        for (NativeParquetDatasets.Def d : datasets) {
             try {
-                results.add(runOne(pg, d, outputDir, runId, extractedAt));
+                results.add(runOne(source, d, outputDir, runId, extractedAt));
             } catch (Exception e) {
                 results.add(new Result(d.parquetName(), 0, 0, 0, 0, null,
                         e.getClass().getSimpleName() + ": " + e.getMessage()));
@@ -111,8 +131,8 @@ public final class NativeParquetService {
         return results;
     }
 
-    private Result runOne(Connection pg, NativeParquetDatasets.Def d, Path outputDir, String runId,
-                          Instant extractedAt) throws SQLException {
+    Result runOne(ParquetRowSource source, NativeParquetDatasets.Def d, Path outputDir, String runId,
+                  Instant extractedAt) throws Exception {
         Path file = outputDir.resolve(d.parquetName()).resolve("current.parquet");
 
         // 1) prior content hashes + capture times (by PK), for change classification and lineage carry-over.
@@ -121,43 +141,33 @@ public final class NativeParquetService {
         // 2) read native current-state rows and build content-hashed dataset rows.
         List<Map<String, Object>> rows = new ArrayList<>();
         int inserted = 0, changed = 0, unchanged = 0;
-        boolean hasSoftDelete = columnExists(pg, d.sourceTable(), "is_deleted");
-        boolean hasCreated = columnExists(pg, d.sourceTable(), "created_at");
-        boolean hasModified = columnExists(pg, d.sourceTable(), "modified_at");
-        String cols = String.join(", ", d.businessColumns());
-        String sql = "SELECT " + d.pkColumn() + " AS __pk, " + cols
-                + (hasCreated ? ", created_at AS __src_created" : "")
-                + (hasModified ? ", modified_at AS __src_modified" : "")
-                + " FROM " + schema + "." + d.sourceTable()
-                + (hasSoftDelete ? " WHERE is_deleted = false" : "");
         boolean isEvent = EVENT_SOURCE_TABLES.contains(d.sourceTable());
-        try (Statement st = pg.createStatement(); ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) {
-                String pk = rs.getString("__pk");
-                Map<String, Object> row = new LinkedHashMap<>();
-                String[] parts = new String[d.businessColumns().size()];
-                for (int i = 0; i < d.businessColumns().size(); i++) {
-                    String c = d.businessColumns().get(i);
-                    String v = rs.getString(c);   // stable PG text form (deterministic across runs)
-                    row.put(c, v);
-                    parts[i] = v;
-                }
-                String contentHash = EventFingerprint.fingerprint(parts);   // business-only; no timestamp
-
-                Prior before = prior.get(pk);
-                Change change = classify(before == null ? null : before.hash(), contentHash);
-                switch (change) {
-                    case NEW -> inserted++;
-                    case CHANGED -> changed++;
-                    case UNCHANGED -> unchanged++;
-                }
-
-                Instant created = hasCreated ? instant(rs, "__src_created") : null;
-                Instant modified = hasModified ? instant(rs, "__src_modified") : null;
-                stampLineage(row, d, pk, contentHash, runIdFor(change, before, runId),
-                        extractedAtFor(change, before, extractedAt), created, modified, isEvent ? created : null);
-                rows.add(row);
+        for (ParquetRowSource.Row sourceRow : source.read(d)) {
+            String pk = sourceRow.primaryKey();
+            Map<String, Object> row = new LinkedHashMap<>();
+            String[] parts = new String[d.businessColumns().size()];
+            for (int i = 0; i < d.businessColumns().size(); i++) {
+                String c = d.businessColumns().get(i);
+                Object value = sourceRow.businessValues().get(c);
+                String v = value == null ? null : value.toString();
+                row.put(c, v);
+                parts[i] = v;
             }
+            String contentHash = EventFingerprint.fingerprint(parts);   // business-only; no timestamp
+
+            Prior before = prior.get(pk);
+            Change change = classify(before == null ? null : before.hash(), contentHash);
+            switch (change) {
+                case NEW -> inserted++;
+                case CHANGED -> changed++;
+                case UNCHANGED -> unchanged++;
+            }
+
+            Instant created = sourceRow.created();
+            Instant modified = sourceRow.modified();
+            stampLineage(row, d, pk, contentHash, runIdFor(change, before, runId),
+                    extractedAtFor(change, before, extractedAt), created, modified, isEvent ? created : null);
+            rows.add(row);
         }
 
         // 3) write the single stable current-state file (overwrite). No per-run accumulation.
@@ -196,12 +206,6 @@ public final class NativeParquetService {
         return map;
     }
 
-    /** A timestamptz source column as an instant (null-safe). */
-    private static Instant instant(ResultSet rs, String column) throws SQLException {
-        OffsetDateTime v = rs.getObject(column, OffsetDateTime.class);
-        return v == null ? null : v.toInstant();
-    }
-
     /**
      * Stamps the lineage envelope. {@code src_natural_key} carries the record PK (the dedup identity). A
      * lineage key that collides with a business column (e.g. an event-link's own {@code src_object_id}) is
@@ -232,16 +236,4 @@ public final class NativeParquetService {
         }
     }
 
-    private boolean columnExists(Connection conn, String table, String column) throws SQLException {
-        String sql = "SELECT 1 FROM information_schema.columns "
-                + "WHERE table_schema = ? AND table_name = ? AND column_name = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, schema);
-            ps.setString(2, table);
-            ps.setString(3, column);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
-        }
-    }
 }

@@ -3,6 +3,10 @@ package com.keyforge.iiq.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.keyforge.iiq.client.IiqSessionClient;
 import com.keyforge.iiq.config.AppConfig;
+import com.keyforge.iiq.nativeparquet.NativeParquetDatasets;
+import com.keyforge.iiq.nativeparquet.NativeParquetService;
+import com.keyforge.iiq.parquet.ParquetConfig;
+import com.keyforge.nativeload.NativeSchemaConfig;
 import com.keyforge.nativeload.NativeAccountEntitlementClient;
 import com.keyforge.nativeload.NativeAccountEntitlementPageSource;
 import com.keyforge.nativeload.NativeAccountEntitlementRestService;
@@ -105,16 +109,22 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /**
- * KF Agent REST service — exposes the existing native (Java-API) extraction as read-only JSON over HTTP,
- * so an external consumer (the Assurance Tool) can pull SailPoint data without any client-side database.
- * It reuses the existing native extraction/mapping verbatim and persists nothing: the DB write path is
- * bypassed here (see {@link NativeEntitlementRestService}). SCIM / {@code IiqApiClient} is NOT involved.
+ * KF Agent REST service — exposes the existing native (Java-API) extraction over HTTP, so an external
+ * consumer (the Assurance Tool) can pull SailPoint data without any client-side database. Data routes reuse
+ * the existing native extraction/mapping and do not write PostgreSQL; the Parquet export route writes local
+ * files only. SCIM / {@code IiqApiClient} is NOT involved.
  *
  * <p>Resource-oriented endpoints (first module implemented): {@code GET /kfagent/entitlements}. Later
  * modules will be added as {@code /kfagent/identities}, {@code /kfagent/applications}, etc.
@@ -128,11 +138,20 @@ public final class KfAgentRestServer {
 
     public static final String PREFIX = "/kfagent";
     public static final int DEFAULT_PORT = 8100;
+    private static final AtomicBoolean PARQUET_EXPORT_RUNNING = new AtomicBoolean();
+
+    @FunctionalInterface
+    interface ParquetExportRunner {
+        List<NativeParquetService.Result> run(IiqSessionClient session, Path outputDir, String runId,
+                                               String onlyDataset) throws Exception;
+    }
 
     private final String host;
     private final int port;
     private final ObjectMapper mapper = new ObjectMapper();
     private final IiqSessionClient session;
+    private final Supplier<Optional<Path>> parquetOutputDir;
+    private final ParquetExportRunner parquetExportRunner;
     private final NativeEntitlementRestService entitlementService = new NativeEntitlementRestService();
     private final NativeIdentityRestService identityService = new NativeIdentityRestService();
     private final NativeApplicationRestService applicationService = new NativeApplicationRestService();
@@ -205,10 +224,20 @@ public final class KfAgentRestServer {
 
     /** Injectable session seam for REST route tests; production constructors keep the regular IIQ session. */
     KfAgentRestServer(AppConfig iiqConfig, String host, int port, RestAuthFilter auth, IiqSessionClient session) {
+        this(iiqConfig, host, port, auth, session, ParquetConfig::explicitOutputDir,
+                (iiqSession, outputDir, runId, onlyDataset) ->
+                        new NativeParquetService(NativeSchemaConfig.resolve())
+                                .runAgent(iiqSession, outputDir, runId, onlyDataset));
+    }
+
+    KfAgentRestServer(AppConfig iiqConfig, String host, int port, RestAuthFilter auth, IiqSessionClient session,
+                      Supplier<Optional<Path>> parquetOutputDir, ParquetExportRunner parquetExportRunner) {
         this.host = host;
         this.port = port;
         this.session = session; // authenticates lazily, session reused across requests
         this.auth = auth;
+        this.parquetOutputDir = parquetOutputDir;
+        this.parquetExportRunner = parquetExportRunner;
     }
 
     public RestAuthFilter auth() {
@@ -233,7 +262,7 @@ public final class KfAgentRestServer {
         server.setExecutor(Executors.newFixedThreadPool(4));
         server.start();
         LOG.info("KF Agent REST listening on http://" + host + ":" + port + PREFIX
-                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/role-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status,syslog-events}  (read-only; no PostgreSQL on this path)");
+                + "/{entitlements,identities,applications,accounts,workgroups,roles,identity-roles,identity-entitlements,account-entitlements,role-entitlements,identity-requests,identity-request-items,identity-request-approvals,policies,provisioning-items,provisioning-transactions,work-items,workflow-definitions,certifications,certification-entities,certification-items,audit-events,policy-constraints,task-results,task-schedules,access-history,access-history/identity-events,access-history/role-events,access-history/certifications,role-hierarchy,group-definitions,workitem-archives,certification-archives,policy-violations,workgroupmember,entitlement-assignment,workgroup-members,entitlement-certification,entitlement-certification-status,syslog-events,parquet/export (POST)}  (data routes read-only; Parquet export writes local files; no PostgreSQL on this path)");
     }
 
     public void stop() {
@@ -242,14 +271,18 @@ public final class KfAgentRestServer {
         }
     }
 
-    private void route(HttpExchange ex) throws IOException {
+    void route(HttpExchange ex) throws IOException {
         KfAgentScanEvidence.clear(); // request-scoped completeness evidence (see writeJson)
         try {
-            if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) {
-                writeJson(ex, 405, error("method not allowed; use GET"));
+            String path = ex.getRequestURI().getPath();
+            boolean parquetExportPath = "/kfagent/parquet/export".equals(path)
+                    || path.startsWith("/kfagent/parquet/export/");
+            if (parquetExportPath ? !"POST".equalsIgnoreCase(ex.getRequestMethod())
+                    : !"GET".equalsIgnoreCase(ex.getRequestMethod())) {
+                writeJson(ex, 405, error(parquetExportPath ? "method not allowed; use POST"
+                        : "method not allowed; use GET"));
                 return;
             }
-            String path = ex.getRequestURI().getPath();
             String sub = path.length() > PREFIX.length() ? path.substring(PREFIX.length()) : "";
             while (sub.startsWith("/")) {
                 sub = sub.substring(1);
@@ -262,17 +295,29 @@ public final class KfAgentRestServer {
                 return;
             }
             if (com.keyforge.iiq.debug.DebugLog.enabled()) {
-                com.keyforge.iiq.debug.DebugLog.log("SERVICE", "endpoint", "/kfagent/" + sub,
+                Object[] service = {"endpoint", "/kfagent/" + sub,
                         "purpose", KfAgentServiceCatalog.purpose(sub),
-                        "source", "IdentityIQ via the KeyForge plugin (read-only)",
+                        "source", KfAgentServiceCatalog.source(sub),
                         "start", q.get("start"), "limit", q.get("limit"),
                         "IIQ_BASE_URL", com.keyforge.iiq.debug.DebugLog.setting("IIQ_BASE_URL"),
                         "IIQ_USERNAME", com.keyforge.iiq.debug.DebugLog.setting("IIQ_USERNAME"),
-                        "IIQ_PASSWORD", com.keyforge.iiq.debug.DebugLog.setting("IIQ_PASSWORD"));
+                        "IIQ_PASSWORD", com.keyforge.iiq.debug.DebugLog.setting("IIQ_PASSWORD")};
+                if (KfAgentServiceCatalog.isParquetExport(sub)) {
+                    // where the export writes; only on export lines, never on the data routes
+                    service = java.util.Arrays.copyOf(service, service.length + 2);
+                    service[service.length - 2] = "PARQUET_OUT_DIR";
+                    service[service.length - 1] = com.keyforge.iiq.debug.DebugLog.setting("PARQUET_OUT_DIR");
+                }
+                com.keyforge.iiq.debug.DebugLog.log("SERVICE", service);
             }
             String invalid = invalidReservedParam(q);
             if (invalid != null) {
                 writeJson(ex, 400, error(invalid));
+                return;
+            }
+
+            if ("parquet/export".equals(sub) || sub.startsWith("parquet/export/")) {
+                handleParquetExport(ex, sub);
                 return;
             }
 
@@ -382,6 +427,40 @@ public final class KfAgentRestServer {
             }
         } finally {
             KfAgentScanEvidence.clear();
+        }
+    }
+
+    private void handleParquetExport(HttpExchange ex, String sub) throws IOException {
+        String onlyDataset = null;
+        if (sub.startsWith("parquet/export/")) {
+            onlyDataset = sub.substring("parquet/export/".length());
+            if (onlyDataset.isBlank() || onlyDataset.contains("/")) {
+                writeJson(ex, 404, error("unknown Parquet dataset"));
+                return;
+            }
+            String requested = onlyDataset;
+            if (NativeParquetDatasets.all().stream().noneMatch(d -> d.parquetName().equals(requested))) {
+                writeJson(ex, 404, error("unknown Parquet dataset '" + onlyDataset + "'"));
+                return;
+            }
+        }
+        Optional<Path> configured = parquetOutputDir.get();
+        if (configured.isEmpty()) {
+            writeJson(ex, 400, error("PARQUET_OUT_DIR must be explicitly set for Parquet export"));
+            return;
+        }
+        if (!PARQUET_EXPORT_RUNNING.compareAndSet(false, true)) {
+            writeJson(ex, 409, error("a Parquet export is already running"));
+            return;
+        }
+        try {
+            List<NativeParquetService.Result> results = parquetExportRunner.run(session, configured.get(),
+                    UUID.randomUUID().toString(), onlyDataset);
+            writeJson(ex, 200, mapper.writeValueAsBytes(results));
+        } catch (Exception e) {
+            throw new IOException("Parquet export failed", e);
+        } finally {
+            PARQUET_EXPORT_RUNNING.set(false);
         }
     }
 
@@ -1511,7 +1590,9 @@ public final class KfAgentRestServer {
         Object detail;
         try {
             com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(body);
-            if (node.isArray()) {
+            if (node.isArray() && ex.getRequestURI().getPath().startsWith(PREFIX + "/" + KfAgentServiceCatalog.PARQUET_EXPORT)) {
+                detail = parquetExportSummary(node);
+            } else if (node.isArray()) {
                 detail = node.size() + " rows";
             } else if (node.has("error")) {
                 detail = "error: " + node.get("error").asText();
@@ -1528,5 +1609,30 @@ public final class KfAgentRestServer {
         }
         com.keyforge.iiq.debug.DebugLog.log("RESULT", "endpoint", ex.getRequestURI().getPath(), "status", status,
                 "returned", detail, "bytes", body.length, "ms", com.keyforge.iiq.debug.DebugLog.elapsedMs());
+    }
+
+    /**
+     * RESULT detail for a Parquet export: datasets written, rows written, how they compare with the previous
+     * files, and which datasets were not written (with their reason), instead of a misleading "N rows".
+     */
+    static String parquetExportSummary(com.fasterxml.jackson.databind.JsonNode results) {
+        int written = 0;
+        long rows = 0, added = 0, changed = 0, unchanged = 0;
+        List<String> notWritten = new ArrayList<>();
+        for (com.fasterxml.jackson.databind.JsonNode r : results) {
+            String error = r.path("error").isNull() ? null : r.path("error").asText(null);
+            if (error != null) {
+                notWritten.add(r.path("dataset").asText("?") + " (" + error + ")");
+                continue;
+            }
+            written++;
+            rows += r.path("total").asLong();
+            added += r.path("inserted").asLong();
+            changed += r.path("changed").asLong();
+            unchanged += r.path("unchanged").asLong();
+        }
+        String summary = written + " datasets written, " + rows + " rows (new " + added + ", changed " + changed
+                + ", unchanged " + unchanged + ")";
+        return notWritten.isEmpty() ? summary : summary + "; not written: " + String.join(", ", notWritten);
     }
 }
