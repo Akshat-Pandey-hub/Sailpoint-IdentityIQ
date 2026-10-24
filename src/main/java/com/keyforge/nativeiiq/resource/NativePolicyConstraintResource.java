@@ -47,7 +47,7 @@ public class NativePolicyConstraintResource extends BasePluginResource {
                                          @QueryParam("limit") @DefaultValue("100") int limit,
                                          @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        LOG.info("KeyForgeNativeIIQ request endpoint=" + "policy-constraints" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "policy-constraints" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
         if (NativeIncrementalQuery.isInvalid(modifiedAfter)) {
             return error(Response.Status.BAD_REQUEST, NativeIncrementalQuery.invalidTimestamp());
         }

@@ -141,7 +141,7 @@ public class NativeSqlReportResource extends BasePluginResource {
     public Response runReport(@PathParam("report") String report, @QueryParam("modifiedAfter") String modifiedAfter,
                               @Context UriInfo uriInfo) {
         long requestStartedAt = System.currentTimeMillis();
-        LOG.info("KeyForgeNativeIIQ request endpoint=" + "sqlReport/" + LogText.safe(report) + ", start=" + LogText.safe(uriInfo.getQueryParameters().getFirst("start")) + ", limit=" + LogText.safe(uriInfo.getQueryParameters().getFirst("limit")) + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "sqlReport/" + LogText.safe(report) + ", start=" + LogText.safe(uriInfo.getQueryParameters().getFirst("start")) + ", limit=" + LogText.safe(uriInfo.getQueryParameters().getFirst("limit")) + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
         String stage = "start";
 try {
             String resourcePath = REPORTS.get(report);

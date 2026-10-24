@@ -19,6 +19,15 @@
     <Attributes>
         <Map>
             <entry key="minUpgradableVersion" value="1.0"/>
+            <!-- Plugin log level: normal (default) = INFO, debug = DEBUG, off = no plugin logging. -->
+            <entry key="settings">
+                <value>
+                    <List>
+                        <Setting name="logLevel" dataType="string" defaultValue="normal"
+                                 label="Log level" helpText="normal (default), debug or off"/>
+                    </List>
+                </value>
+            </entry>
             <!-- Read-only native Identity REST resource, routed under plugin/rest/keyForgeNativeIIQ/. -->
             <entry key="restResources">
                 <value>

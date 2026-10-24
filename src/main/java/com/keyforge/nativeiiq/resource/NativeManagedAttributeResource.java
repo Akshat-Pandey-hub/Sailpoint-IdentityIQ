@@ -51,7 +51,7 @@ public class NativeManagedAttributeResource extends BasePluginResource {
                                     @QueryParam("limit") @DefaultValue("100") int limit,
                                     @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        LOG.info("KeyForgeNativeIIQ request endpoint=" + "entitlements" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "entitlements" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         java.util.Date modifiedAfterDate =
@@ -107,7 +107,7 @@ public class NativeManagedAttributeResource extends BasePluginResource {
                                           @QueryParam("limit") @DefaultValue("0") int limit,
                                           @QueryParam("includeXml") @DefaultValue("true") boolean includeXml) {
         long requestStartedAt = System.currentTimeMillis();
-        LOG.info("KeyForgeNativeIIQ request endpoint=" + "entitlements-source" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + "<not set>");
+        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "entitlements-source" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + "<not set>");
         String stage = "start";
         if (LOG.isDebugEnabled()) {
             LOG.debug("KeyForgeNativeIIQ query endpoint=" + "entitlements-source" + ", firstRow=" + start + ", resultLimit=" + limit + ", incrementalFilter=" + false);

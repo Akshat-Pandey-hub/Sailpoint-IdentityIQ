@@ -56,7 +56,7 @@ public class NativeApprovalConfigResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getApprovalConfig(@QueryParam("flow") @DefaultValue(DEFAULT_FLOW) String flow) {
         long requestStartedAt = System.currentTimeMillis();
-        LOG.info("KeyForgeNativeIIQ request endpoint=" + "approval-config" + ", start=" + "<not set>" + ", limit=" + "<not set>" + ", modifiedAfter=" + "<not set>");
+        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "approval-config" + ", start=" + "<not set>" + ", limit=" + "<not set>" + ", modifiedAfter=" + "<not set>");
         String stage = "validateFlow";
 try {
             String flowName = flow == null || flow.trim().isEmpty() ? DEFAULT_FLOW : flow.trim();
