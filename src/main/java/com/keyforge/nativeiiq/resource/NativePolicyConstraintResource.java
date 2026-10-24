@@ -3,6 +3,7 @@ package com.keyforge.nativeiiq.resource;
 import com.keyforge.nativeiiq.model.NativePolicyConstraintExtractionResult;
 import com.keyforge.nativeiiq.service.NativePolicyConstraintExtractionService;
 import com.keyforge.nativeiiq.wire.NativePolicyConstraintWire;
+import com.keyforge.nativeiiq.source.NativeIncrementalQuery;
 
 import sailpoint.api.SailPointContext;
 import sailpoint.authorization.UnauthorizedAccessException;
@@ -43,7 +44,12 @@ public class NativePolicyConstraintResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPolicyConstraints(@QueryParam("start") @DefaultValue("0") int start,
-                                         @QueryParam("limit") @DefaultValue("100") int limit) {
+                                         @QueryParam("limit") @DefaultValue("100") int limit,
+                                         @QueryParam("modifiedAfter") String modifiedAfter) {
+        if (NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return error(Response.Status.BAD_REQUEST, NativeIncrementalQuery.invalidTimestamp());
+        }
+        java.util.Date modifiedAfterDate = NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         String stage = "start";
@@ -52,7 +58,7 @@ public class NativePolicyConstraintResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativePolicyConstraintExtractionResult result =
-                    new NativePolicyConstraintExtractionService().extract(context, safeStart, safeLimit);
+                    new NativePolicyConstraintExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativePolicyConstraintWire.envelope(result, safeStart, safeLimit);
             return Response.ok(envelope).build();

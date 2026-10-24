@@ -2,6 +2,7 @@ package com.keyforge.nativeiiq.resource;
 
 import com.keyforge.nativeiiq.model.NativeIdentityRoleExtractionResult;
 import com.keyforge.nativeiiq.service.NativeIdentityRoleExtractionService;
+import com.keyforge.nativeiiq.source.NativeIncrementalQuery;
 import com.keyforge.nativeiiq.wire.NativeIdentityRoleWire;
 
 import sailpoint.api.SailPointContext;
@@ -44,7 +45,12 @@ public class NativeIdentityRoleResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getIdentityRoles(@QueryParam("start") @DefaultValue("0") int start,
-                                     @QueryParam("limit") @DefaultValue("200") int limit) {
+                                     @QueryParam("limit") @DefaultValue("200") int limit,
+                                     @QueryParam("modifiedAfter") String modifiedAfter) {
+        if (NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return error(Response.Status.BAD_REQUEST, NativeIncrementalQuery.invalidTimestamp());
+        }
+        java.util.Date modifiedAfterDate = NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         String stage = "start";
@@ -53,7 +59,7 @@ public class NativeIdentityRoleResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeIdentityRoleExtractionResult result =
-                    new NativeIdentityRoleExtractionService().extract(context, safeStart, safeLimit);
+                    new NativeIdentityRoleExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeIdentityRoleWire.envelope(result, safeStart, safeLimit);
             LOG.fine("KeyForgeNativeIIQ identity-roles: returning " + result.getCount() + " edge(s)");

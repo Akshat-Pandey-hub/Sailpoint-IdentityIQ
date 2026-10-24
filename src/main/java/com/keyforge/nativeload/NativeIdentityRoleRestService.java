@@ -29,8 +29,8 @@ import java.util.function.Function;
  * is a {@code text} column (parser reads it with {@code text()}), returned as a string. The jsonb field
  * is not filterable; every scalar/text field is. The KeyForge {@code identityroleid} PK,
  * {@code record_hash}, {@code is_deleted}/{@code deleted_at} (not in the native record) and the lineage
- * envelope are excluded. This edge has no {@code source_hash}, and the native client has no server-side
- * {@code modifiedAfter} support (full-scan only).
+ * envelope are excluded. This edge has no {@code source_hash}; incremental eligibility comes from the
+ * owning Identity timestamp and is applied by the plugin before parent paging.
  */
 public final class NativeIdentityRoleRestService {
 

@@ -121,4 +121,38 @@ class ChangedAfterClientTest {
         assertEquals(Map.of("start", "0", "limit", "50", "runId", "run-1", "modifiedAfter", BOUND), bounded.params.get(0));
     }
 
+    @Test
+    void identityRoleClient() {
+        check((s, b) -> new NativeIdentityRoleClient(s).withModifiedAfter(b).fetchPage(0, 50));
+    }
+
+    @Test
+    void roleRelationshipClient() {
+        for (String bound : new String[]{BOUND, null, "", "  "}) {
+            RecordingSession session = new RecordingSession();
+            new NativeRoleRelationshipClient(session).withModifiedAfter(bound).fetchPage(0, 50, "run-1");
+            Map<String, String> expected = new LinkedHashMap<>();
+            expected.put("start", "0"); expected.put("limit", "50"); expected.put("runId", "run-1");
+            if (bound != null && !bound.isBlank()) expected.put("modifiedAfter", BOUND);
+            assertEquals(expected, session.params.get(0));
+        }
+    }
+
+    @Test
+    void workgroupMembershipClient() {
+        for (String bound : new String[]{BOUND, null, "", "  "}) {
+            RecordingSession session = new RecordingSession();
+            new NativeWorkgroupMembershipClient(session, "run-1").withModifiedAfter(bound).fetch(0, 50);
+            Map<String, String> expected = new LinkedHashMap<>();
+            expected.put("start", "0"); expected.put("limit", "50"); expected.put("runId", "run-1");
+            if (bound != null && !bound.isBlank()) expected.put("modifiedAfter", BOUND);
+            assertEquals(expected, session.params.get(0));
+        }
+    }
+
+    @Test
+    void policyConstraintClient() {
+        check((s, b) -> new NativePolicyConstraintClient(s).withModifiedAfter(b).fetchPage(0, 50));
+    }
+
 }

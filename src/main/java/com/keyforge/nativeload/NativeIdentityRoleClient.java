@@ -14,9 +14,15 @@ public final class NativeIdentityRoleClient implements NativeIdentityRolePageSou
     public static final String IDENTITY_ROLES_PATH = "plugin/rest/keyForgeNativeIIQ/identity-roles";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativeIdentityRoleClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    public NativeIdentityRoleClient withModifiedAfter(String value) {
+        this.modifiedAfter = value == null || value.isBlank() ? null : value.trim();
+        return this;
     }
 
     @Override
@@ -25,6 +31,7 @@ public final class NativeIdentityRoleClient implements NativeIdentityRolePageSou
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) params.put("modifiedAfter", modifiedAfter);
         return session.get(IDENTITY_ROLES_PATH, params);
     }
 }

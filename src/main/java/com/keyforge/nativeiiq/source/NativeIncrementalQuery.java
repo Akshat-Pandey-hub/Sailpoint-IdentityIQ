@@ -60,9 +60,16 @@ public final class NativeIncrementalQuery {
      * newly created, never-edited objects. Built only from {@code Filter.gt/isnull/and/or} (verified in the 8.4
      * {@code identityiq.jar}).
      */
-    static Filter changedAfter(Date bound) {
+    public static Filter changedAfterFilter(Date bound) {
+        if (bound == null) {
+            return null;
+        }
         return Filter.or(Filter.gt(MODIFIED_PROPERTY, bound),
                 Filter.and(Filter.isnull(MODIFIED_PROPERTY), Filter.gt(CREATED_PROPERTY, bound)));
+    }
+
+    static Filter changedAfter(Date bound) {
+        return changedAfterFilter(bound);
     }
 
     /** Same changed-after rule for objects already loaded in memory (used for TaskSchedule). */

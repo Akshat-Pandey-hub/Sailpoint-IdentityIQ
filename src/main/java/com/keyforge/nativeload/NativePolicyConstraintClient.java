@@ -15,9 +15,15 @@ public final class NativePolicyConstraintClient implements NativePolicyConstrain
     public static final String POLICY_CONSTRAINTS_PATH = "plugin/rest/keyForgeNativeIIQ/policy-constraints";
 
     private final IiqSessionClient session;
+    private String modifiedAfter;
 
     public NativePolicyConstraintClient(IiqSessionClient session) {
         this.session = session;
+    }
+
+    public NativePolicyConstraintClient withModifiedAfter(String value) {
+        this.modifiedAfter = value == null || value.isBlank() ? null : value.trim();
+        return this;
     }
 
     @Override
@@ -26,6 +32,7 @@ public final class NativePolicyConstraintClient implements NativePolicyConstrain
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
+        if (modifiedAfter != null) params.put("modifiedAfter", modifiedAfter);
         return session.get(POLICY_CONSTRAINTS_PATH, params);
     }
 }

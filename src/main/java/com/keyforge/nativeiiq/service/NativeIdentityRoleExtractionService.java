@@ -22,8 +22,14 @@ public final class NativeIdentityRoleExtractionService {
 
     public NativeIdentityRoleExtractionResult extract(SailPointContext context, int start, int limit)
             throws GeneralException {
+        return extract(context, start, limit, null);
+    }
+
+    public NativeIdentityRoleExtractionResult extract(SailPointContext context, int start, int limit,
+                                                       java.util.Date modifiedAfter)
+            throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeIdentityRoleExtractor(context, config).extract(Math.max(0, start), limit);
+        return new NativeIdentityRoleExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
     }
 
     public NativeIdentityRoleExtractionResult extractAll(SailPointContext context) throws GeneralException {

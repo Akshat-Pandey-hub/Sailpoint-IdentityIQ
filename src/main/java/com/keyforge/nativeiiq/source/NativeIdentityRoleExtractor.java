@@ -10,6 +10,7 @@ import sailpoint.object.QueryOptions;
 import sailpoint.tools.GeneralException;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.Iterator;
 
 /**
@@ -27,8 +28,13 @@ public final class NativeIdentityRoleExtractor {
     }
 
     public NativeIdentityRoleExtractionResult extract(int start, int limit) throws GeneralException {
+        return extract(start, limit, null);
+    }
+
+    public NativeIdentityRoleExtractionResult extract(int start, int limit, Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("id", true);
+        NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         if (start > 0) {
             qo.setFirstRow(start);
         }
@@ -37,7 +43,9 @@ public final class NativeIdentityRoleExtractor {
         }
         NativeIdentityRoleExtractionResult result = new NativeIdentityRoleExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "IdentityRole", Instant.now());
-        result.setSourceCount(context.countObjects(Identity.class, new QueryOptions()));
+        QueryOptions countOptions = new QueryOptions();
+        NativeIncrementalQuery.applyModifiedAfter(countOptions, modifiedAfter);
+        result.setSourceCount(context.countObjects(Identity.class, countOptions));
 
         int identities = 0;
         Iterator<Object[]> ids = context.search(Identity.class, qo, "id");

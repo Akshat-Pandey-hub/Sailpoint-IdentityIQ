@@ -543,9 +543,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // The native identity-role client has no server-side modifiedAfter support (full-scan only);
-        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
-        NativeIdentityRolePageSource source = new NativeIdentityRoleClient(session);
+        // The Identity parent is incremented by its own changed-after timestamps.
+        NativeIdentityRolePageSource source = new NativeIdentityRoleClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = identityRoleService.fetch(source, filters, start, limit);
@@ -607,9 +606,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // The native Bundle-relationship client has no server-side modifiedAfter support (full-scan only);
-        // modifiedAfter stays reserved (never a field filter) but is simply not applied here.
-        NativeRoleRelationshipPageSource source = new NativeRoleRelationshipClient(session);
+        // Changed profiles include their owning Bundles; Bundle timestamps cover hierarchy edges.
+        NativeRoleRelationshipPageSource source = new NativeRoleRelationshipClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = roleEntitlementService.fetch(source, filters, start, limit);
@@ -629,9 +627,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // Same shared Bundle-relationship extraction as role-entitlements; this endpoint collects only the
-        // hierarchy edges. No server-side modifiedAfter support (full-scan only); modifiedAfter stays reserved.
-        NativeRoleRelationshipPageSource source = new NativeRoleRelationshipClient(session);
+        // Bundle timestamps cover changed hierarchy edges; changed profiles can also re-admit their Bundle.
+        NativeRoleRelationshipPageSource source = new NativeRoleRelationshipClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = roleHierarchyService.fetch(source, filters, start, limit);
@@ -739,11 +736,10 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // Reuse the existing native Workgroup-Membership client + parser (the import service is DB-coupled, so
-        // it is not used here); runId is a plugin lineage query param, not a DB handle. No modifiedAfter
-        // support (full-scan only); modifiedAfter stays reserved. No PostgreSQL on this path.
+        // The member Identity owns this relationship; its changed-after timestamp drives the incremental page.
         NativeWorkgroupMembershipClient client =
-                new NativeWorkgroupMembershipClient(session, java.util.UUID.randomUUID().toString());
+                new NativeWorkgroupMembershipClient(session, java.util.UUID.randomUUID().toString())
+                        .withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows =
@@ -1213,9 +1209,8 @@ public final class KfAgentRestServer {
         Integer start = intOrNull(q.get("start"));
         Integer limit = intOrNull(q.get("limit"));
 
-        // Existing native PolicyConstraint extraction; the service collects records in memory (no DB). No
-        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
-        NativePolicyConstraintPageSource source = new NativePolicyConstraintClient(session);
+        // Changed constraint children re-admit their owning Policy before parent paging.
+        NativePolicyConstraintPageSource source = new NativePolicyConstraintClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
         try {
             List<Map<String, Object>> rows = policyConstraintService.fetch(source, filters, start, limit);
