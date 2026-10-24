@@ -23,6 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class JsonSafeTest {
 
+    public static final class ReferenceValue {
+        public String getId() { return "identity-1"; }
+        public String getName() { return "jsmith"; }
+    }
+
     private enum Color { RED }
 
     /** A bean with no serializable properties — Jackson's default mapper throws on this ("empty bean"). */
@@ -71,6 +76,25 @@ class JsonSafeTest {
         Map<String, Object> m = (Map<String, Object>) converted;
         assertEquals("RED", m.get("k"));
         assertEquals("v", m.get("2"));
+    }
+
+    @Test
+    void convertsSailPointObjectsToReferenceMapsThroughTheConversionSeam() {
+        Map<String, Object> reference = JsonSafe.referenceValue(new ReferenceValue());
+
+        assertEquals(ReferenceValue.class.getName(), reference.get("class")); // full class name, as ReflectiveProperties gives everywhere
+        assertEquals("identity-1", reference.get("id"));
+        assertEquals("jsmith", reference.get("name"));
+    }
+
+    @Test
+    void convertsOtherIiqXmlObjectsToCanonicalXmlThroughTheConversionSeam() {
+        Object safe = JsonSafe.xmlValue(new Object(), value -> "<ProvisioningPlan/>");
+
+        assertInstanceOf(String.class, safe);
+        String xml = (String) safe;
+        assertTrue(xml.startsWith("<"));
+        assertTrue(!xml.matches(".*@[0-9a-f].*"));
     }
 
     @Test
