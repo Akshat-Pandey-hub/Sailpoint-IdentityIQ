@@ -70,6 +70,11 @@ class NativeSqlReportSqlContractTest {
             long count = text.chars().filter(ch -> ch == '?').count();
             assertEquals(report.getValue().longValue(), count, report.getKey() + " placeholder count");
         }
+        assertTrue(sql("entitlementAssignment.sql").contains(
+                        "GREATEST(ie.created, ie.modified, i.modified, app.modified, b.modified,\n"
+                                + "                p.created, p.modified,\n"
+                                + "                ir.created, ir.modified, iri.created, iri.modified)"),
+                "role profile timestamps participate in the incremental predicate");
         assertTrue(sql("entitlementCertificationStatus.sql")
                         .lastIndexOf("WHERE\n    ci.exception_application IS NOT NULL")
                         < sql("entitlementCertificationStatus.sql").lastIndexOf("\nWHERE\n(") ,

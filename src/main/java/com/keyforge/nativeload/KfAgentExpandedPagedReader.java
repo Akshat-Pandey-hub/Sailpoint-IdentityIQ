@@ -57,11 +57,13 @@ final class KfAgentExpandedPagedReader<R> {
         List<R> result = new ArrayList<>();
         if (wanted == 0) return result;
 
+        SourceCountGuard sourceCountGuard = new SourceCountGuard("Expanded entity", ignored -> -1);
         int sourceStart = 0;
         int scannedSourceRows = 0;
         while (true) {
             String json = fetch.fetch(sourceStart, readPageSize);
             Page<R> page = parse.parse(json, sourceStart, readPageSize);
+            sourceCountGuard.checkCount(page.sourceTotal);
             for (R row : page.rows) {
                 if (!matches.test(row)) continue;
                 if (skip > 0) {

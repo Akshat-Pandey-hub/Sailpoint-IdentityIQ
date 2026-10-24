@@ -98,6 +98,26 @@ class KfAgentExpandedPagedReaderTest {
     }
 
     @Test
+    void sourceCountChangeBetweenPagesIsReportedEvenWhenFinalPageMatchesItsCount() {
+        KfAgentExpandedPagedReader<Row> reader = new KfAgentExpandedPagedReader<>(
+                (start, limit) -> start == 0 ? "first" : "second",
+                (json, start, requested) -> {
+                    if ("first".equals(json)) {
+                        List<Row> rows = new ArrayList<>();
+                        for (int i = 0; i < 500; i++) rows.add(new Row(i, i));
+                        return new KfAgentExpandedPagedReader.Page<>(rows, 500, false, 1_000);
+                    }
+                    List<Row> rows = new ArrayList<>();
+                    for (int i = 500; i < 999; i++) rows.add(new Row(i, i));
+                    return new KfAgentExpandedPagedReader.Page<>(rows, 999, true, 999);
+                }, 500);
+
+        NativeImportException error = assertThrows(NativeImportException.class,
+                () -> reader.read(row -> true, null, null));
+        assertTrue(error.getMessage().contains("1000 -> 999"));
+    }
+
+    @Test
     void fullSnapshotOnlyForNoFiltersNoStartNoLimit() {
         Map<String, String> none = new LinkedHashMap<>();
         assertTrue(KfAgentExpandedPagedReader.isFullSnapshot(null, null, null));

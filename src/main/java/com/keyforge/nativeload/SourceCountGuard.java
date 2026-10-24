@@ -20,7 +20,12 @@ final class SourceCountGuard {
 
     /** Returns {@code json} unchanged after checking its source count against the first page's. */
     String check(String json) {
-        int count = sourceCount.applyAsInt(json);
+        checkCount(sourceCount.applyAsInt(json));
+        return json;
+    }
+
+    /** Checks an already-parsed source count against the first page's count. */
+    void checkCount(int count) {
         if (count >= 0) {
             if (baseline >= 0 && baseline != count) {
                 throw new NativeImportException(entity + " source count changed during paginated extraction: "
@@ -28,6 +33,5 @@ final class SourceCountGuard {
             }
             baseline = count;
         }
-        return json;
     }
 }

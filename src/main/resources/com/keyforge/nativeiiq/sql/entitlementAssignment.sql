@@ -170,6 +170,7 @@ AND
 (
     CAST(? AS BIGINT) IS NULL
     OR GREATEST(ie.created, ie.modified, i.modified, app.modified, b.modified,
+                p.created, p.modified,
                 ir.created, ir.modified, iri.created, iri.modified) > CAST(? AS BIGINT)
     OR EXISTS (
         SELECT 1
