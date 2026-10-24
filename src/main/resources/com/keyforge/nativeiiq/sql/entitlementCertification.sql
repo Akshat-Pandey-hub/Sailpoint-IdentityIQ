@@ -52,6 +52,25 @@ INNER JOIN spt_identity i
 INNER JOIN spt_application a
     ON a.id = ie.application
 
+WHERE
+(
+    CAST(? AS BIGINT) IS NULL
+    OR GREATEST(ie.created, ie.modified, i.modified, a.modified) > CAST(? AS BIGINT)
+    OR EXISTS (
+        SELECT 1
+        FROM spt_certification_item ci2
+        INNER JOIN spt_certification_entity ce2
+            ON ce2.id = ci2.certification_entity_id
+        WHERE (ce2.target_id = i.id OR ce2.target_name = i.name)
+          AND ci2.exception_application = a.name
+          AND (ce2.native_identity = ie.native_identity OR ce2.native_identity IS NULL)
+          AND (
+              ce2.created > CAST(? AS BIGINT) OR ce2.modified > CAST(? AS BIGINT)
+              OR ci2.created > CAST(? AS BIGINT) OR ci2.modified > CAST(? AS BIGINT)
+          )
+    )
+)
+
 ORDER BY
     never_certified DESC,
     i.name,

@@ -32,10 +32,20 @@ public final class NativeSqlReportClient {
      * @return the raw JSON envelope body
      */
     public String fetch(String report, Map<String, String> filters, Integer start, Integer limit) {
+        return fetch(report, filters, start, limit, null);
+    }
+
+    /** Fetches a page, optionally bounding source-row change times before the plugin pages it. */
+    public String fetch(String report, Map<String, String> filters, Integer start, Integer limit,
+                        String modifiedAfter) {
         session.warmCsrfToken();
         Map<String, String> params = new LinkedHashMap<String, String>();
         if (filters != null) {
             params.putAll(filters);
+        }
+        params.remove("modifiedAfter"); // reserved control parameter, never a report-column filter
+        if (modifiedAfter != null && !modifiedAfter.trim().isEmpty()) {
+            params.put("modifiedAfter", modifiedAfter.trim());
         }
         if (start != null) {
             params.put("start", start.toString());

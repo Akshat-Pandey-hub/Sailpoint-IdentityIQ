@@ -116,6 +116,29 @@ LEFT JOIN certification_history ch
 
     AND ch.rn = 1
 
+WHERE
+(
+    CAST(? AS BIGINT) IS NULL
+    OR GREATEST(ie.created, ie.modified, i.modified, mgr.modified, app.modified) > CAST(? AS BIGINT)
+    OR EXISTS (
+        SELECT 1
+        FROM spt_certification_entity ce2
+        INNER JOIN spt_certification c2
+            ON c2.id = ce2.certification_id
+        INNER JOIN spt_certification_item ci2
+            ON ci2.certification_entity_id = ce2.id
+        LEFT JOIN spt_certification_action ca2
+            ON ca2.id = ci2.action
+        WHERE ce2.target_id = i.id
+          AND (
+              ce2.created > CAST(? AS BIGINT) OR ce2.modified > CAST(? AS BIGINT)
+              OR ci2.created > CAST(? AS BIGINT) OR ci2.modified > CAST(? AS BIGINT)
+              OR ca2.created > CAST(? AS BIGINT) OR ca2.modified > CAST(? AS BIGINT)
+              OR c2.created > CAST(? AS BIGINT) OR c2.modified > CAST(? AS BIGINT)
+          )
+    )
+)
+
 ORDER BY
     never_certified DESC,
     i.name,

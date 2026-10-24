@@ -1,9 +1,11 @@
 package com.keyforge.nativeiiq.resource;
 
 import java.sql.Connection;
+import java.sql.ParameterMetaData;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
-import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,7 +27,7 @@ final class NativeSqlReportExecutor {
 
     static Map<String, Object> execute(Connection conn, String report, String sql,
                                        Map<String, String> filters, Integer requestedStart,
-                                       Integer requestedLimit) throws Exception {
+                                       Integer requestedLimit, Long modifiedAfter) throws Exception {
         validatePage(requestedStart, requestedLimit);
         int start = requestedStart == null ? 0 : requestedStart.intValue();
         int pageLimit = requestedLimit == null ? MAX_ROWS : requestedLimit.intValue();
@@ -34,17 +36,26 @@ final class NativeSqlReportExecutor {
         boolean truncated = false;
         boolean hasMore = false;
 
-        Statement st = null;
+        PreparedStatement st = null;
         ResultSet rs = null;
         try {
-            st = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+            st = conn.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             st.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
             st.setFetchSize(FETCH_SIZE);
+            ParameterMetaData parameters = st.getParameterMetaData();
+            int parameterCount = parameters.getParameterCount();
+            for (int parameter = 1; parameter <= parameterCount; parameter++) {
+                if (modifiedAfter == null) {
+                    st.setNull(parameter, Types.BIGINT);
+                } else {
+                    st.setLong(parameter, modifiedAfter.longValue());
+                }
+            }
             int maxRows = jdbcMaxRows(start, pageLimit, filters);
             if (maxRows > 0) {
                 st.setMaxRows(maxRows);
             }
-            rs = st.executeQuery(sql);
+            rs = st.executeQuery();
             ResultSetMetaData md = rs.getMetaData();
             int count = md.getColumnCount();
             for (int c = 1; c <= count; c++) {

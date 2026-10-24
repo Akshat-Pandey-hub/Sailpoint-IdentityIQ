@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Guards the existing SQL report order and records what the query text proves about row grain. */
@@ -54,6 +55,25 @@ class NativeSqlReportSqlContractTest {
             assertTrue(report.getValue().intValue() == selectWidth(text, select),
                     report.getKey() + " selected-column count matches its report contract");
         }
+    }
+
+    @Test
+    void everyReportHasItsSqlBoundPredicateAndExpectedPlaceholderCount() throws Exception {
+        Map<String, Integer> parameters = new LinkedHashMap<>();
+        parameters.put("entitlementAssignment.sql", 4);
+        parameters.put("workgroupMembers.sql", 2);
+        parameters.put("entitlementCertification.sql", 6);
+        parameters.put("entitlementCertificationStatus.sql", 10);
+        for (Map.Entry<String, Integer> report : parameters.entrySet()) {
+            String text = sql(report.getKey());
+            assertTrue(text.contains("CAST(? AS BIGINT)"), report.getKey() + " uses BIGINT bound casts");
+            long count = text.chars().filter(ch -> ch == '?').count();
+            assertEquals(report.getValue().longValue(), count, report.getKey() + " placeholder count");
+        }
+        assertTrue(sql("entitlementCertificationStatus.sql")
+                        .lastIndexOf("WHERE\n    ci.exception_application IS NOT NULL")
+                        < sql("entitlementCertificationStatus.sql").lastIndexOf("\nWHERE\n(") ,
+                "the certification-history CTE predicate remains in place and the new filter is on the outer query");
     }
 
     private static int selectWidth(String sql, int start) {

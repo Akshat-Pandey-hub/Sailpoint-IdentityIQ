@@ -55,4 +55,17 @@ class NativeSqlReportClientTest {
         new NativeSqlReportClient(session).fetch("workgroupMembers", null, null, null);
         assertTrue(session.params.isEmpty());
     }
+
+    @Test
+    void sendsModifiedAfterOnlyWhenNonBlank() {
+        StubSession bounded = new StubSession();
+        new NativeSqlReportClient(bounded).fetch("workgroupMembers", null, 0, 10, "2026-10-12T10:00:00Z");
+        assertEquals("2026-10-12T10:00:00Z", bounded.params.get("modifiedAfter"));
+
+        for (String absent : new String[]{null, "", "  "}) {
+            StubSession plain = new StubSession();
+            new NativeSqlReportClient(plain).fetch("workgroupMembers", null, 0, 10, absent);
+            assertTrue(!plain.params.containsKey("modifiedAfter"));
+        }
+    }
 }

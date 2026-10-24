@@ -200,9 +200,14 @@ public final class KfAgentRestServer {
      *             client ID / secret in KFAGENT_USERNAME / KFAGENT_PASSWORD)
      */
     public KfAgentRestServer(AppConfig iiqConfig, String host, int port, RestAuthFilter auth) {
+        this(iiqConfig, host, port, auth, new IiqSessionClient(iiqConfig));
+    }
+
+    /** Injectable session seam for REST route tests; production constructors keep the regular IIQ session. */
+    KfAgentRestServer(AppConfig iiqConfig, String host, int port, RestAuthFilter auth, IiqSessionClient session) {
         this.host = host;
         this.port = port;
-        this.session = new IiqSessionClient(iiqConfig); // authenticates lazily, session reused across requests
+        this.session = session; // authenticates lazily, session reused across requests
         this.auth = auth;
     }
 
@@ -755,7 +760,7 @@ public final class KfAgentRestServer {
      * the shared {@link NativeSqlReportRestService} to filter/page/serialize it. The report id is fixed
      * ("entitlementAssignment") — never caller-supplied — so this is not an arbitrary-SQL surface. No
      * PostgreSQL on this path; the existing extract-native-entitlement-assignment-db command is untouched.
-     * No modifiedAfter (the report client runs the whole SELECT); it stays reserved.
+     * modifiedAfter is passed through as a SQL bound and remains excluded from field filters.
      */
     private void handleEntitlementAssignment(HttpExchange ex, Map<String, String> q) throws IOException {
         Map<String, String> filters = new LinkedHashMap<>();
@@ -770,7 +775,7 @@ public final class KfAgentRestServer {
         NativeSqlReportClient client = new NativeSqlReportClient(session);
         try {
             List<Map<String, Object>> rows =
-                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit),
+                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit, q.get("modifiedAfter")),
                             "entitlementAssignment", filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
@@ -792,7 +797,7 @@ public final class KfAgentRestServer {
      * {@code /kfagent/workgroupmember}), which is the {@code Identity.getWorkgroups()} edge topology.
      * Reuses the same shared {@link NativeSqlReportRestService} + {@link NativeSqlReportClient}; report id
      * is fixed ("workgroupMembers"), never caller-supplied. No PostgreSQL on this path; the existing
-     * extract-native-workgroup-members-db command is untouched. No modifiedAfter (whole SELECT), reserved.
+     * extract-native-workgroup-members-db command is untouched. modifiedAfter is passed through as a SQL bound and remains excluded from field filters.
      */
     private void handleWorkgroupMembersReport(HttpExchange ex, Map<String, String> q) throws IOException {
         Map<String, String> filters = new LinkedHashMap<>();
@@ -807,7 +812,7 @@ public final class KfAgentRestServer {
         NativeSqlReportClient client = new NativeSqlReportClient(session);
         try {
             List<Map<String, Object>> rows =
-                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit),
+                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit, q.get("modifiedAfter")),
                             "workgroupMembers", filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
@@ -828,7 +833,7 @@ public final class KfAgentRestServer {
      * {@code never_certified} flag ('YES'/'NO'). Reuses the same shared {@link NativeSqlReportRestService}
      * + {@link NativeSqlReportClient}; report id is fixed ("entitlementCertification"), never
      * caller-supplied. No PostgreSQL on this path; the existing extract-native-entitlement-certification-db
-     * command is untouched. No modifiedAfter (whole SELECT), reserved.
+     * command is untouched. modifiedAfter is passed through as a SQL bound and remains excluded from field filters.
      */
     private void handleEntitlementCertification(HttpExchange ex, Map<String, String> q) throws IOException {
         Map<String, String> filters = new LinkedHashMap<>();
@@ -843,7 +848,7 @@ public final class KfAgentRestServer {
         NativeSqlReportClient client = new NativeSqlReportClient(session);
         try {
             List<Map<String, Object>> rows =
-                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit),
+                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit, q.get("modifiedAfter")),
                             "entitlementCertification", filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
@@ -866,7 +871,7 @@ public final class KfAgentRestServer {
      * {@code rn}/{@code certification_id} are not projected. Reuses the same shared
      * {@link NativeSqlReportRestService} + {@link NativeSqlReportClient}; report id is fixed
      * ("entitlementCertificationStatus"), never caller-supplied. No PostgreSQL on this path; the existing
-     * extract-native-entitlement-certification-status-db command is untouched. No modifiedAfter, reserved.
+     * extract-native-entitlement-certification-status-db command is untouched. modifiedAfter is passed through as a SQL bound and remains excluded from field filters.
      */
     private void handleEntitlementCertificationStatus(HttpExchange ex, Map<String, String> q) throws IOException {
         Map<String, String> filters = new LinkedHashMap<>();
@@ -881,7 +886,7 @@ public final class KfAgentRestServer {
         NativeSqlReportClient client = new NativeSqlReportClient(session);
         try {
             List<Map<String, Object>> rows =
-                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit),
+                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit, q.get("modifiedAfter")),
                             "entitlementCertificationStatus", filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {

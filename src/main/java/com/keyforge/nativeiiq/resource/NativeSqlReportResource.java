@@ -8,6 +8,7 @@ import sailpoint.rest.plugin.SystemAdmin;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -137,7 +138,8 @@ public class NativeSqlReportResource extends BasePluginResource {
     @Path("sqlReport/{report}")
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
-    public Response runReport(@PathParam("report") String report, @Context UriInfo uriInfo) {
+    public Response runReport(@PathParam("report") String report, @QueryParam("modifiedAfter") String modifiedAfter,
+                              @Context UriInfo uriInfo) {
         String stage = "start";
         try {
             String resourcePath = REPORTS.get(report);
@@ -147,6 +149,14 @@ public class NativeSqlReportResource extends BasePluginResource {
                 err.put("error", "unknown report (not registered server-side)");
                 return Response.status(Response.Status.NOT_FOUND).entity(err).build();
             }
+
+            if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+                return error(Response.Status.BAD_REQUEST, report,
+                        com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp().getMessage());
+            }
+            java.util.Date parsedModifiedAfter =
+                    com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+            Long modifiedAfterMillis = parsedModifiedAfter == null ? null : Long.valueOf(parsedModifiedAfter.getTime());
 
             stage = "loadSql";
             String sql = loadSql(resourcePath);
@@ -158,7 +168,7 @@ public class NativeSqlReportResource extends BasePluginResource {
             MultivaluedMap<String, String> query = uriInfo.getQueryParameters();
             for (Map.Entry<String, List<String>> entry : query.entrySet()) {
                 String key = entry.getKey();
-                if ("start".equals(key) || "limit".equals(key)) {
+                if ("start".equals(key) || "limit".equals(key) || "modifiedAfter".equals(key)) {
                     continue;
                 }
                 List<String> values = entry.getValue();
@@ -177,7 +187,8 @@ public class NativeSqlReportResource extends BasePluginResource {
             Connection conn = context.getJdbcConnection(); // IIQ application DB; owned by context, not closed here
 
             stage = "execute";
-            Map<String, Object> envelope = NativeSqlReportExecutor.execute(conn, report, sql, filters, start, limit);
+            Map<String, Object> envelope = NativeSqlReportExecutor.execute(
+                    conn, report, sql, filters, start, limit, modifiedAfterMillis);
 
             LOG.fine("KeyForgeNativeIIQ sqlReport[" + report + "]: returned "
                     + envelope.get("returned") + " row(s)");

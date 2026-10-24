@@ -16,6 +16,11 @@ LEFT JOIN spt_identity_workgroups iw
 LEFT JOIN spt_identity u
     ON iw.identity_id = u.id
 WHERE wg.workgroup = TRUE
+  AND (
+      CAST(? AS BIGINT) IS NULL
+      OR GREATEST(wg.modified, wg.created, u.modified, u.created) > CAST(? AS BIGINT)
+  )
+-- Member removals cannot be detected incrementally because the removed membership edge is deleted.
 ORDER BY
     wg.name,
     u.inactive DESC,

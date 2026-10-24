@@ -35,8 +35,7 @@ import java.util.Set;
  * {@link IllegalArgumentException} (the routing layer maps it to HTTP 400), filtering is applied before
  * {@code start}/{@code limit}, and {@code start} defaults to 0. When omitted, {@code limit} preserves the
  * plugin's legacy cap; a capped/incomplete response becomes an error instead of a partial success. An
- * empty page is {@code []}. No {@code modifiedAfter}: the underlying report client supports no change-bound,
- * so that param stays reserved/ignored.
+ * empty page is {@code []}. The agent forwards the reserved {@code modifiedAfter} parameter to the plugin for filtering inside SQL.
  */
 public final class NativeSqlReportRestService {
 

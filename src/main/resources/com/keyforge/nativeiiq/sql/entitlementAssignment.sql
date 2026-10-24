@@ -166,6 +166,18 @@ WHERE
         AND pc.elt LIKE CONCAT('%', ie.value, '%')
     )
 )
+AND
+(
+    CAST(? AS BIGINT) IS NULL
+    OR GREATEST(ie.created, ie.modified, i.modified, app.modified, b.modified,
+                ir.created, ir.modified, iri.created, iri.modified) > CAST(? AS BIGINT)
+    OR EXISTS (
+        SELECT 1
+        FROM spt_identity_request irx
+        WHERE irx.target_id = i.id
+          AND (irx.created > CAST(? AS BIGINT) OR irx.modified > CAST(? AS BIGINT))
+    )
+)
 
 ORDER BY
     i.name,

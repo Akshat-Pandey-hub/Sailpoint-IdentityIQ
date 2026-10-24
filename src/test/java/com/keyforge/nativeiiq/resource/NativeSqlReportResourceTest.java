@@ -6,9 +6,11 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
+import java.sql.ParameterMetaData;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
-import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,6 +31,9 @@ class NativeSqlReportResourceTest {
         int rowIndex = -1;
         int timeout;
         int maxRows;
+        int parameterCount;
+        final Map<Integer, Object> parameters = new LinkedHashMap<Integer, Object>();
+        final Map<Integer, Integer> parameterTypes = new LinkedHashMap<Integer, Integer>();
         boolean statementClosed;
         boolean resultSetClosed;
         boolean failOnRead;
@@ -39,17 +44,21 @@ class NativeSqlReportResourceTest {
         }
 
         Connection connection() {
-            Statement statement = proxy(Statement.class, (p, method, args) -> {
+            PreparedStatement statement = proxy(PreparedStatement.class, (p, method, args) -> {
                 switch (method.getName()) {
                     case "setQueryTimeout": timeout = (Integer) args[0]; return null;
                     case "setMaxRows": maxRows = (Integer) args[0]; return null;
+                    case "getParameterMetaData": return proxy(ParameterMetaData.class, (mp, mm, ma) ->
+                            "getParameterCount".equals(mm.getName()) ? parameterCount : defaultValue(mm.getReturnType()));
+                    case "setLong": parameters.put((Integer) args[0], args[1]); parameterTypes.put((Integer) args[0], Types.BIGINT); return null;
+                    case "setNull": parameters.put((Integer) args[0], null); parameterTypes.put((Integer) args[0], (Integer) args[1]); return null;
                     case "executeQuery": return resultSet();
                     case "close": statementClosed = true; return null;
                     default: return defaultValue(method.getReturnType());
                 }
             });
             return proxy(Connection.class, (p, method, args) ->
-                    "createStatement".equals(method.getName()) ? statement
+                    "prepareStatement".equals(method.getName()) ? statement
                             : defaultValue(method.getReturnType()));
         }
 
@@ -93,6 +102,36 @@ class NativeSqlReportResourceTest {
         assertEquals(Arrays.asList("c", "d"), ids(page2));
         assertEquals(Boolean.FALSE, page2.get("hasMore"));
         assertEquals(5, later.maxRows);
+    }
+
+    @Test
+    void bindsEverySqlParameterToBoundEpochMillisecondsAndRetainsPaging() throws Exception {
+        JdbcFixture fixture = fixture("a", "b", "c", "d");
+        fixture.parameterCount = 4;
+        long bound = 1791801000123L;
+        Map<String, Object> page = NativeSqlReportExecutor.execute(
+                fixture.connection(), "test", "SELECT ?, ?, ?, ?", null, 0, 2, Long.valueOf(bound));
+        assertEquals(4, fixture.parameters.size());
+        for (int i = 1; i <= 4; i++) {
+            assertEquals(Long.valueOf(bound), fixture.parameters.get(i));
+            assertEquals(Integer.valueOf(Types.BIGINT), fixture.parameterTypes.get(i));
+        }
+        assertEquals(Arrays.asList("a", "b"), ids(page));
+        assertEquals(Boolean.TRUE, page.get("hasMore"));
+        assertEquals(3, fixture.maxRows);
+    }
+
+    @Test
+    void bindsNullAsBigintForEverySqlParameterWhenBoundIsAbsent() throws Exception {
+        JdbcFixture fixture = fixture("a");
+        fixture.parameterCount = 3;
+        NativeSqlReportExecutor.execute(fixture.connection(), "test", "SELECT ?, ?, ?", null, 0, 1, null);
+        assertEquals(3, fixture.parameters.size());
+        for (int i = 1; i <= 3; i++) {
+            assertTrue(fixture.parameters.containsKey(i));
+            assertEquals(null, fixture.parameters.get(i));
+            assertEquals(Integer.valueOf(Types.BIGINT), fixture.parameterTypes.get(i));
+        }
     }
 
     @Test
@@ -164,15 +203,15 @@ class NativeSqlReportResourceTest {
         JdbcFixture fixture = fixture("a");
         // A failure in setQueryTimeout must still close the statement even before a ResultSet exists.
         Connection conn = proxy(Connection.class, (p, method, args) -> {
-            if (!"createStatement".equals(method.getName())) return defaultValue(method.getReturnType());
-            return proxy(Statement.class, (sp, sm, sa) -> {
+            if (!"prepareStatement".equals(method.getName())) return defaultValue(method.getReturnType());
+            return proxy(PreparedStatement.class, (sp, sm, sa) -> {
                 if ("setQueryTimeout".equals(sm.getName())) throw new java.sql.SQLException("timeout setup failed");
                 if ("close".equals(sm.getName())) { fixture.statementClosed = true; return null; }
                 return defaultValue(sm.getReturnType());
             });
         });
         assertThrows(Exception.class,
-                () -> NativeSqlReportExecutor.execute(conn, "r", "SELECT 1", null, 0, 1));
+                () -> NativeSqlReportExecutor.execute(conn, "r", "SELECT 1", null, 0, 1, null));
         assertTrue(fixture.statementClosed);
         assertFalse(fixture.resultSetClosed);
     }
@@ -185,7 +224,7 @@ class NativeSqlReportResourceTest {
 
     private static Map<String, Object> execute(JdbcFixture fixture, Map<String, String> filters,
                                                 Integer start, Integer limit) throws Exception {
-        return NativeSqlReportExecutor.execute(fixture.connection(), "test", "SELECT test", filters, start, limit);
+        return NativeSqlReportExecutor.execute(fixture.connection(), "test", "SELECT test", filters, start, limit, null);
     }
 
     @SuppressWarnings("unchecked")
