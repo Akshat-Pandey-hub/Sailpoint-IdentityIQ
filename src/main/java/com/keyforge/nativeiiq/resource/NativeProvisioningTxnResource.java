@@ -32,7 +32,7 @@ public class NativeProvisioningTxnResource extends BasePluginResource {
     private static final Log LOG = LogFactory.getLog(NativeProvisioningTxnResource.class);
 
     static final int MAX_LIMIT = 1000;
-    static final int DEFAULT_LIMIT = 100;
+    static final int DEFAULT_LIMIT = 1000;
 
     @Override
     public String getPluginName() {
@@ -44,7 +44,7 @@ public class NativeProvisioningTxnResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getProvisioningTransactions(@QueryParam("start") @DefaultValue("0") int start,
-                                                @QueryParam("limit") @DefaultValue("100") int limit,
+                                                @QueryParam("limit") @DefaultValue("1000") int limit,
                                                 @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "provisioning-transactions", start, limit, modifiedAfter);

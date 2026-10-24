@@ -37,6 +37,7 @@ public final class NativeGroupDefinitionExtractor {
     public NativeGroupDefinitionExtractionResult extract(int start, int limit, Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("name", true);
+        qo.addOrdering("id", true);
         NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         if (start > 0) {
             qo.setFirstRow(start);

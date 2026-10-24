@@ -32,7 +32,7 @@ import java.util.function.Function;
  */
 public final class NativeAuditEventRestService {
 
-    private static final int INTERNAL_PAGE_SIZE = 500;
+    private static final int INTERNAL_PAGE_SIZE = 1000; // = the plugin's per-call maximum, so large reads take the fewest IIQ calls
 
     /** The plugin's per-call maximum ({@code NativeAuditEventResource.MAX_LIMIT}); larger windows are chunked. */
     static final int PLUGIN_MAX_PAGE = 1000;

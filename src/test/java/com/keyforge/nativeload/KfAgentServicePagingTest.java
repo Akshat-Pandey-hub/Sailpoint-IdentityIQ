@@ -60,7 +60,12 @@ class KfAgentServicePagingTest {
         List<Map<String, Object>> fetch(Plugin plugin, Map<String, String> filters, Integer start, Integer limit);
     }
 
-    record Service(String name, String entity, Fetch fetch) {
+    /** {@code chunk}: how many rows the service asks the plugin for per call (its INTERNAL_PAGE_SIZE). */
+    record Service(String name, String entity, Fetch fetch, int chunk) {
+        Service(String name, String entity, Fetch fetch) {
+            this(name, entity, fetch, 500);
+        }
+
         @Override
         public String toString() {
             return name;
@@ -89,7 +94,7 @@ class KfAgentServicePagingTest {
                 new Service("group-definitions", "GroupDefinition",
                         (p, f, s, l) -> new NativeGroupDefinitionRestService().fetch(p::fetchPage, f, s, l)),
                 new Service("audit-events", "AuditEvent",
-                        (p, f, s, l) -> new NativeAuditEventRestService().fetch(p::fetchPage, f, s, l)),
+                        (p, f, s, l) -> new NativeAuditEventRestService().fetch(p::fetchPage, f, s, l), 1000),
                 new Service("workitem-archives", "WorkItemArchive",
                         (p, f, s, l) -> new NativeWorkItemArchiveRestService().fetch(p::fetchPage, f, s, l)),
                 new Service("certification-archives", "CertificationArchive",
@@ -107,17 +112,17 @@ class KfAgentServicePagingTest {
                 new Service("certification-items", "CertificationItem",
                         (p, f, s, l) -> new NativeCertificationItemRestService().fetch(p::fetchPage, f, s, l)),
                 new Service("provisioning-transactions", "ProvisioningTransaction",
-                        (p, f, s, l) -> new NativeProvisioningTransactionRestService().fetch(p::fetchPage, f, s, l)),
+                        (p, f, s, l) -> new NativeProvisioningTransactionRestService().fetch(p::fetchPage, f, s, l), 1000),
                 new Service("work-items", "WorkItem",
                         (p, f, s, l) -> new NativeWorkItemRestService().fetch(p::fetchPage, f, s, l)),
                 new Service("access-history-certifications", "HistoricalCertification",
-                        (p, f, s, l) -> new NativeAccessHistoryCertificationRestService().fetch(p::fetchPage, f, s, l)),
+                        (p, f, s, l) -> new NativeAccessHistoryCertificationRestService().fetch(p::fetchPage, f, s, l), 1000),
                 new Service("access-history-entitlements", "HistoricalEntitlementCapture",
-                        (p, f, s, l) -> new NativeAccessHistoryEntitlementRestService().fetch(p::fetchPage, f, s, l)),
+                        (p, f, s, l) -> new NativeAccessHistoryEntitlementRestService().fetch(p::fetchPage, f, s, l), 1000),
                 new Service("access-history-identity-events", "HistoricalIdentityEvent",
-                        (p, f, s, l) -> new NativeAccessHistoryIdentityEventRestService().fetch(p::fetchPage, f, s, l)),
+                        (p, f, s, l) -> new NativeAccessHistoryIdentityEventRestService().fetch(p::fetchPage, f, s, l), 1000),
                 new Service("access-history-role-events", "HistoricalRoleEvent",
-                        (p, f, s, l) -> new NativeAccessHistoryRoleEventRestService().fetch(p::fetchPage, f, s, l)));
+                        (p, f, s, l) -> new NativeAccessHistoryRoleEventRestService().fetch(p::fetchPage, f, s, l), 1000));
     }
 
     /** Services whose import refuses a source count that changes mid-scan; their bounded reads must too. */
@@ -179,8 +184,9 @@ class KfAgentServicePagingTest {
         List<Map<String, Object>> rows = svc.fetch().fetch(plugin, Map.of("source_id", id(1_234)), null, 1);
 
         assertEquals(List.of(id(1_234)), ids(rows));
-        assertEquals(3, plugin.calls.size(), "pages 0, 500, 1000 only");
-        assertEquals(1_500, plugin.rowsRead());
+        int pagesUpToTheMatch = 1_234 / svc.chunk() + 1; // e.g. chunk 500: pages 0, 500, 1000 only
+        assertEquals(pagesUpToTheMatch, plugin.calls.size(), "reading stops at the page holding the match");
+        assertEquals(pagesUpToTheMatch * svc.chunk(), plugin.rowsRead());
     }
 
     @ParameterizedTest

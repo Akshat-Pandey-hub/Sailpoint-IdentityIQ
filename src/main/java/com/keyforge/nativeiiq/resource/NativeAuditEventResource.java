@@ -30,7 +30,7 @@ import java.util.Map;
 public class NativeAuditEventResource extends BasePluginResource {
     private static final Log LOG = LogFactory.getLog(NativeAuditEventResource.class);
     static final int MAX_LIMIT = 1000;
-    static final int DEFAULT_LIMIT = 200;
+    static final int DEFAULT_LIMIT = 1000;
 
     @Override
     public String getPluginName() {
@@ -42,7 +42,7 @@ public class NativeAuditEventResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAuditEvents(@QueryParam("start") @DefaultValue("0") int start,
-                                   @QueryParam("limit") @DefaultValue("200") int limit,
+                                   @QueryParam("limit") @DefaultValue("1000") int limit,
                                    @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "audit-events", start, limit, modifiedAfter);

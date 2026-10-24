@@ -40,7 +40,7 @@ public final class NativeAccessHistoryIdentityEventRestService {
         String fetchPage(int start, int limit);
     }
 
-    private static final int INTERNAL_PAGE_SIZE = 500;
+    private static final int INTERNAL_PAGE_SIZE = 1000; // = the plugin's per-call maximum, so large reads take the fewest IIQ calls
 
     private final ObjectMapper mapper = new ObjectMapper();
 

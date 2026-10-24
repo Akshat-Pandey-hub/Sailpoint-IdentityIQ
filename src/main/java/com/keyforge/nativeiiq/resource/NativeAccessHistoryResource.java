@@ -51,7 +51,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     private static final Log LOG = LogFactory.getLog(NativeAccessHistoryResource.class);
 
     static final int MAX_LIMIT = 1000;
-    static final int DEFAULT_LIMIT = 100;
+    static final int DEFAULT_LIMIT = 1000;
 
     @Override
     public String getPluginName() {
@@ -63,7 +63,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getEntitlementCaptures(@QueryParam("start") @DefaultValue("0") int start,
-                                           @QueryParam("limit") @DefaultValue("100") int limit,
+                                           @QueryParam("limit") @DefaultValue("1000") int limit,
                                            @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "access-history/entitlement-captures", start, limit, modifiedAfter);
@@ -103,7 +103,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getIdentityEvents(@QueryParam("start") @DefaultValue("0") int start,
-                                      @QueryParam("limit") @DefaultValue("100") int limit,
+                                      @QueryParam("limit") @DefaultValue("1000") int limit,
                                       @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "access-history/identity-events", start, limit, modifiedAfter);
@@ -143,7 +143,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRoleEvents(@QueryParam("start") @DefaultValue("0") int start,
-                                  @QueryParam("limit") @DefaultValue("100") int limit,
+                                  @QueryParam("limit") @DefaultValue("1000") int limit,
                                   @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "access-history/role-events", start, limit, modifiedAfter);
@@ -183,7 +183,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getCertifications(@QueryParam("start") @DefaultValue("0") int start,
-                                      @QueryParam("limit") @DefaultValue("100") int limit,
+                                      @QueryParam("limit") @DefaultValue("1000") int limit,
                                       @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "access-history/certifications", start, limit, modifiedAfter);
