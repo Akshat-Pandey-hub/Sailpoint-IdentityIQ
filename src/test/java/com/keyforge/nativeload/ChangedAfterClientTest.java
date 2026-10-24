@@ -1,7 +1,6 @@
 package com.keyforge.nativeload;
 
 import com.keyforge.iiq.client.IiqSessionClient;
-import com.keyforge.iiq.config.AppConfig;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -25,7 +24,7 @@ class ChangedAfterClientTest {
         final List<Map<String, String>> params = new ArrayList<>();
 
         RecordingSession() {
-            super(new AppConfig("http://localhost:1/identityiq", "u", "p"));
+            super("http://localhost:1/identityiq", "u", "p", null); // no real HttpClient: every network call is overridden
         }
 
         @Override

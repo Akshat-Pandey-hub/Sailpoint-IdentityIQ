@@ -99,8 +99,11 @@ public class IiqSessionClient extends IiqApiClient {
                 .build();
     }
 
-    /** Test seam: inject a fake HttpClient and endpoints via the package-private ctor. */
-    IiqSessionClient(String baseUrl, String username, String password, HttpClient httpClient) {
+    /**
+     * Test seam: inject a fake HttpClient and endpoints. Protected so test doubles that override every network
+     * call can skip building a real HttpClient (which needs a local socket some environments do not allow).
+     */
+    protected IiqSessionClient(String baseUrl, String username, String password, HttpClient httpClient) {
         super();
         this.baseUrl = baseUrl;
         this.username = username;
