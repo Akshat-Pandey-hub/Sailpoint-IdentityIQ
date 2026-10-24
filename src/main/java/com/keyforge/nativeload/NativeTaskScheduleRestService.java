@@ -30,7 +30,8 @@ import java.util.function.Function;
  * {@code resume_at}/{@code created_at}/{@code modified_at} are ISO-8601 timestamps; every other field is text
  * ({@code source_id} is the schedule's name — TaskSchedule has no GUID). The 16 scalar fields are filterable.
  * The KeyForge {@code taskscheduleid} PK, {@code record_hash}, lineage envelope and soft-delete columns are
- * excluded. The agent passes {@code modifiedAfter} through to the plugin, which filters loaded schedules in code because IIQ ignores query filters.
+ * excluded. The agent passes {@code modifiedAfter} through to the plugin, which filters loaded schedules in code because IIQ ignores query filters;
+ * IIQ stores no created/modified on schedules (null live), and such undated schedules are always returned.
  */
 public final class NativeTaskScheduleRestService {
 

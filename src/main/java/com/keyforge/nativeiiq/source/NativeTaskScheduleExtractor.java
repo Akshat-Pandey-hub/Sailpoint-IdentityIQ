@@ -61,7 +61,10 @@ public final class NativeTaskScheduleExtractor {
                 continue;
             }
             try {
-                if (!NativeIncrementalQuery.changedAfter(ts.getModified(), ts.getCreated(), modifiedAfter)) {
+                // IIQ keeps no created/modified on TaskSchedule (null on every live schedule); an undated
+                // schedule cannot be proven unchanged, so it is always returned
+                boolean undated = ts.getModified() == null && ts.getCreated() == null;
+                if (!undated && !NativeIncrementalQuery.changedAfter(ts.getModified(), ts.getCreated(), modifiedAfter)) {
                     continue;
                 }
                 if (matched++ < start) {
