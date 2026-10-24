@@ -72,7 +72,7 @@ public class NativeIdentityResource extends BasePluginResource {
                                   @QueryParam("limit") @DefaultValue("100") int limit,
                                   @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "identities" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "identities", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         // Optional CSS incremental bound: only identities changed after this ISO-8601 instant. Absent
@@ -103,18 +103,18 @@ public class NativeIdentityResource extends BasePluginResource {
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeIdentityWire.envelope(result, safeStart, safeLimit);
 
-            LOG.info("KeyForgeNativeIIQ identities: returning " + result.getCount() + " record(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "identities", result.getCount(), requestStartedAt);
             // Hand the JAX-RS JSON provider the Map so it is serialized to a JSON OBJECT exactly once.
             // (Passing a JsonHelper.toJson(...) String here made the provider serialize it a SECOND
             //  time, producing a double-encoded quoted JSON string.)
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.warn("KeyForgeNativeIIQ identities: authorization denied at stage=" + stage, e);
+            PluginLog.denied(LOG, "identities", stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
             // Broader than Exception on purpose (see class javadoc): contain Errors too so the caller
             // gets a diagnosable JSON 500 and the server log keeps the full stack — never exception.jsf.
-            LOG.error("KeyForgeNativeIIQ identities: failed at stage=" + stage, t);
+            PluginLog.failed(LOG, "identities", stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
@@ -126,7 +126,7 @@ public class NativeIdentityResource extends BasePluginResource {
      */
     private static Response error(Response.Status status, Throwable t) {
         if (status == Response.Status.BAD_REQUEST) {
-            LOG.info("KeyForgeNativeIIQ request rejected endpoint=identity reason=" + LogText.safe(t == null ? null : t.getMessage()));
+            PluginLog.rejected(LOG, "identities", t == null ? null : t.getMessage());
         }
         return Response.status(status)
                 .entity(NativeIdentityWire.errorEnvelope(status.getStatusCode(), t))

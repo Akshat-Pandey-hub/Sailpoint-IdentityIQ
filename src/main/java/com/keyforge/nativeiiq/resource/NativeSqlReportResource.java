@@ -141,7 +141,7 @@ public class NativeSqlReportResource extends BasePluginResource {
     public Response runReport(@PathParam("report") String report, @QueryParam("modifiedAfter") String modifiedAfter,
                               @Context UriInfo uriInfo) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "sqlReport/" + LogText.safe(report) + ", start=" + LogText.safe(uriInfo.getQueryParameters().getFirst("start")) + ", limit=" + LogText.safe(uriInfo.getQueryParameters().getFirst("limit")) + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "sqlReport/" + report, uriInfo.getQueryParameters().getFirst("start"), uriInfo.getQueryParameters().getFirst("limit"), modifiedAfter);
         String stage = "start";
 try {
             String resourcePath = REPORTS.get(report);
@@ -192,18 +192,16 @@ try {
             Map<String, Object> envelope = NativeSqlReportExecutor.execute(
                     conn, report, sql, filters, start, limit, modifiedAfterMillis, LOG);
 
-            LOG.info("KeyForgeNativeIIQ sqlReport[" + report + "]: returned "
-                    + envelope.get("returned") + " row(s), hasMore=" + envelope.get("hasMore")
-                    + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "sqlReport/" + report, envelope.get("returned"), requestStartedAt);
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.warn("KeyForgeNativeIIQ sqlReport: authorization denied at stage=" + stage, e);
+            PluginLog.denied(LOG, "sqlReport/" + report, stage, e);
             return error(Response.Status.FORBIDDEN, report, "Access denied.");
         } catch (NativeSqlReportExecutor.BadRequest e) {
             return error(Response.Status.BAD_REQUEST, report, e.getMessage());
         } catch (Throwable t) {
             // Broader than Exception on purpose: contain Errors so IIQ returns a JSON 500, never exception.jsf.
-            LOG.error("KeyForgeNativeIIQ sqlReport: failed at stage=" + stage, t);
+            PluginLog.failed(LOG, "sqlReport/" + report, stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, report,
                     "SQL report could not be completed. Check the IdentityIQ server log.");
         }
@@ -254,8 +252,7 @@ try {
 
     private Response error(Response.Status status, String report, String message) {
         if (status == Response.Status.BAD_REQUEST) {
-            LOG.info("KeyForgeNativeIIQ request rejected endpoint=sqlReport/" + LogText.safe(report)
-                    + " reason=" + LogText.safe(message));
+            PluginLog.rejected(LOG, "sqlReport/" + report, message);
         }
         Map<String, Object> error = new LinkedHashMap<String, Object>();
         error.put("message", message);

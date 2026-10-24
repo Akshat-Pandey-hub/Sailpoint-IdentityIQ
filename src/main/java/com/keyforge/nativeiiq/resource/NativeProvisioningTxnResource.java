@@ -47,7 +47,7 @@ public class NativeProvisioningTxnResource extends BasePluginResource {
                                                 @QueryParam("limit") @DefaultValue("100") int limit,
                                                 @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "provisioning-transactions" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "provisioning-transactions", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         // Optional incremental bound (ISO-8601): objects changed after it (modified after it, or never modified and
@@ -73,20 +73,20 @@ public class NativeProvisioningTxnResource extends BasePluginResource {
             }
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeProvisioningTxnWire.envelope(result, safeStart, safeLimit);
-            LOG.info("KeyForgeNativeIIQ provisioning-transactions: returning " + result.getCount() + " record(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "provisioning-transactions", result.getCount(), requestStartedAt);
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.warn("KeyForgeNativeIIQ provisioning-transactions: denied at stage=" + stage, e);
+            PluginLog.denied(LOG, "provisioning-transactions", stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.error("KeyForgeNativeIIQ provisioning-transactions: failed at stage=" + stage, t);
+            PluginLog.failed(LOG, "provisioning-transactions", stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     private static Response error(Response.Status status, Throwable t) {
         if (status == Response.Status.BAD_REQUEST) {
-            LOG.info("KeyForgeNativeIIQ request rejected endpoint=provisioningtxn reason=" + LogText.safe(t == null ? null : t.getMessage()));
+            PluginLog.rejected(LOG, "provisioning-transactions", t == null ? null : t.getMessage());
         }
         return Response.status(status)
                 .entity(NativeProvisioningTxnWire.errorEnvelope(status.getStatusCode(), t))

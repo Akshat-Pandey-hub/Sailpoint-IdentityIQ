@@ -46,7 +46,7 @@ public class NativeCertificationEntityResource extends BasePluginResource {
                                              @QueryParam("limit") @DefaultValue("500") int limit,
                                              @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "certification-entities" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "certification-entities", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         // Optional incremental bound (ISO-8601): objects changed after it (modified after it, or never modified and
@@ -72,20 +72,20 @@ public class NativeCertificationEntityResource extends BasePluginResource {
             }
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeCertificationEntityWire.envelope(result, safeStart, safeLimit);
-            LOG.info("KeyForgeNativeIIQ certification-entities: returning " + result.getCount() + " record(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "certification-entities", result.getCount(), requestStartedAt);
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.warn("KeyForgeNativeIIQ certification-entities: denied at stage=" + stage, e);
+            PluginLog.denied(LOG, "certification-entities", stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.error("KeyForgeNativeIIQ certification-entities: failed at stage=" + stage, t);
+            PluginLog.failed(LOG, "certification-entities", stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     private static Response error(Response.Status status, Throwable t) {
         if (status == Response.Status.BAD_REQUEST) {
-            LOG.info("KeyForgeNativeIIQ request rejected endpoint=certificationentity reason=" + LogText.safe(t == null ? null : t.getMessage()));
+            PluginLog.rejected(LOG, "certification-entities", t == null ? null : t.getMessage());
         }
         return Response.status(status)
                 .entity(NativeCertificationEntityWire.errorEnvelope(status.getStatusCode(), t))

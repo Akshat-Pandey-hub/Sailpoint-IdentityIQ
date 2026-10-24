@@ -50,7 +50,7 @@ public class NativeLinkResource extends BasePluginResource {
                                 @QueryParam("limit") @DefaultValue("100") int limit,
                                 @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "accounts" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "accounts", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         java.util.Date modifiedAfterDate =
@@ -76,14 +76,14 @@ public class NativeLinkResource extends BasePluginResource {
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeLinkWire.envelope(result, safeStart, safeLimit);
 
-            LOG.info("KeyForgeNativeIIQ accounts: returning " + result.getCount() + " record(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "accounts", result.getCount(), requestStartedAt);
             // Return the Map so the provider serializes once to a JSON object (never a double-encoded String).
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.warn("KeyForgeNativeIIQ accounts: authorization denied at stage=" + stage, e);
+            PluginLog.denied(LOG, "accounts", stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.error("KeyForgeNativeIIQ accounts: failed at stage=" + stage, t);
+            PluginLog.failed(LOG, "accounts", stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
@@ -91,7 +91,7 @@ public class NativeLinkResource extends BasePluginResource {
     /** Returns the error map as the entity; the JSON provider serializes it once (a JSON object). */
     private static Response error(Response.Status status, Throwable t) {
         if (status == Response.Status.BAD_REQUEST) {
-            LOG.info("KeyForgeNativeIIQ request rejected endpoint=link reason=" + LogText.safe(t == null ? null : t.getMessage()));
+            PluginLog.rejected(LOG, "accounts", t == null ? null : t.getMessage());
         }
         return Response.status(status)
                 .entity(NativeLinkWire.errorEnvelope(status.getStatusCode(), t))

@@ -47,7 +47,7 @@ public class NativePolicyConstraintResource extends BasePluginResource {
                                          @QueryParam("limit") @DefaultValue("100") int limit,
                                          @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "policy-constraints" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "policy-constraints", start, limit, modifiedAfter);
         if (NativeIncrementalQuery.isInvalid(modifiedAfter)) {
             return error(Response.Status.BAD_REQUEST, NativeIncrementalQuery.invalidTimestamp());
         }
@@ -69,20 +69,20 @@ public class NativePolicyConstraintResource extends BasePluginResource {
             }
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativePolicyConstraintWire.envelope(result, safeStart, safeLimit);
-            LOG.info("KeyForgeNativeIIQ result endpoint=policy-constraints status=200 rows=" + result.getCount() + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "policy-constraints", result.getCount(), requestStartedAt);
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.warn("KeyForgeNativeIIQ policy-constraints: authorization denied at stage=" + stage, e);
+            PluginLog.denied(LOG, "policy-constraints", stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.error("KeyForgeNativeIIQ policy-constraints: failed at stage=" + stage, t);
+            PluginLog.failed(LOG, "policy-constraints", stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     private static Response error(Response.Status status, Throwable t) {
         if (status == Response.Status.BAD_REQUEST) {
-            LOG.info("KeyForgeNativeIIQ request rejected endpoint=policyconstraint reason=" + LogText.safe(t == null ? null : t.getMessage()));
+            PluginLog.rejected(LOG, "policy-constraints", t == null ? null : t.getMessage());
         }
         return Response.status(status)
                 .entity(NativePolicyConstraintWire.errorEnvelope(status.getStatusCode(), t))

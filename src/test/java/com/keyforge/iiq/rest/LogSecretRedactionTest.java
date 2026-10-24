@@ -118,6 +118,20 @@ class LogSecretRedactionTest {
     }
 
     @Test
+    void aPluginFailureShowsTheReasonIdentityIqGave() {
+        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger("test.failure");
+        Exception e = new com.keyforge.iiq.client.IiqApiException("IdentityIQ request to "
+                + "http://iiq/plugin/rest/keyForgeNativeIIQ/roles?start=0&limit=3 failed with HTTP 500: "
+                + "IdentityIQ says: could not resolve property: foo of: sailpoint.object.Bundle", 500);
+        DebugLog.failure(log, "GET /kfagent/roles failed (caller gets HTTP 500)", e);
+
+        assertEquals(1, events.size(), "exactly one line per failure: " + all());
+        String line = all();
+        assertTrue(line.contains("reason=IIQ_SERVER_ERROR"), line);
+        assertTrue(line.contains("IdentityIQ says: could not resolve property: foo"), line);
+    }
+
+    @Test
     void anUnexpectedFailureKeepsItsStackTrace() {
         org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger("test.failure");
         DebugLog.failure(log, "Unexpected error: boom", new IllegalStateException("boom"));

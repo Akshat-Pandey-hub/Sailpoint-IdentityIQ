@@ -45,7 +45,7 @@ public class NativeViolationResource extends BasePluginResource {
                                   @QueryParam("limit") @DefaultValue("100") int limit,
                                   @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "violations" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "violations", start, limit, modifiedAfter);
         java.util.Date bound = com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
             return error(Response.Status.BAD_REQUEST, com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
@@ -64,20 +64,20 @@ public class NativeViolationResource extends BasePluginResource {
                     new NativeViolationExtractionService().extract(context, safeStart, safeLimit, bound);
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeViolationWire.envelope(result, safeStart, safeLimit);
-            LOG.info("KeyForgeNativeIIQ result endpoint=violations status=200 rows=" + result.getCount() + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "violations", result.getCount(), requestStartedAt);
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.warn("KeyForgeNativeIIQ violations: authorization denied at stage=" + stage, e);
+            PluginLog.denied(LOG, "violations", stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.error("KeyForgeNativeIIQ violations: failed at stage=" + stage, t);
+            PluginLog.failed(LOG, "violations", stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     private static Response error(Response.Status status, Throwable t) {
         if (status == Response.Status.BAD_REQUEST) {
-            LOG.info("KeyForgeNativeIIQ request rejected endpoint=violation reason=" + LogText.safe(t == null ? null : t.getMessage()));
+            PluginLog.rejected(LOG, "violations", t == null ? null : t.getMessage());
         }
         return Response.status(status)
                 .entity(NativeViolationWire.errorEnvelope(status.getStatusCode(), t))

@@ -242,8 +242,11 @@ public final class DebugLog {
         Object[] head = {
                 "what", what,
                 "reason", reason,
-                "cause", root == t ? t.getClass().getSimpleName() : root.getClass().getSimpleName() + ": "
-                        + firstLine(root.getMessage()),
+                // an IdentityIQ/plugin error carries IIQ's own reason ("IdentityIQ says: ..."); show it, since
+                // the IIQ server log is on the client's server and not readable from here
+                "cause", root == t && !(t instanceof com.keyforge.iiq.client.IiqApiException)
+                        ? t.getClass().getSimpleName()
+                        : root.getClass().getSimpleName() + ": " + firstLine(root.getMessage()),
                 "at", where == null ? "-" : where.toString()};
         String line = render(level(), error ? "FAILED" : "WARNING", true,
                 concat(concat(head, context), valuesFor(reason)));

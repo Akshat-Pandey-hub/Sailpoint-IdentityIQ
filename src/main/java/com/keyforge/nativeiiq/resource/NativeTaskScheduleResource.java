@@ -50,7 +50,7 @@ public class NativeTaskScheduleResource extends BasePluginResource {
                                      @QueryParam("limit") @DefaultValue("100") int limit,
                                      @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "task-schedules" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "task-schedules", start, limit, modifiedAfter);
         java.util.Date bound = com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
             return error(Response.Status.BAD_REQUEST, com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
@@ -74,20 +74,20 @@ public class NativeTaskScheduleResource extends BasePluginResource {
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeTaskScheduleWire.envelope(result, safeStart, safeLimit);
 
-            LOG.info("KeyForgeNativeIIQ task-schedules: returning " + result.getCount() + " record(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "task-schedules", result.getCount(), requestStartedAt);
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.warn("KeyForgeNativeIIQ task-schedules: authorization denied at stage=" + stage, e);
+            PluginLog.denied(LOG, "task-schedules", stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.error("KeyForgeNativeIIQ task-schedules: failed at stage=" + stage, t);
+            PluginLog.failed(LOG, "task-schedules", stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     private static Response error(Response.Status status, Throwable t) {
         if (status == Response.Status.BAD_REQUEST) {
-            LOG.info("KeyForgeNativeIIQ request rejected endpoint=taskschedule reason=" + LogText.safe(t == null ? null : t.getMessage()));
+            PluginLog.rejected(LOG, "task-schedules", t == null ? null : t.getMessage());
         }
         return Response.status(status)
                 .entity(NativeTaskScheduleWire.errorEnvelope(status.getStatusCode(), t))

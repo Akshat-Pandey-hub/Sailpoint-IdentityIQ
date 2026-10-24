@@ -51,7 +51,7 @@ public class NativeWorkItemArchiveResource extends BasePluginResource {
                                         @QueryParam("limit") @DefaultValue("100") int limit,
                                         @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "workitem-archives" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "workitem-archives", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
@@ -82,14 +82,14 @@ public class NativeWorkItemArchiveResource extends BasePluginResource {
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeWorkItemArchiveWire.envelope(result, safeStart, safeLimit);
 
-            LOG.info("KeyForgeNativeIIQ workitem-archives: returning " + result.getCount() + " record(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "workitem-archives", result.getCount(), requestStartedAt);
             // Return the Map so the provider serializes once to a JSON object (never a double-encoded String).
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.warn("KeyForgeNativeIIQ workitem-archives: authorization denied at stage=" + stage, e);
+            PluginLog.denied(LOG, "workitem-archives", stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.error("KeyForgeNativeIIQ workitem-archives: failed at stage=" + stage, t);
+            PluginLog.failed(LOG, "workitem-archives", stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
@@ -97,7 +97,7 @@ public class NativeWorkItemArchiveResource extends BasePluginResource {
     /** Returns the error map as the entity; the JSON provider serializes it once (a JSON object). */
     private static Response error(Response.Status status, Throwable t) {
         if (status == Response.Status.BAD_REQUEST) {
-            LOG.info("KeyForgeNativeIIQ request rejected endpoint=workitemarchive reason=" + LogText.safe(t == null ? null : t.getMessage()));
+            PluginLog.rejected(LOG, "workitem-archives", t == null ? null : t.getMessage());
         }
         return Response.status(status)
                 .entity(NativeWorkItemArchiveWire.errorEnvelope(status.getStatusCode(), t))

@@ -56,12 +56,12 @@ public class NativeApprovalConfigResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getApprovalConfig(@QueryParam("flow") @DefaultValue(DEFAULT_FLOW) String flow) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "approval-config" + ", start=" + "<not set>" + ", limit=" + "<not set>" + ", modifiedAfter=" + "<not set>");
+        PluginLog.request(LOG, "approval-config", null, null, null);
         String stage = "validateFlow";
 try {
             String flowName = flow == null || flow.trim().isEmpty() ? DEFAULT_FLOW : flow.trim();
             if (!FLOW_NAME.matcher(flowName).matches()) {
-                LOG.info("KeyForgeNativeIIQ request rejected endpoint=approval-config reason=Invalid flow name");
+                PluginLog.rejected(LOG, "approval-config", "Invalid flow name");
                 return Response.status(Response.Status.BAD_REQUEST).entity(error(400, "Invalid flow name")).type(MediaType.APPLICATION_JSON).build();
             }
             stage = "getContext";
@@ -74,8 +74,7 @@ try {
             if (workflowName == null || workflowName.trim().isEmpty()) {
                 result.put("configurationFound", Boolean.FALSE);
                 result.put("message", "The configuration key has no workflow value.");
-                LOG.info("KeyForgeNativeIIQ result endpoint=approval-config status=200 rows=not-applicable, elapsedMs="
-                        + (System.currentTimeMillis() - requestStartedAt));
+                PluginLog.result(LOG, "approval-config", 1, requestStartedAt); // one read-only trace object
                 return Response.ok(result).type(MediaType.APPLICATION_JSON).build();
             }
             stage = "loadWorkflow";
@@ -84,8 +83,7 @@ try {
                 result.put("configurationFound", Boolean.TRUE);
                 result.put("workflowFound", Boolean.FALSE);
                 result.put("message", "The configured workflow name did not resolve to a Workflow object.");
-                LOG.info("KeyForgeNativeIIQ result endpoint=approval-config status=200 rows=not-applicable, elapsedMs="
-                        + (System.currentTimeMillis() - requestStartedAt));
+                PluginLog.result(LOG, "approval-config", 1, requestStartedAt); // one read-only trace object
                 return Response.ok(result).type(MediaType.APPLICATION_JSON).build();
             }
             stage = "buildWorkflowTrace";
@@ -95,14 +93,13 @@ try {
             result.put("readOnly", Boolean.TRUE);
             result.put("rulesExecuted", Boolean.FALSE);
             result.put("scriptsExecuted", Boolean.FALSE);
-            LOG.info("KeyForgeNativeIIQ result endpoint=approval-config status=200 rows=not-applicable, elapsedMs="
-                    + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "approval-config", 1, requestStartedAt); // one read-only trace object
             return Response.ok(result).type(MediaType.APPLICATION_JSON).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.warn("Approval config trace authorization denied at stage=" + stage, e);
+            PluginLog.denied(LOG, "approval-config", stage, e);
             return Response.status(Response.Status.FORBIDDEN).entity(error(403, e.getClass().getName() + ": " + String.valueOf(e.getMessage()))).type(MediaType.APPLICATION_JSON).build();
         } catch (Throwable t) {
-            LOG.error("Approval config trace failed at stage=" + stage, t);
+            PluginLog.failed(LOG, "approval-config", stage, t);
             Map<String, Object> error = error(500, t.getClass().getName() + " at " + stage + ": " + String.valueOf(t.getMessage()));
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(error).type(MediaType.APPLICATION_JSON).build();
         }

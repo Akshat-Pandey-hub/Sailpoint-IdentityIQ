@@ -66,7 +66,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
                                            @QueryParam("limit") @DefaultValue("100") int limit,
                                            @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "access-history/entitlement-captures" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "access-history/entitlement-captures", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
@@ -89,7 +89,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
                     new NativeAccessHistoryExtractionService().extractEntitlementCaptures(context, safeStart, safeLimit, createdAfter);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.entitlementCaptureEnvelope(page, safeStart, safeLimit);
-            LOG.info("KeyForgeNativeIIQ result endpoint=access-history/entitlement-captures status=200 rows=" + page.getReturned() + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "access-history/entitlement-captures", page.getReturned(), requestStartedAt);
             return Response.ok(env).build();
         } catch (UnauthorizedAccessException e) {
             return denied("HistoricalEntitlementCapture", stage, e);
@@ -106,7 +106,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
                                       @QueryParam("limit") @DefaultValue("100") int limit,
                                       @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "access-history/identity-events" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "access-history/identity-events", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
@@ -129,8 +129,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
                     new NativeAccessHistoryExtractionService().extractIdentityEvents(context, safeStart, safeLimit, createdAfter);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.identityEventEnvelope(page, safeStart, safeLimit);
-            LOG.info("KeyForgeNativeIIQ result endpoint=access-history/entitlement-captures status=200 rows=" + page.getReturned() + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
-            LOG.info("KeyForgeNativeIIQ result endpoint=access-history/identity-events status=200 rows=" + page.getReturned() + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "access-history/identity-events", page.getReturned(), requestStartedAt);
             return Response.ok(env).build();
         } catch (UnauthorizedAccessException e) {
             return denied("HistoricalIdentityEvent", stage, e);
@@ -147,7 +146,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
                                   @QueryParam("limit") @DefaultValue("100") int limit,
                                   @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "access-history/role-events" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "access-history/role-events", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
@@ -170,7 +169,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
                     new NativeAccessHistoryExtractionService().extractRoleEvents(context, safeStart, safeLimit, createdAfter);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.roleEventEnvelope(page, safeStart, safeLimit);
-            LOG.info("KeyForgeNativeIIQ result endpoint=access-history/role-events status=200 rows=" + page.getReturned() + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "access-history/role-events", page.getReturned(), requestStartedAt);
             return Response.ok(env).build();
         } catch (UnauthorizedAccessException e) {
             return denied("HistoricalRoleEvent", stage, e);
@@ -187,7 +186,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
                                       @QueryParam("limit") @DefaultValue("100") int limit,
                                       @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "access-history/certifications" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "access-history/certifications", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
@@ -210,8 +209,7 @@ public class NativeAccessHistoryResource extends BasePluginResource {
                     new NativeAccessHistoryExtractionService().extractCertifications(context, safeStart, safeLimit, createdAfter);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.certificationEnvelope(page, safeStart, safeLimit);
-            LOG.info("KeyForgeNativeIIQ result endpoint=access-history/certifications status=200 rows="
-                    + page.getReturned() + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "access-history/certifications", page.getReturned(), requestStartedAt);
             return Response.ok(env).build();
         } catch (UnauthorizedAccessException e) {
             return denied("HistoricalCertification", stage, e);
@@ -220,22 +218,39 @@ public class NativeAccessHistoryResource extends BasePluginResource {
         }
     }
 
+    /** The REST path of each Access History object, for the log. */
+    private static String endpointFor(String entity) {
+        if ("HistoricalEntitlementCapture".equals(entity)) {
+            return "access-history/entitlement-captures";
+        }
+        if ("HistoricalIdentityEvent".equals(entity)) {
+            return "access-history/identity-events";
+        }
+        if ("HistoricalRoleEvent".equals(entity)) {
+            return "access-history/role-events";
+        }
+        if ("HistoricalCertification".equals(entity)) {
+            return "access-history/certifications";
+        }
+        return "access-history/" + entity;
+    }
+
     private static Response denied(String entity, String stage, Throwable t) {
-        LOG.warn("KeyForgeNativeIIQ access-history " + entity + ": denied at stage=" + stage, t);
+        PluginLog.denied(LOG, endpointFor(entity), stage, t);
         return Response.status(Response.Status.FORBIDDEN)
                 .entity(NativeAccessHistoryWire.errorEnvelope(entity, Response.Status.FORBIDDEN.getStatusCode(), t))
                 .type(MediaType.APPLICATION_JSON).build();
     }
 
     private static Response badRequest(String entity, Throwable t) {
-        LOG.info("KeyForgeNativeIIQ request rejected endpoint=" + entity + " reason=" + LogText.safe(t == null ? null : t.getMessage()));
+        PluginLog.rejected(LOG, endpointFor(entity), t == null ? null : t.getMessage());
         return Response.status(Response.Status.BAD_REQUEST)
                 .entity(NativeAccessHistoryWire.errorEnvelope(entity, Response.Status.BAD_REQUEST.getStatusCode(), t))
                 .type(MediaType.APPLICATION_JSON).build();
     }
 
     private static Response failed(String entity, String stage, Throwable t) {
-        LOG.error("KeyForgeNativeIIQ access-history " + entity + ": failed at stage=" + stage, t);
+        PluginLog.failed(LOG, endpointFor(entity), stage, t);
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(NativeAccessHistoryWire.errorEnvelope(
                         entity, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), t))

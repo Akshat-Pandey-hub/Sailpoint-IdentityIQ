@@ -45,7 +45,7 @@ public class NativePolicyResource extends BasePluginResource {
                                 @QueryParam("limit") @DefaultValue("100") int limit,
                                 @QueryParam("modifiedAfter") String modifiedAfter) {
         long requestStartedAt = System.currentTimeMillis();
-        PluginLogLevel.apply(); LOG.info("KeyForgeNativeIIQ request endpoint=" + "policies" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
+        PluginLog.request(LOG, "policies", start, limit, modifiedAfter);
         java.util.Date bound = com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
             return error(Response.Status.BAD_REQUEST, com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
@@ -64,20 +64,20 @@ public class NativePolicyResource extends BasePluginResource {
                     new NativePolicyExtractionService().extract(context, safeStart, safeLimit, bound);
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativePolicyWire.envelope(result, safeStart, safeLimit);
-            LOG.info("KeyForgeNativeIIQ result endpoint=policies status=200 rows=" + result.getCount() + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
+            PluginLog.result(LOG, "policies", result.getCount(), requestStartedAt);
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.warn("KeyForgeNativeIIQ policies: authorization denied at stage=" + stage, e);
+            PluginLog.denied(LOG, "policies", stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.error("KeyForgeNativeIIQ policies: failed at stage=" + stage, t);
+            PluginLog.failed(LOG, "policies", stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     private static Response error(Response.Status status, Throwable t) {
         if (status == Response.Status.BAD_REQUEST) {
-            LOG.info("KeyForgeNativeIIQ request rejected endpoint=policy reason=" + LogText.safe(t == null ? null : t.getMessage()));
+            PluginLog.rejected(LOG, "policies", t == null ? null : t.getMessage());
         }
         return Response.status(status)
                 .entity(NativePolicyWire.errorEnvelope(status.getStatusCode(), t))
