@@ -83,7 +83,8 @@ public final class NativeIncrementalQuery {
      * Parses an ISO-8601 instant (e.g. {@code 2026-01-01T00:00:00Z}, with or without offset) into a
      * {@link Date} suitable for an IIQ {@code modified} filter, or {@code null} if absent/unparseable.
      * Self-contained so the plugin needs no loader classes. A value that cannot be parsed yields
-     * {@code null}, which collapses to a full scan — the helper never fabricates a boundary.
+     * {@code null}; resources must reject such a value with {@link #isInvalid} first, so a malformed
+     * bound is answered with 400 and never collapses into an unfiltered full scan.
      */
     public static Date parseIsoToDate(String iso) {
         if (iso == null || iso.trim().isEmpty()) {
@@ -99,5 +100,16 @@ public final class NativeIncrementalQuery {
                 return null;
             }
         }
+    }
+
+    /** True when {@code iso} was supplied (non-blank) but is not a parseable ISO-8601 instant. */
+    public static boolean isInvalid(String iso) {
+        return iso != null && !iso.trim().isEmpty() && parseIsoToDate(iso) == null;
+    }
+
+    /** The client error for an invalid bound; a fixed message that never echoes input or internals. */
+    public static IllegalArgumentException invalidTimestamp() {
+        return new IllegalArgumentException("invalid 'modifiedAfter': expected an ISO-8601 instant, e.g. "
+                + "2026-10-12T10:00:00Z or 2026-10-12T15:30:00+05:30");
     }
 }

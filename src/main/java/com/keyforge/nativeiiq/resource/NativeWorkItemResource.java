@@ -51,6 +51,10 @@ public class NativeWorkItemResource extends BasePluginResource {
         // created after it). Absent or unparseable -> null -> the full population (unchanged behaviour).
         java.util.Date modifiedAfterDate =
                 com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+        if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return error(Response.Status.BAD_REQUEST,
+                    com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
+        }
         String stage = "start";
         try {
             stage = "getContext";

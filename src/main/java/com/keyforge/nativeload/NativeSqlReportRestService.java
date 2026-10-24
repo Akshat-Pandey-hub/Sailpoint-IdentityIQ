@@ -33,9 +33,10 @@ import java.util.Set;
  * <p>Filtering/paging follow the established REST contract: exact scalar-column equality, multiple
  * filters AND-combined, an unknown filter name (not a runtime column) throws
  * {@link IllegalArgumentException} (the routing layer maps it to HTTP 400), filtering is applied before
- * {@code start}/{@code limit}, {@code start} defaults to 0, {@code limit} defaults to all, an empty
- * result is {@code []}. No {@code modifiedAfter}: the underlying report client runs the whole SELECT and
- * supports no change-bound, so that param stays reserved/ignored.
+ * {@code start}/{@code limit}, and {@code start} defaults to 0. When omitted, {@code limit} preserves the
+ * plugin's legacy cap; a capped/incomplete response becomes an error instead of a partial success. An
+ * empty page is {@code []}. No {@code modifiedAfter}: the underlying report client supports no change-bound,
+ * so that param stays reserved/ignored.
  */
 public final class NativeSqlReportRestService {
 
@@ -44,7 +45,15 @@ public final class NativeSqlReportRestService {
     public interface ReportSource {
         /** @return the raw JSON envelope body for the given server-registered report id */
         String fetchReport(String reportId);
+
+        /** Existing test/fake sources may ignore paging; production supplies the complete request. */
+        default String fetchReport(String reportId, Map<String, String> filters,
+                                   Integer start, Integer limit) {
+            return fetchReport(reportId);
+        }
     }
+
+    private static final int MAX_PAGE_SIZE = 200000;
 
     private final NativeSqlReportParser parser = new NativeSqlReportParser();
 
@@ -61,7 +70,8 @@ public final class NativeSqlReportRestService {
     }
 
     /**
-     * Fetch → parse → filter → window → serialize for one registered report.
+     * Fetch one plugin page → parse → serialize. The plugin applies the existing exact-string filters
+     * before paging while streaming the JDBC result set, so the agent no longer buffers the full report.
      *
      * @throws IllegalArgumentException if {@code reportId} is not registered, or a filter names a
      *                                  field that is not one of the report's runtime columns
@@ -73,7 +83,23 @@ public final class NativeSqlReportRestService {
                     + "'; registered reports are: " + registeredReports);
         }
 
-        NativeSqlReportParser.Result result = parser.parse(source.fetchReport(reportId));
+        int normalizedStart = start == null ? 0 : start.intValue();
+        if (normalizedStart < 0) {
+            throw new IllegalArgumentException("invalid 'start': must be zero or greater");
+        }
+        if (limit != null && (limit.intValue() < 1 || limit.intValue() > MAX_PAGE_SIZE)) {
+            throw new IllegalArgumentException("invalid 'limit': must be between 1 and " + MAX_PAGE_SIZE);
+        }
+        long endExclusive = (long) normalizedStart + (long) (limit == null ? MAX_PAGE_SIZE : limit.intValue()) + 1L;
+        if (endExclusive > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("invalid paging range: start plus limit exceeds JDBC's supported row range");
+        }
+
+        NativeSqlReportParser.Result result = parser.parse(
+                source.fetchReport(reportId, filters, start, limit));
+        if (result.truncated) {
+            throw new NativeImportException("IIQ returned an incomplete SQL report; request a smaller page.");
+        }
 
         // The authoritative, generic column contract is whatever the plugin returned at runtime.
         Set<String> columns = new LinkedHashSet<>(result.columns);
@@ -86,20 +112,21 @@ public final class NativeSqlReportRestService {
             }
         }
 
-        List<Map<String, String>> matched = new ArrayList<>();
-        for (Map<String, String> row : result.rows) {
-            if (matches(row, filters)) {
-                matched.add(row);
+        List<Map<String, String>> selected = result.rows;
+        if (!result.pagingApplied) {
+            // Compatibility with an older plugin that ignores paging/filter query parameters.
+            List<Map<String, String>> matched = new ArrayList<>();
+            for (Map<String, String> row : result.rows) {
+                if (matches(row, filters)) matched.add(row);
             }
+            int from = Math.min(normalizedStart, matched.size());
+            int to = limit == null ? matched.size()
+                    : (int) Math.min((long) matched.size(), (long) from + limit.intValue());
+            selected = matched.subList(from, Math.max(from, to));
         }
 
-        int from = (start == null || start < 0) ? 0 : start;
-        if (from > matched.size()) from = matched.size();
-        int to = (limit == null || limit < 0) ? matched.size() : Math.min(matched.size(), from + limit);
-        if (to < from) to = from;
-
-        List<Map<String, Object>> out = new ArrayList<>(to - from);
-        for (Map<String, String> row : matched.subList(from, to)) {
+        List<Map<String, Object>> out = new ArrayList<>(selected.size());
+        for (Map<String, String> row : selected) {
             Map<String, Object> m = new LinkedHashMap<>();
             if (!result.columns.isEmpty()) {
                 for (String col : result.columns) {
@@ -114,14 +141,10 @@ public final class NativeSqlReportRestService {
     }
 
     private static boolean matches(Map<String, String> row, Map<String, String> filters) {
-        if (filters == null || filters.isEmpty()) {
-            return true;
-        }
-        for (Map.Entry<String, String> f : filters.entrySet()) {
-            String actual = row.get(f.getKey());
-            if (actual == null || !actual.equals(f.getValue())) { // null never equals a requested value
-                return false;
-            }
+        if (filters == null || filters.isEmpty()) return true;
+        for (Map.Entry<String, String> filter : filters.entrySet()) {
+            String actual = row.get(filter.getKey());
+            if (actual == null || !actual.equals(filter.getValue())) return false;
         }
         return true;
     }

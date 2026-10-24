@@ -58,4 +58,5 @@ ORDER BY
     a.name,
     ie.native_identity,
     ie.name,
-    ie.value
+    ie.value,
+    ie.id

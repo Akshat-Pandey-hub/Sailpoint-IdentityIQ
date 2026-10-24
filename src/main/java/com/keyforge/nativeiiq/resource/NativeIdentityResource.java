@@ -77,6 +77,10 @@ public class NativeIdentityResource extends BasePluginResource {
         // or unparseable -> null -> full page (unchanged behaviour). Server-side filter, not post-hoc.
         java.util.Date modifiedAfterDate =
                 com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+        if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return error(Response.Status.BAD_REQUEST,
+                    com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
+        }
         // Boundary logging: records the last successful stage; no credentials or Identity data.
         // Authorization is enforced by IIQ's PluginAuthorizationFilter via the @SystemAdmin annotation
         // above (the caller must be a System Administrator) — the required IIQ 8.4 plugin-REST gate.

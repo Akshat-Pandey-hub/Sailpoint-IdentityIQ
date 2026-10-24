@@ -6,8 +6,10 @@ import java.time.Instant;
 import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for the native CSS incremental query helper — the single place the server-side
@@ -47,5 +49,29 @@ class NativeIncrementalQueryTest {
         assertNull(NativeIncrementalQuery.parseIsoToDate(null));
         assertNull(NativeIncrementalQuery.parseIsoToDate("   "));
         assertNull(NativeIncrementalQuery.parseIsoToDate("not-a-timestamp"));
+    }
+
+    @Test
+    void onlyASuppliedButUnparseableBoundIsInvalid() {
+        // absent / blank = no bound (ordinary request), unchanged
+        assertFalse(NativeIncrementalQuery.isInvalid(null));
+        assertFalse(NativeIncrementalQuery.isInvalid(""));
+        assertFalse(NativeIncrementalQuery.isInvalid("   "));
+        // every format accepted today stays valid
+        assertFalse(NativeIncrementalQuery.isInvalid("2026-01-01T00:00:00Z"));
+        assertFalse(NativeIncrementalQuery.isInvalid("2026-01-01T00:00:00.123456Z"));
+        assertFalse(NativeIncrementalQuery.isInvalid("2026-01-01T05:30:00+05:30"));
+        // supplied but not an instant -> invalid (rejected with 400, never an unfiltered scan)
+        assertTrue(NativeIncrementalQuery.isInvalid("yesterday"));
+        assertTrue(NativeIncrementalQuery.isInvalid("2026-02-30T00:00:00Z"), "impossible calendar date");
+        assertTrue(NativeIncrementalQuery.isInvalid("2026-01-01"), "date without time is not an instant");
+        assertTrue(NativeIncrementalQuery.isInvalid("1767225600000"), "epoch millis is not a supported format");
+    }
+
+    @Test
+    void invalidTimestampMessageIsFixedAndDoesNotEchoInput() {
+        String msg = NativeIncrementalQuery.invalidTimestamp().getMessage();
+        assertTrue(msg.startsWith("invalid 'modifiedAfter'"));
+        assertFalse(msg.contains("yesterday"));
     }
 }

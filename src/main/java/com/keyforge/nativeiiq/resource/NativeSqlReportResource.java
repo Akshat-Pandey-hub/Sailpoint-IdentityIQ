@@ -8,9 +8,12 @@ import sailpoint.rest.plugin.SystemAdmin;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -18,9 +21,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,9 +50,6 @@ import java.util.logging.Logger;
 public class NativeSqlReportResource extends BasePluginResource {
 
     private static final Logger LOG = Logger.getLogger(NativeSqlReportResource.class.getName());
-
-    /** Hard cap so a single request can never materialize an unbounded result set into memory. */
-    static final int MAX_ROWS = 200000;
 
     /** Report name -> bundled SQL resource path (on the plugin classpath). Baked, never client-supplied. */
     private static final Map<String, String> REPORTS = new LinkedHashMap<String, String>();
@@ -139,7 +137,7 @@ public class NativeSqlReportResource extends BasePluginResource {
     @Path("sqlReport/{report}")
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
-    public Response runReport(@PathParam("report") String report) {
+    public Response runReport(@PathParam("report") String report, @Context UriInfo uriInfo) {
         String stage = "start";
         try {
             String resourcePath = REPORTS.get(report);
@@ -156,6 +154,22 @@ public class NativeSqlReportResource extends BasePluginResource {
                 throw new IllegalStateException("registered report SQL is not a single read-only SELECT");
             }
 
+            Map<String, String> filters = new LinkedHashMap<String, String>();
+            MultivaluedMap<String, String> query = uriInfo.getQueryParameters();
+            for (Map.Entry<String, List<String>> entry : query.entrySet()) {
+                String key = entry.getKey();
+                if ("start".equals(key) || "limit".equals(key)) {
+                    continue;
+                }
+                List<String> values = entry.getValue();
+                if (values != null && !values.isEmpty()) {
+                    filters.put(key, values.get(0));
+                }
+            }
+            Integer start = NativeSqlReportExecutor.parsePageValue(query.getFirst("start"), "start");
+            Integer limit = NativeSqlReportExecutor.parsePageValue(query.getFirst("limit"), "limit");
+            NativeSqlReportExecutor.validatePage(start, limit);
+
             stage = "getContext";
             SailPointContext context = getContext();
 
@@ -163,69 +177,22 @@ public class NativeSqlReportResource extends BasePluginResource {
             Connection conn = context.getJdbcConnection(); // IIQ application DB; owned by context, not closed here
 
             stage = "execute";
-            Map<String, Object> envelope = execute(conn, report, sql);
+            Map<String, Object> envelope = NativeSqlReportExecutor.execute(conn, report, sql, filters, start, limit);
 
             LOG.fine("KeyForgeNativeIIQ sqlReport[" + report + "]: returned "
                     + envelope.get("returned") + " row(s)");
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
             LOG.log(Level.WARNING, "KeyForgeNativeIIQ sqlReport: authorization denied at stage=" + stage, e);
-            return error(Response.Status.FORBIDDEN, report, e);
+            return error(Response.Status.FORBIDDEN, report, "Access denied.");
+        } catch (NativeSqlReportExecutor.BadRequest e) {
+            return error(Response.Status.BAD_REQUEST, report, e.getMessage());
         } catch (Throwable t) {
             // Broader than Exception on purpose: contain Errors so IIQ returns a JSON 500, never exception.jsf.
             LOG.log(Level.SEVERE, "KeyForgeNativeIIQ sqlReport: failed at stage=" + stage, t);
-            return error(Response.Status.INTERNAL_SERVER_ERROR, report, t);
+            return error(Response.Status.INTERNAL_SERVER_ERROR, report,
+                    "SQL report could not be completed. Check the IdentityIQ server log.");
         }
-    }
-
-    /** Runs the SELECT and projects the ResultSet into {columns, rows[], returned, truncated}. */
-    private Map<String, Object> execute(Connection conn, String report, String sql) throws Exception {
-        List<String> columns = new ArrayList<String>();
-        List<Map<String, Object>> rows = new ArrayList<Map<String, Object>>();
-        boolean truncated = false;
-
-        Statement st = null;
-        ResultSet rs = null;
-        try {
-            st = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-            rs = st.executeQuery(sql);
-            ResultSetMetaData md = rs.getMetaData();
-            int n = md.getColumnCount();
-            for (int c = 1; c <= n; c++) {
-                // getColumnLabel honours the SQL alias (AS ...), preserving the business column names.
-                columns.add(md.getColumnLabel(c));
-            }
-            int count = 0;
-            while (rs.next()) {
-                if (count >= MAX_ROWS) {
-                    truncated = true;
-                    break;
-                }
-                Map<String, Object> row = new LinkedHashMap<String, Object>();
-                for (int c = 1; c <= n; c++) {
-                    // getString preserves the value verbatim and leaves SQL NULL as JSON null.
-                    row.put(columns.get(c - 1), rs.getString(c));
-                }
-                rows.add(row);
-                count++;
-            }
-        } finally {
-            if (rs != null) {
-                try { rs.close(); } catch (Exception ignore) { }
-            }
-            if (st != null) {
-                try { st.close(); } catch (Exception ignore) { }
-            }
-            // Deliberately NOT closing conn: it belongs to the SailPointContext.
-        }
-
-        Map<String, Object> env = new LinkedHashMap<String, Object>();
-        env.put("report", report);
-        env.put("columns", columns);
-        env.put("rows", rows);
-        env.put("returned", Integer.valueOf(rows.size()));
-        env.put("truncated", Boolean.valueOf(truncated));
-        return env;
     }
 
     /** Loads the bundled SQL and strips only a trailing {@code ;}/whitespace (JDBC single-statement). */
@@ -271,10 +238,9 @@ public class NativeSqlReportResource extends BasePluginResource {
         return true;
     }
 
-    private Response error(Response.Status status, String report, Throwable t) {
+    private Response error(Response.Status status, String report, String message) {
         Map<String, Object> error = new LinkedHashMap<String, Object>();
-        error.put("type", t == null ? null : t.getClass().getName());
-        error.put("message", t == null ? null : String.valueOf(t.getMessage()));
+        error.put("message", message);
         Map<String, Object> env = new LinkedHashMap<String, Object>();
         env.put("report", report);
         env.put("status", Integer.valueOf(status.getStatusCode()));

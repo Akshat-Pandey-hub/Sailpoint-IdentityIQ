@@ -71,6 +71,10 @@ public class NativeAccessHistoryResource extends BasePluginResource {
         // Absent or unparseable -> null -> the full population (unchanged behaviour).
         java.util.Date createdAfter =
                 com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+        if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return badRequest("HistoricalEntitlementCapture",
+                    com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
+        }
         String stage = "start";
         try {
             stage = "getContext";
@@ -101,6 +105,10 @@ public class NativeAccessHistoryResource extends BasePluginResource {
         // Absent or unparseable -> null -> the full population (unchanged behaviour).
         java.util.Date createdAfter =
                 com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+        if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return badRequest("HistoricalIdentityEvent",
+                    com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
+        }
         String stage = "start";
         try {
             stage = "getContext";
@@ -131,6 +139,10 @@ public class NativeAccessHistoryResource extends BasePluginResource {
         // Absent or unparseable -> null -> the full population (unchanged behaviour).
         java.util.Date createdAfter =
                 com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+        if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return badRequest("HistoricalRoleEvent",
+                    com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
+        }
         String stage = "start";
         try {
             stage = "getContext";
@@ -161,6 +173,10 @@ public class NativeAccessHistoryResource extends BasePluginResource {
         // Absent or unparseable -> null -> the full population (unchanged behaviour).
         java.util.Date createdAfter =
                 com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+        if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return badRequest("HistoricalCertification",
+                    com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
+        }
         String stage = "start";
         try {
             stage = "getContext";
@@ -182,6 +198,12 @@ public class NativeAccessHistoryResource extends BasePluginResource {
         LOG.log(Level.WARNING, "KeyForgeNativeIIQ access-history " + entity + ": denied at stage=" + stage, t);
         return Response.status(Response.Status.FORBIDDEN)
                 .entity(NativeAccessHistoryWire.errorEnvelope(entity, Response.Status.FORBIDDEN.getStatusCode(), t))
+                .type(MediaType.APPLICATION_JSON).build();
+    }
+
+    private static Response badRequest(String entity, Throwable t) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                .entity(NativeAccessHistoryWire.errorEnvelope(entity, Response.Status.BAD_REQUEST.getStatusCode(), t))
                 .type(MediaType.APPLICATION_JSON).build();
     }
 

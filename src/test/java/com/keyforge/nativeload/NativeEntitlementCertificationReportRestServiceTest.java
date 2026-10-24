@@ -195,8 +195,10 @@ class NativeEntitlementCertificationReportRestServiceTest {
         assertEquals(2, win.size());
         assertEquals("bob", win.get(0).get("user_id"));
         assertEquals(1, svc.fetch(src, "entitlementCertification", null, 0, 1).size());
-        assertEquals(3, svc.fetch(src, "entitlementCertification", null, -5, null).size()); // start<0 -> 0
-        assertEquals(3, svc.fetch(src, "entitlementCertification", null, null, -1).size()); // limit<0 -> all
+        assertThrows(IllegalArgumentException.class,
+                () -> svc.fetch(src, "entitlementCertification", null, -5, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> svc.fetch(src, "entitlementCertification", null, null, -1));
         assertEquals(0, svc.fetch(src, "entitlementCertification", null, 99, 5).size());    // past end -> []
     }
 

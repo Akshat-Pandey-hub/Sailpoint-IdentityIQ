@@ -19,4 +19,7 @@ WHERE wg.workgroup = TRUE
 ORDER BY
     wg.name,
     u.inactive DESC,
-    u.display_name
+    u.display_name,
+    wg.id,
+    u.id,
+    iw.idx

@@ -53,6 +53,10 @@ public class NativeRoleResource extends BasePluginResource {
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         java.util.Date modifiedAfterDate =
                 com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+        if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return error(Response.Status.BAD_REQUEST,
+                    com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
+        }
         String stage = "start";
         try {
             LOG.fine("KeyForgeNativeIIQ roles: entering (start=" + safeStart + ", limit=" + safeLimit + ")");

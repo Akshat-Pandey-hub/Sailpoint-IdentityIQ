@@ -20,11 +20,16 @@ final class NativeSqlReportParser {
         final List<String> columns;
         final List<Map<String, String>> rows;
         final boolean truncated;
+        final boolean hasMore;
+        final boolean pagingApplied;
 
-        Result(List<String> columns, List<Map<String, String>> rows, boolean truncated) {
+        Result(List<String> columns, List<Map<String, String>> rows, boolean truncated,
+               boolean hasMore, boolean pagingApplied) {
             this.columns = columns;
             this.rows = rows;
             this.truncated = truncated;
+            this.hasMore = hasMore;
+            this.pagingApplied = pagingApplied;
         }
     }
 
@@ -35,21 +40,19 @@ final class NativeSqlReportParser {
         try {
             root = mapper.readTree(json == null ? "" : json);
         } catch (Exception e) {
-            throw new NativeImportException("SQL-report endpoint did not return JSON: "
-                    + e.getMessage() + " -- body: " + snippet(json), e);
+            throw new NativeImportException("IIQ SQL-report endpoint returned an invalid response.", e);
         }
         if (root == null || !root.isObject()) {
-            throw new NativeImportException("Unexpected SQL-report response (not a JSON object) -- body: "
-                    + snippet(json));
+            throw new NativeImportException("IIQ SQL-report endpoint returned an invalid response.");
         }
         JsonNode error = root.get("error");
         if (error != null && !error.isNull()) {
-            String type = error.path("type").asText("unknown");
             String message = error.path("message").asText("");
-            throw new NativeImportException("IIQ plugin endpoint returned an error (status "
-                    + root.path("status").asText("?") + "): " + type
-                    + (message.isEmpty() ? "" : ": " + message)
-                    + (error.isTextual() ? ": " + error.asText() : ""));
+            int status = root.path("status").asInt(500);
+            if (status == 400 && !message.isEmpty()) {
+                throw new IllegalArgumentException(message);
+            }
+            throw new NativeImportException("IIQ SQL report failed (HTTP " + status + ").");
         }
 
         List<String> columns = new ArrayList<String>();
@@ -62,8 +65,7 @@ final class NativeSqlReportParser {
 
         JsonNode rowsNode = root.get("rows");
         if (rowsNode == null || !rowsNode.isArray()) {
-            throw new NativeImportException("Unexpected SQL-report response (no 'rows' array) -- body: "
-                    + snippet(json));
+            throw new NativeImportException("IIQ SQL-report endpoint returned an invalid response.");
         }
         List<Map<String, String>> rows = new ArrayList<Map<String, String>>();
         for (JsonNode r : rowsNode) {
@@ -86,14 +88,8 @@ final class NativeSqlReportParser {
         }
 
         boolean truncated = root.path("truncated").asBoolean(false);
-        return new Result(columns, rows, truncated);
-    }
-
-    private static String snippet(String json) {
-        if (json == null || json.isEmpty()) {
-            return "<empty>";
-        }
-        String s = json.strip().replaceAll("\\s+", " ");
-        return s.length() <= 500 ? s : s.substring(0, 500) + "... (truncated)";
+        boolean hasMore = root.path("hasMore").asBoolean(false);
+        boolean pagingApplied = root.path("pagingApplied").asBoolean(false);
+        return new Result(columns, rows, truncated, hasMore, pagingApplied);
     }
 }

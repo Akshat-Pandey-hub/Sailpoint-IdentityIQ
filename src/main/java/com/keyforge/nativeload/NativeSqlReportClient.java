@@ -25,15 +25,29 @@ public final class NativeSqlReportClient {
     }
 
     /**
-     * Fetches the full JSON envelope for a report (the server returns the whole result set in one
-     * response). Warms the CSRF token first, exactly as the other native reads do.
+     * Fetches one JSON page from a report. Filters, start, and limit are sent to the plugin so that
+     * filtering remains before paging and the plugin does not return the full report body.
      *
      * @param report the server-registered report name (e.g. {@code entitlementAssignment})
      * @return the raw JSON envelope body
      */
-    public String fetch(String report) {
+    public String fetch(String report, Map<String, String> filters, Integer start, Integer limit) {
         session.warmCsrfToken();
         Map<String, String> params = new LinkedHashMap<String, String>();
+        if (filters != null) {
+            params.putAll(filters);
+        }
+        if (start != null) {
+            params.put("start", start.toString());
+        }
+        if (limit != null) {
+            params.put("limit", limit.toString());
+        }
         return session.get(SQL_REPORT_PATH + report, params);
+    }
+
+    /** Backward-compatible convenience for callers that need the legacy unpaged envelope. */
+    public String fetch(String report) {
+        return fetch(report, null, null, null);
     }
 }

@@ -122,4 +122,7 @@ ORDER BY
     app.name,
     ie.native_identity,
     ie.name,
-    ie.value
+    ie.value,
+    ie.id,
+    ch.certification_id,
+    ch.native_identity

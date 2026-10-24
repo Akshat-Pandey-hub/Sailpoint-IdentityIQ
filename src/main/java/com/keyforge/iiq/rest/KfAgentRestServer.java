@@ -768,15 +768,24 @@ public final class KfAgentRestServer {
             }
         }
         Integer start = intOrNull(q.get("start"));
-        Integer limit = intOrNull(q.get("limit"));
+        Integer limit = reportLimit(q.get("limit"));
 
         NativeSqlReportClient client = new NativeSqlReportClient(session);
         try {
             List<Map<String, Object>> rows =
-                    sqlReportService.fetch(client::fetch, "entitlementAssignment", filters, start, limit);
+                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit),
+                            "entitlementAssignment", filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field / unregistered report
+        } catch (com.keyforge.nativeload.NativeImportException incomplete) {
+            writeJson(ex, 502, error(incomplete.getMessage()));
+        } catch (com.keyforge.iiq.client.IiqApiException iiq) {
+            if (iiq.getStatusCode() != 400) {
+                throw iiq; // any other IIQ failure stays a server error, as before
+            }
+            // the plugin rejected the request (unknown filter field or invalid start/limit)
+            writeJson(ex, 400, error("invalid report request: unknown filter field or invalid start/limit"));
         }
     }
 
@@ -796,15 +805,24 @@ public final class KfAgentRestServer {
             }
         }
         Integer start = intOrNull(q.get("start"));
-        Integer limit = intOrNull(q.get("limit"));
+        Integer limit = reportLimit(q.get("limit"));
 
         NativeSqlReportClient client = new NativeSqlReportClient(session);
         try {
             List<Map<String, Object>> rows =
-                    sqlReportService.fetch(client::fetch, "workgroupMembers", filters, start, limit);
+                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit),
+                            "workgroupMembers", filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field / unregistered report
+        } catch (com.keyforge.nativeload.NativeImportException incomplete) {
+            writeJson(ex, 502, error(incomplete.getMessage()));
+        } catch (com.keyforge.iiq.client.IiqApiException iiq) {
+            if (iiq.getStatusCode() != 400) {
+                throw iiq; // any other IIQ failure stays a server error, as before
+            }
+            // the plugin rejected the request (unknown filter field or invalid start/limit)
+            writeJson(ex, 400, error("invalid report request: unknown filter field or invalid start/limit"));
         }
     }
 
@@ -823,15 +841,24 @@ public final class KfAgentRestServer {
             }
         }
         Integer start = intOrNull(q.get("start"));
-        Integer limit = intOrNull(q.get("limit"));
+        Integer limit = reportLimit(q.get("limit"));
 
         NativeSqlReportClient client = new NativeSqlReportClient(session);
         try {
             List<Map<String, Object>> rows =
-                    sqlReportService.fetch(client::fetch, "entitlementCertification", filters, start, limit);
+                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit),
+                            "entitlementCertification", filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field / unregistered report
+        } catch (com.keyforge.nativeload.NativeImportException incomplete) {
+            writeJson(ex, 502, error(incomplete.getMessage()));
+        } catch (com.keyforge.iiq.client.IiqApiException iiq) {
+            if (iiq.getStatusCode() != 400) {
+                throw iiq; // any other IIQ failure stays a server error, as before
+            }
+            // the plugin rejected the request (unknown filter field or invalid start/limit)
+            writeJson(ex, 400, error("invalid report request: unknown filter field or invalid start/limit"));
         }
     }
 
@@ -852,15 +879,24 @@ public final class KfAgentRestServer {
             }
         }
         Integer start = intOrNull(q.get("start"));
-        Integer limit = intOrNull(q.get("limit"));
+        Integer limit = reportLimit(q.get("limit"));
 
         NativeSqlReportClient client = new NativeSqlReportClient(session);
         try {
             List<Map<String, Object>> rows =
-                    sqlReportService.fetch(client::fetch, "entitlementCertificationStatus", filters, start, limit);
+                    sqlReportService.fetch(id -> client.fetch(id, filters, start, limit),
+                            "entitlementCertificationStatus", filters, start, limit);
             writeJson(ex, 200, mapper.writeValueAsBytes(rows)); // plain JSON array, no wrapper
         } catch (IllegalArgumentException bad) {
             writeJson(ex, 400, error(bad.getMessage())); // unknown filter field / unregistered report
+        } catch (com.keyforge.nativeload.NativeImportException incomplete) {
+            writeJson(ex, 502, error(incomplete.getMessage()));
+        } catch (com.keyforge.iiq.client.IiqApiException iiq) {
+            if (iiq.getStatusCode() != 400) {
+                throw iiq; // any other IIQ failure stays a server error, as before
+            }
+            // the plugin rejected the request (unknown filter field or invalid start/limit)
+            writeJson(ex, 400, error("invalid report request: unknown filter field or invalid start/limit"));
         }
     }
 
@@ -1386,6 +1422,12 @@ public final class KfAgentRestServer {
             }
         }
         return null;
+    }
+
+    /** SQL-report limit: a negative value means "no limit", as on every other endpoint. */
+    private static Integer reportLimit(String raw) {
+        Integer limit = intOrNull(raw);
+        return limit != null && limit < 0 ? null : limit;
     }
 
     private static Integer intOrNull(String s) {

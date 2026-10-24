@@ -40,15 +40,20 @@ class NativeSqlReportParserTest {
 
     @Test
     void truncatedFlagIsCarried() {
-        String json = "{\"columns\":[\"a\"],\"rows\":[{\"a\":\"x\"}],\"truncated\":true}";
+        String json = "{\"columns\":[\"a\"],\"rows\":[{\"a\":\"x\"}],"
+                + "\"truncated\":true,\"hasMore\":true,\"pagingApplied\":true}";
         assertTrue(parser.parse(json).truncated);
+        assertTrue(parser.parse(json).hasMore);
+        assertTrue(parser.parse(json).pagingApplied);
     }
 
     @Test
     void errorEnvelopeThrows() {
         String json = "{\"report\":\"entitlementAssignment\",\"status\":500,"
                 + "\"error\":{\"type\":\"java.sql.SQLException\",\"message\":\"bad column\"}}";
-        assertThrows(NativeImportException.class, () -> parser.parse(json));
+        NativeImportException error = assertThrows(NativeImportException.class, () -> parser.parse(json));
+        assertFalse(error.getMessage().contains("bad column"), "database details are not exposed to the caller");
+        assertTrue(error.getMessage().contains("HTTP 500"));
     }
 
     @Test

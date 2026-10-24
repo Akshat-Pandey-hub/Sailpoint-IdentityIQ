@@ -54,6 +54,10 @@ public class NativeManagedAttributeResource extends BasePluginResource {
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         java.util.Date modifiedAfterDate =
                 com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
+        if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
+            return error(Response.Status.BAD_REQUEST,
+                    com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
+        }
         // Authorization enforced by IIQ's PluginAuthorizationFilter via @SystemAdmin (required 8.4 gate).
         String stage = "start";
         try {
