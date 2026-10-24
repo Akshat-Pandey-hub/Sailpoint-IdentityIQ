@@ -32,7 +32,7 @@ import java.util.function.Function;
  * field is not filterable; the other 16 are scalar ({@code constraint_count} is an integer) and filterable.
  * The KeyForge {@code policyid} PK, {@code record_hash}, {@code is_deleted}/{@code deleted_at} (not in the
  * native record) and the lineage envelope are excluded. No {@code source_hash}; no native
- * {@code modifiedAfter} (full-scan only).
+ * {@code modifiedAfter} is forwarded to the plugin when supplied; filtering is source-side where supported.
  */
 public final class NativePolicyRestService {
 

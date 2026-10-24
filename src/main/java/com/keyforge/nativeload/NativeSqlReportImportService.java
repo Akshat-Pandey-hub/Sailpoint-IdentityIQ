@@ -44,6 +44,9 @@ public final class NativeSqlReportImportService {
     public Result importAll(Connection conn, String runId) throws SQLException {
         String json = fetcher.get();
         NativeSqlReportParser.Result parsed = parser.parse(json);
+        if (parsed.truncated) {
+            throw new NativeImportException("SQL report response was truncated; existing report rows were left unchanged");
+        }
         int persisted = repository.replaceAll(conn, parsed.rows, runId);
         return new Result(parsed.rows.size(), persisted, parsed.truncated, parsed.columns.size());
     }

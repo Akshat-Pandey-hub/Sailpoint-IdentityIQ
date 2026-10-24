@@ -32,7 +32,7 @@ import java.util.function.Function;
  * filterable; the other 33 are scalar (strings / booleans / integers / timestamps) and filterable. The
  * KeyForge {@code identityrequestid} PK, {@code record_hash}, {@code is_deleted}/{@code deleted_at} (not in
  * the native record) and the lineage envelope are excluded. This row has no {@code source_hash}, and the
- * native client has no server-side {@code modifiedAfter} support (full-scan only). The nested {@code items}
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  * and {@code approvals} belong to their own entities and are NOT part of this response.
  */
 public final class NativeIdentityRequestRestService {

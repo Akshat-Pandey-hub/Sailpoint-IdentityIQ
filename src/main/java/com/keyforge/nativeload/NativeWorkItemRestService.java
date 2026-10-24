@@ -33,7 +33,7 @@ import java.util.function.Function;
  * jsonb fields are not filterable; the other 37 are scalar and filterable. The KeyForge {@code workitemid} PK,
  * {@code record_hash}, lineage envelope ({@code source_system}/{@code source_interface}/
  * {@code source_object_type}/{@code extraction_run_id}/{@code extracted_at}) and soft-delete columns are
- * excluded. No native {@code modifiedAfter} (the WorkItem client has no server-side modified filter →
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  * full-scan only).
  */
 public final class NativeWorkItemRestService {

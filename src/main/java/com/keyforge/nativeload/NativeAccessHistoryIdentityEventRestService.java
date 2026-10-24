@@ -30,7 +30,7 @@ import java.util.function.Function;
  * {@code qry_property1}..{@code qry_property10} (the native event's queryable history properties) which are
  * preserved as real columns. There are no boolean fields. The 37 scalar fields are filterable. The KeyForge
  * {@code hist_event_id} PK, {@code record_hash} and the lineage envelope are excluded. Append-only (no
- * soft-delete columns). No native {@code modifiedAfter} (full-scan only).
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  */
 public final class NativeAccessHistoryIdentityEventRestService {
 

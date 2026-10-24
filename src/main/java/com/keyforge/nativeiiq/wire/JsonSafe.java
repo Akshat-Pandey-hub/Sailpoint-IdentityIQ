@@ -51,7 +51,7 @@ public final class JsonSafe {
                 return value; // already JSON-primitive
             }
             if (depth >= MAX_DEPTH) {
-                return String.valueOf(value); // stop recursing; keep a readable form
+                return depthLimitValue(value, JsonSafe::iiqValue, () -> String.valueOf(value));
             }
             if (value instanceof CharSequence || value instanceof Character) {
                 return value.toString();
@@ -91,14 +91,8 @@ public final class JsonSafe {
                 }
                 return out;
             }
-            if (value instanceof SailPointObject) {
-                Map<String, Object> ref = referenceValue(value);
-                if (ref != null) return ref;
-            }
-            if (value instanceof AbstractXmlObject) {
-                Object xml = xmlValue(value, NativeSerialize::xml);
-                if (xml != null) return xml;
-            }
+            Object iiqValue = iiqValue(value);
+            if (iiqValue != null) return iiqValue;
             // Unknown/complex type (proxy, custom bean): degrade to a safe string rather than let
             // Jackson attempt to introspect it and throw.
             return String.valueOf(value);
@@ -111,6 +105,23 @@ public final class JsonSafe {
     /** The same {id, name, class} reference ReflectiveProperties gives SailPoint objects everywhere else. */
     static Map<String, Object> referenceValue(Object value) {
         return ReflectiveProperties.asReference(value);
+    }
+
+    /** Apply the same safe IIQ-object representation at ordinary and depth-limited positions. */
+    private static Object iiqValue(Object value) {
+        if (value instanceof SailPointObject) {
+            return referenceValue(value);
+        }
+        if (value instanceof AbstractXmlObject) {
+            return xmlValue(value, NativeSerialize::xml);
+        }
+        return null;
+    }
+
+    static Object depthLimitValue(Object value, Function<Object, Object> iiqHandler,
+                                  java.util.function.Supplier<Object> fallback) {
+        Object safe = iiqHandler.apply(value);
+        return safe != null ? safe : fallback.get();
     }
 
     /** IIQ's canonical XML for the value, or null; the serializer is a seam for tests. */

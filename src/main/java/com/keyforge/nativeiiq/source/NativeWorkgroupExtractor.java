@@ -55,19 +55,23 @@ public final class NativeWorkgroupExtractor {
                 config.getSourceSystem(), config.getExtractionRunId(), "Workgroup", Instant.now());
 
         Iterator<Object[]> ids = context.search(Identity.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            Identity wg = context.getObjectById(Identity.class, id);
-            if (wg == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                Identity wg = context.getObjectById(Identity.class, id);
+                if (wg == null) {
+                    continue;
+                }
+                try {
+                    NativeWorkgroupRow row = NativeWorkgroupMapper.map(
+                            wg, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getWorkgroups().add(row);
+                } finally {
+                    context.decache(wg);
+                }
             }
-            try {
-                NativeWorkgroupRow row = NativeWorkgroupMapper.map(
-                        wg, config.getSourceSystem(), config.getExtractionRunId());
-                result.getWorkgroups().add(row);
-            } finally {
-                context.decache(wg);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

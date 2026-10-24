@@ -59,19 +59,23 @@ public final class NativeSyslogEventExtractor {
                 NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter)));
 
         Iterator<Object[]> ids = context.search(SyslogEvent.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            SyslogEvent s = context.getObjectById(SyslogEvent.class, id);
-            if (s == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                SyslogEvent s = context.getObjectById(SyslogEvent.class, id);
+                if (s == null) {
+                    continue;
+                }
+                try {
+                    NativeSyslogEventRow row = NativeSyslogEventMapper.map(
+                            s, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getSyslogEvents().add(row);
+                } finally {
+                    context.decache(s);
+                }
             }
-            try {
-                NativeSyslogEventRow row = NativeSyslogEventMapper.map(
-                        s, config.getSourceSystem(), config.getExtractionRunId());
-                result.getSyslogEvents().add(row);
-            } finally {
-                context.decache(s);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

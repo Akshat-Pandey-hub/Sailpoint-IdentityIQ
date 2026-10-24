@@ -27,7 +27,7 @@ import java.util.function.Function;
  * there are no nested/jsonb fields ({@code expansion} is a boolean; {@code expansion_cause}/{@code expansion_info}
  * are text), so every field is filterable. The KeyForge {@code identityrequestitemid} PK, {@code record_hash},
  * {@code is_deleted}/{@code deleted_at} (not in the native record) and the lineage envelope are excluded.
- * This row has no {@code source_hash}, and the native client has no server-side {@code modifiedAfter}
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  * support (full-scan only).
  */
 public final class NativeIdentityRequestItemRestService {

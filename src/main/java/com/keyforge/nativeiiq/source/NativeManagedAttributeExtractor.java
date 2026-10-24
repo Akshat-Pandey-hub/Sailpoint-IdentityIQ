@@ -44,7 +44,7 @@ public final class NativeManagedAttributeExtractor {
     /**
      * Paginated read with an optional server-side CSS incremental bound: when {@code modifiedAfter} is
      * non-null, IIQ returns only entitlements whose {@code modified} time is after it (native
-     * {@code Filter.gt("modified", ...)} via {@link NativeIncrementalQuery}). {@code null} = full scan.
+     * {@link NativeIncrementalQuery#changedAfterFilter(java.util.Date)}). {@code null} = full scan.
      */
     public NativeManagedAttributeExtractionResult extract(int start, int limit, java.util.Date modifiedAfter)
             throws GeneralException {
@@ -65,19 +65,23 @@ public final class NativeManagedAttributeExtractor {
                 config.getSourceSystem(), config.getExtractionRunId(), "ManagedAttribute", Instant.now());
 
         Iterator<Object[]> ids = context.search(ManagedAttribute.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            ManagedAttribute ma = context.getObjectById(ManagedAttribute.class, id);
-            if (ma == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                ManagedAttribute ma = context.getObjectById(ManagedAttribute.class, id);
+                if (ma == null) {
+                    continue;
+                }
+                try {
+                    NativeManagedAttributeRow row = NativeManagedAttributeMapper.map(
+                            ma, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getManagedAttributes().add(row);
+                } finally {
+                    context.decache(ma);
+                }
             }
-            try {
-                NativeManagedAttributeRow row = NativeManagedAttributeMapper.map(
-                        ma, config.getSourceSystem(), config.getExtractionRunId());
-                result.getManagedAttributes().add(row);
-            } finally {
-                context.decache(ma);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

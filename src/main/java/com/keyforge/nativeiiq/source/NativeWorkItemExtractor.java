@@ -52,19 +52,23 @@ public final class NativeWorkItemExtractor {
                 NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
 
         Iterator<Object[]> ids = context.search(WorkItem.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            WorkItem w = context.getObjectById(WorkItem.class, id);
-            if (w == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                WorkItem w = context.getObjectById(WorkItem.class, id);
+                if (w == null) {
+                    continue;
+                }
+                try {
+                    NativeWorkItemRow row = NativeWorkItemMapper.map(
+                            w, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getRows().add(row);
+                } finally {
+                    context.decache(w);
+                }
             }
-            try {
-                NativeWorkItemRow row = NativeWorkItemMapper.map(
-                        w, config.getSourceSystem(), config.getExtractionRunId());
-                result.getRows().add(row);
-            } finally {
-                context.decache(w);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
         result.setFinishedAt(Instant.now());
         return result;

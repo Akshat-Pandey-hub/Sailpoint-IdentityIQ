@@ -31,7 +31,7 @@ import java.util.function.Function;
  * filterable; the other 33 are scalar and filterable. The KeyForge {@code provisioningtxnid} PK,
  * {@code record_hash}, lineage envelope ({@code source_system}/{@code source_interface}/{@code source_object_type}/
  * {@code extraction_run_id}/{@code extracted_at}) and soft-delete columns are excluded. No native
- * {@code modifiedAfter} (the txn client has no server-side modified filter → full-scan only).
+ * {@code modifiedAfter} is forwarded to the plugin when supplied; filtering is source-side where supported.
  */
 public final class NativeProvisioningTransactionRestService {
 

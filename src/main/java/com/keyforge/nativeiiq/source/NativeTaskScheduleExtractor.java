@@ -41,6 +41,7 @@ public final class NativeTaskScheduleExtractor {
     public NativeTaskScheduleExtractionResult extract(int start, int limit, Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("name", true);
+        qo.addOrdering("id", true);
         return extract(qo, Math.max(0, start), limit, modifiedAfter);
     }
 
@@ -51,31 +52,35 @@ public final class NativeTaskScheduleExtractor {
 
         int matched = 0;
         Iterator<Object[]> ids = context.search(TaskSchedule.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            if (limit > 0 && result.getTaskSchedules().size() >= limit) {
-                break;
-            }
-            String id = (String) ids.next()[0];
-            TaskSchedule ts = context.getObjectById(TaskSchedule.class, id);
-            if (ts == null) {
-                continue;
-            }
-            try {
-                // IIQ keeps no created/modified on TaskSchedule (null on every live schedule); an undated
-                // schedule cannot be proven unchanged, so it is always returned
-                boolean undated = ts.getModified() == null && ts.getCreated() == null;
-                if (!undated && !NativeIncrementalQuery.changedAfter(ts.getModified(), ts.getCreated(), modifiedAfter)) {
+        try {
+            while (ids != null && ids.hasNext()) {
+                if (limit > 0 && result.getTaskSchedules().size() >= limit) {
+                    break;
+                }
+                String id = (String) ids.next()[0];
+                TaskSchedule ts = context.getObjectById(TaskSchedule.class, id);
+                if (ts == null) {
                     continue;
                 }
-                if (matched++ < start) {
-                    continue;
+                try {
+                    // Live TaskSchedule objects have neither timestamp. Keep undated schedules conservatively so
+                    // an unavailable timestamp can never make an actually changed schedule disappear.
+                    boolean undated = ts.getModified() == null && ts.getCreated() == null;
+                    if (!undated && !NativeIncrementalQuery.changedAfter(ts.getModified(), ts.getCreated(), modifiedAfter)) {
+                        continue;
+                    }
+                    if (matched++ < start) {
+                        continue;
+                    }
+                    NativeTaskScheduleRow row = NativeTaskScheduleMapper.map(
+                            ts, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getTaskSchedules().add(row);
+                } finally {
+                    context.decache(ts);
                 }
-                NativeTaskScheduleRow row = NativeTaskScheduleMapper.map(
-                        ts, config.getSourceSystem(), config.getExtractionRunId());
-                result.getTaskSchedules().add(row);
-            } finally {
-                context.decache(ts);
             }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

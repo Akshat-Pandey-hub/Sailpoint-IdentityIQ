@@ -28,9 +28,12 @@ public final class NativeRoleRelationshipExtractor {
         QueryOptions countOptions = new QueryOptions();addIncrementalFilter(countOptions, modifiedAfter, changedBundleIds);
         out.setSourceCount(context.countObjects(Bundle.class,countOptions));
         Iterator<Object[]> ids=context.search(Bundle.class,qo,"id");
-        while(ids!=null&&ids.hasNext()){String id=(String)ids.next()[0];Bundle b=context.getObjectById(Bundle.class,id);if(b==null)continue;
+        try {
+while(ids!=null&&ids.hasNext()){String id=(String)ids.next()[0];Bundle b=context.getObjectById(Bundle.class,id);if(b==null)continue;
             try{out.setReturnedBundles(out.getReturnedBundles()+1);NativeRoleRelationshipMapper.map(b,out,config.getSourceSystem(),config.getExtractionRunId());}
-            finally{context.decache(b);}}
+            finally{context.decache(b);}} } finally {
+            sailpoint.tools.Util.flushIterator(ids);
+        }
         return out;
     }
 
@@ -40,23 +43,32 @@ public final class NativeRoleRelationshipExtractor {
         QueryOptions profiles = new QueryOptions();
         NativeIncrementalQuery.applyModifiedAfter(profiles, modifiedAfter);
         Iterator<Profile> changed = context.search(Profile.class, profiles);
-        while (changed != null && changed.hasNext()) {
-            Profile profile = changed.next();
-            if (profile == null) continue;
-            try {
-                Bundle bundle = profile.getBundle();
-                if (bundle != null && bundle.getId() != null) ids.add(bundle.getId());
-            } finally {
-                context.decache(profile);
+        try {
+            while (changed != null && changed.hasNext()) {
+                Profile profile = changed.next();
+                if (profile == null) continue;
+                try {
+                    Bundle bundle = profile.getBundle();
+                    if (bundle != null && bundle.getId() != null) {
+                        ids.add(bundle.getId());
+                        if (NativeIncrementalQuery.exceedsChangedParentIdLimit(ids)) return null;
+                    }
+                } finally {
+                    context.decache(profile);
+                }
             }
+        } finally {
+            sailpoint.tools.Util.flushIterator(changed);
         }
         return ids;
     }
 
     private static void addIncrementalFilter(QueryOptions options, Date modifiedAfter, Set<String> changedBundleIds) {
         if (modifiedAfter == null) return;
+        if (changedBundleIds == null) return; // too many changed children: safely fall back to all parents
         Filter parentChanged = NativeIncrementalQuery.changedAfterFilter(modifiedAfter);
         if (changedBundleIds == null || changedBundleIds.isEmpty()) options.addFilter(parentChanged);
         else options.addFilter(Filter.or(parentChanged, Filter.in("id", changedBundleIds)));
     }
+
 }

@@ -60,19 +60,23 @@ public final class NativePolicyConstraintExtractor {
 
         int policies = 0;
         Iterator<Object[]> ids = context.search(Policy.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            Policy p = context.getObjectById(Policy.class, id);
-            if (p == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                Policy p = context.getObjectById(Policy.class, id);
+                if (p == null) {
+                    continue;
+                }
+                try {
+                    policies++;
+                    NativePolicyConstraintMapper.mapInto(p, result.getConstraints(),
+                            config.getSourceSystem(), config.getExtractionRunId());
+                } finally {
+                    context.decache(p);
+                }
             }
-            try {
-                policies++;
-                NativePolicyConstraintMapper.mapInto(p, result.getConstraints(),
-                        config.getSourceSystem(), config.getExtractionRunId());
-            } finally {
-                context.decache(p);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
         result.setPolicyCount(policies);
         result.setFinishedAt(Instant.now());
@@ -82,34 +86,44 @@ public final class NativePolicyConstraintExtractor {
     private Set<String> changedConstraintParents(Date modifiedAfter) throws GeneralException {
         Set<String> ids = new LinkedHashSet<String>();
         if (modifiedAfter == null) return ids;
-        collectChangedConstraintParents(SODConstraint.class, modifiedAfter, ids);
-        collectChangedConstraintParents(ActivityConstraint.class, modifiedAfter, ids);
-        collectChangedConstraintParents(GenericConstraint.class, modifiedAfter, ids);
+        if (!collectChangedConstraintParents(SODConstraint.class, modifiedAfter, ids)) return null;
+        if (!collectChangedConstraintParents(ActivityConstraint.class, modifiedAfter, ids)) return null;
+        if (!collectChangedConstraintParents(GenericConstraint.class, modifiedAfter, ids)) return null;
         return ids;
     }
 
-    private <T extends BaseConstraint> void collectChangedConstraintParents(Class<T> type, Date modifiedAfter,
-                                                                             Set<String> policyIds)
+    private <T extends BaseConstraint> boolean collectChangedConstraintParents(Class<T> type, Date modifiedAfter,
+                                                                                Set<String> policyIds)
             throws GeneralException {
         QueryOptions qo = new QueryOptions();
         NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         Iterator<T> changed = context.search(type, qo);
-        while (changed != null && changed.hasNext()) {
-            T constraint = changed.next();
-            if (constraint == null) continue;
-            try {
-                Policy policy = constraint.getPolicy();
-                if (policy != null && policy.getId() != null) policyIds.add(policy.getId());
-            } finally {
-                context.decache(constraint);
+        try {
+            while (changed != null && changed.hasNext()) {
+                T constraint = changed.next();
+                if (constraint == null) continue;
+                try {
+                    Policy policy = constraint.getPolicy();
+                    if (policy != null && policy.getId() != null) {
+                        policyIds.add(policy.getId());
+                        if (NativeIncrementalQuery.exceedsChangedParentIdLimit(policyIds)) return false;
+                    }
+                } finally {
+                    context.decache(constraint);
+                }
             }
+        } finally {
+            sailpoint.tools.Util.flushIterator(changed);
         }
+        return true;
     }
 
     private static void addIncrementalFilter(QueryOptions options, Date modifiedAfter, Set<String> childChangedPolicyIds) {
         if (modifiedAfter == null) return;
+        if (childChangedPolicyIds == null) return; // too many changed children: safely fall back to all parents
         Filter parentChanged = NativeIncrementalQuery.changedAfterFilter(modifiedAfter);
         if (childChangedPolicyIds == null || childChangedPolicyIds.isEmpty()) options.addFilter(parentChanged);
         else options.addFilter(Filter.or(parentChanged, Filter.in("id", childChangedPolicyIds)));
     }
+
 }

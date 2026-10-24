@@ -53,7 +53,7 @@ public final class NativeIdentityExtractor {
     /**
      * Paginated read with an optional server-side CSS incremental bound: when {@code modifiedAfter} is
      * non-null, IIQ returns only identities whose {@code modified} time is after it (native
-     * {@code Filter.gt("modified", ...)} via {@link NativeIncrementalQuery}). {@code null} = full scan
+     * {@link NativeIncrementalQuery#changedAfterFilter(java.util.Date)}). {@code null} = full scan
      * (unchanged behaviour). Ordering/paging are identical in both modes. STRICTLY READ-ONLY.
      */
     public NativeExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
@@ -75,19 +75,23 @@ public final class NativeIdentityExtractor {
 
         // Project only ids first (cheap), then load full objects one at a time and release from cache.
         Iterator<Object[]> ids = context.search(Identity.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            Identity idn = context.getObjectById(Identity.class, id);
-            if (idn == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                Identity idn = context.getObjectById(Identity.class, id);
+                if (idn == null) {
+                    continue;
+                }
+                try {
+                    NativeIdentityRow row = NativeIdentityMapper.map(
+                            idn, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getIdentities().add(row);
+                } finally {
+                    context.decache(idn);
+                }
             }
-            try {
-                NativeIdentityRow row = NativeIdentityMapper.map(
-                        idn, config.getSourceSystem(), config.getExtractionRunId());
-                result.getIdentities().add(row);
-            } finally {
-                context.decache(idn);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

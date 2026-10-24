@@ -9,6 +9,8 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -95,6 +97,16 @@ class JsonSafeTest {
         String xml = (String) safe;
         assertTrue(xml.startsWith("<"));
         assertTrue(!xml.matches(".*@[0-9a-f].*"));
+    }
+
+    @Test
+    void depthLimitPrefersSafeIiqRepresentationBeforeTextFallback() {
+        Object value = new Opaque();
+        Function<Object, Object> iiqRepresentation = ignored -> "<safe-reference/>";
+        Supplier<Object> fallback = () -> "Opaque@abc123";
+
+        assertEquals("<safe-reference/>", JsonSafe.depthLimitValue(value, iiqRepresentation, fallback));
+        assertEquals("Opaque@abc123", JsonSafe.depthLimitValue(value, ignored -> null, fallback));
     }
 
     @Test

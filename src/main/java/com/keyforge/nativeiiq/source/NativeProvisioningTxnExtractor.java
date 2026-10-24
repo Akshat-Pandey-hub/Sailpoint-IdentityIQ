@@ -53,19 +53,23 @@ public final class NativeProvisioningTxnExtractor {
                 NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
 
         Iterator<Object[]> ids = context.search(ProvisioningTransaction.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            ProvisioningTransaction pt = context.getObjectById(ProvisioningTransaction.class, id);
-            if (pt == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                ProvisioningTransaction pt = context.getObjectById(ProvisioningTransaction.class, id);
+                if (pt == null) {
+                    continue;
+                }
+                try {
+                    NativeProvisioningTxnRow row = NativeProvisioningTxnMapper.map(
+                            pt, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getRows().add(row);
+                } finally {
+                    context.decache(pt);
+                }
             }
-            try {
-                NativeProvisioningTxnRow row = NativeProvisioningTxnMapper.map(
-                        pt, config.getSourceSystem(), config.getExtractionRunId());
-                result.getRows().add(row);
-            } finally {
-                context.decache(pt);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
         result.setFinishedAt(Instant.now());
         return result;

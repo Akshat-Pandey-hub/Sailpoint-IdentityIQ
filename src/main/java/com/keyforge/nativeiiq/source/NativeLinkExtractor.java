@@ -37,7 +37,7 @@ public final class NativeLinkExtractor {
     /**
      * Paginated read with an optional server-side CSS incremental bound: when {@code modifiedAfter} is
      * non-null, IIQ returns only accounts whose {@code modified} time is after it (native
-     * {@code Filter.gt("modified", ...)} via {@link NativeIncrementalQuery}). {@code null} = full scan.
+     * {@link NativeIncrementalQuery#changedAfterFilter(java.util.Date)}). {@code null} = full scan.
      */
     public NativeLinkExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
@@ -57,18 +57,22 @@ public final class NativeLinkExtractor {
                 config.getSourceSystem(), config.getExtractionRunId(), "Link", Instant.now());
 
         Iterator<Object[]> ids = context.search(Link.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            Link link = context.getObjectById(Link.class, id);
-            if (link == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                Link link = context.getObjectById(Link.class, id);
+                if (link == null) {
+                    continue;
+                }
+                try {
+                    NativeLinkRow row = NativeLinkMapper.map(link, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getLinks().add(row);
+                } finally {
+                    context.decache(link);
+                }
             }
-            try {
-                NativeLinkRow row = NativeLinkMapper.map(link, config.getSourceSystem(), config.getExtractionRunId());
-                result.getLinks().add(row);
-            } finally {
-                context.decache(link);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

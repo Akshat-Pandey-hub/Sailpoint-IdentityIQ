@@ -51,19 +51,23 @@ public final class NativeViolationExtractor {
                 config.getSourceSystem(), config.getExtractionRunId(), "PolicyViolation", Instant.now());
 
         Iterator<Object[]> ids = context.search(PolicyViolation.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            PolicyViolation v = context.getObjectById(PolicyViolation.class, id);
-            if (v == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                PolicyViolation v = context.getObjectById(PolicyViolation.class, id);
+                if (v == null) {
+                    continue;
+                }
+                try {
+                    NativeViolationRow row = NativeViolationMapper.map(
+                            v, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getViolations().add(row);
+                } finally {
+                    context.decache(v);
+                }
             }
-            try {
-                NativeViolationRow row = NativeViolationMapper.map(
-                        v, config.getSourceSystem(), config.getExtractionRunId());
-                result.getViolations().add(row);
-            } finally {
-                context.decache(v);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

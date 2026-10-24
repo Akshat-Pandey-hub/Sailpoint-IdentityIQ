@@ -30,7 +30,7 @@ import java.util.function.Function;
  * {@code assignment} is a boolean, {@code item_index} is an integer. The jsonb field is not filterable;
  * the other 16 are scalar and filterable. The KeyForge {@code provisioningitemid} PK, {@code record_hash},
  * {@code src_object_id}/{@code src_natural_key}, {@code is_deleted}/{@code deleted_at} (not in the native
- * record) and the lineage envelope are excluded. No {@code source_hash}; no native {@code modifiedAfter}
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  * (full-scan only).
  */
 public final class NativeProvisioningItemRestService {

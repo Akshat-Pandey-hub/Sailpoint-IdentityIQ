@@ -31,7 +31,7 @@ import java.util.function.Function;
  * {@code permission_attributes} are {@code jsonb} (returned as JSON, not filterable); the other 14 fields are
  * scalar text and filterable. The KeyForge {@code accountentitlementid} PK, {@code record_hash},
  * {@code is_deleted}/{@code deleted_at} (not in the native record) and the lineage envelope are excluded.
- * This edge has no {@code source_hash}, and the native client has no server-side {@code modifiedAfter}
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  * support (full-scan only).
  */
 public final class NativeAccountEntitlementRestService {

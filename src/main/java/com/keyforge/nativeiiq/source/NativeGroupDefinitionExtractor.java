@@ -53,19 +53,23 @@ public final class NativeGroupDefinitionExtractor {
                 config.getSourceSystem(), config.getExtractionRunId(), "GroupDefinition", Instant.now());
 
         Iterator<Object[]> ids = context.search(GroupDefinition.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            GroupDefinition gd = context.getObjectById(GroupDefinition.class, id);
-            if (gd == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                GroupDefinition gd = context.getObjectById(GroupDefinition.class, id);
+                if (gd == null) {
+                    continue;
+                }
+                try {
+                    NativeGroupDefinitionRow row = NativeGroupDefinitionMapper.map(
+                            gd, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getGroupDefinitions().add(row);
+                } finally {
+                    context.decache(gd);
+                }
             }
-            try {
-                NativeGroupDefinitionRow row = NativeGroupDefinitionMapper.map(
-                        gd, config.getSourceSystem(), config.getExtractionRunId());
-                result.getGroupDefinitions().add(row);
-            } finally {
-                context.decache(gd);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

@@ -31,7 +31,7 @@ import java.util.function.Function;
  * returned as strings. The jsonb field is not filterable; every scalar/text field is. The KeyForge
  * {@code entitlementid} PK, {@code record_hash}, {@code is_deleted}/{@code deleted_at} (not in the native
  * record) and the lineage envelope are excluded. This row has no {@code source_hash}, and the native
- * client has no server-side {@code modifiedAfter} support (full-scan only).
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  */
 public final class NativeIdentityEntitlementRestService {
 

@@ -28,7 +28,7 @@ import java.util.function.Function;
  * timestamps; every other field is text. All 32 are filterable. The KeyForge {@code certificationentityid}
  * PK, {@code record_hash}, lineage envelope ({@code source_system}/{@code source_interface}/
  * {@code source_object_type}/{@code extraction_run_id}/{@code extracted_at}) and soft-delete columns are
- * excluded. No native {@code modifiedAfter} (the client has no server-side modified filter → full-scan only).
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  */
 public final class NativeCertificationEntityRestService {
 

@@ -47,19 +47,23 @@ public final class NativeCertificationExtractor {
         result.setSourceCount(context.countObjects(Certification.class, NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
 
         Iterator<Object[]> ids = context.search(Certification.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            Certification c = context.getObjectById(Certification.class, id);
-            if (c == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                Certification c = context.getObjectById(Certification.class, id);
+                if (c == null) {
+                    continue;
+                }
+                try {
+                    NativeCertificationRow row = NativeCertificationMapper.map(
+                            c, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getRows().add(row);
+                } finally {
+                    context.decache(c);
+                }
             }
-            try {
-                NativeCertificationRow row = NativeCertificationMapper.map(
-                        c, config.getSourceSystem(), config.getExtractionRunId());
-                result.getRows().add(row);
-            } finally {
-                context.decache(c);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
         result.setFinishedAt(Instant.now());
         return result;

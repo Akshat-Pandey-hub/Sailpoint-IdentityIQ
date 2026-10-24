@@ -47,18 +47,22 @@ public final class NativePolicyExtractor {
                 config.getSourceSystem(), config.getExtractionRunId(), "Policy", Instant.now());
 
         Iterator<Object[]> ids = context.search(Policy.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            Policy p = context.getObjectById(Policy.class, id);
-            if (p == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                Policy p = context.getObjectById(Policy.class, id);
+                if (p == null) {
+                    continue;
+                }
+                try {
+                    NativePolicyRow row = NativePolicyMapper.map(p, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getPolicies().add(row);
+                } finally {
+                    context.decache(p);
+                }
             }
-            try {
-                NativePolicyRow row = NativePolicyMapper.map(p, config.getSourceSystem(), config.getExtractionRunId());
-                result.getPolicies().add(row);
-            } finally {
-                context.decache(p);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

@@ -60,19 +60,23 @@ public final class NativeWorkItemArchiveExtractor {
                 NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter)));
 
         Iterator<Object[]> ids = context.search(WorkItemArchive.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            WorkItemArchive a = context.getObjectById(WorkItemArchive.class, id);
-            if (a == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                WorkItemArchive a = context.getObjectById(WorkItemArchive.class, id);
+                if (a == null) {
+                    continue;
+                }
+                try {
+                    NativeWorkItemArchiveRow row = NativeWorkItemArchiveMapper.map(
+                            a, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getWorkItemArchives().add(row);
+                } finally {
+                    context.decache(a);
+                }
             }
-            try {
-                NativeWorkItemArchiveRow row = NativeWorkItemArchiveMapper.map(
-                        a, config.getSourceSystem(), config.getExtractionRunId());
-                result.getWorkItemArchives().add(row);
-            } finally {
-                context.decache(a);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

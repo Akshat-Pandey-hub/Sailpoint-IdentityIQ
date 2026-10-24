@@ -30,7 +30,7 @@ import java.util.function.Function;
  * ({@code capabilities}, {@code attributes}) are not filterable. The KeyForge {@code workgroupid} PK,
  * {@code record_hash}, {@code is_deleted}/{@code deleted_at} (not in the native record) and the lineage
  * envelope are excluded. Workgroup has no {@code source_hash}, and the native Workgroup client has no
- * server-side {@code modifiedAfter} support (full-scan only).
+ * {@code modifiedAfter} is forwarded to the plugin when supplied; filtering is source-side where supported.
  */
 public final class NativeWorkgroupRestService {
 

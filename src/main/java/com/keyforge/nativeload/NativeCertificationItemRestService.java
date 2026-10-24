@@ -32,7 +32,7 @@ import java.util.function.Function;
  * {@code action_decision_date}/{@code action_mitigation_expiration}/{@code created_at}/{@code modified_at});
  * every other field is text. The 53 scalar fields are filterable. The KeyForge {@code certificationitemid}
  * PK, {@code record_hash}, lineage envelope and soft-delete columns are excluded. No native
- * {@code modifiedAfter} (the client has no server-side modified filter → full-scan only).
+ * {@code modifiedAfter} is forwarded to the plugin when supplied; filtering is source-side where supported.
  */
 public final class NativeCertificationItemRestService {
 

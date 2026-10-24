@@ -61,19 +61,23 @@ public final class NativeIdentityEntitlementExtractor {
                 NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
 
         Iterator<Object[]> ids = context.search(IdentityEntitlement.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            IdentityEntitlement e = context.getObjectById(IdentityEntitlement.class, id);
-            if (e == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                IdentityEntitlement e = context.getObjectById(IdentityEntitlement.class, id);
+                if (e == null) {
+                    continue;
+                }
+                try {
+                    NativeIdentityEntitlementRow row = NativeIdentityEntitlementMapper.map(
+                            e, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getRows().add(row);
+                } finally {
+                    context.decache(e);
+                }
             }
-            try {
-                NativeIdentityEntitlementRow row = NativeIdentityEntitlementMapper.map(
-                        e, config.getSourceSystem(), config.getExtractionRunId());
-                result.getRows().add(row);
-            } finally {
-                context.decache(e);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

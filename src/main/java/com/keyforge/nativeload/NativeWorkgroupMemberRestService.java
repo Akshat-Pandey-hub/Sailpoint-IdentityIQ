@@ -30,7 +30,7 @@ import java.util.function.Function;
  * {@code identity_id} DB columns, {@code record_hash}, the lineage envelope ({@code src_system}/
  * {@code src_interface}/{@code src_object_type}/{@code src_object_id}/{@code src_natural_key}/
  * {@code extraction_run_id}/{@code extracted_at}) and the soft-delete columns ({@code is_deleted}/
- * {@code deleted_at}). No native {@code modifiedAfter} (full-scan only).
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  */
 public final class NativeWorkgroupMemberRestService {
 

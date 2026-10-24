@@ -29,7 +29,7 @@ import java.util.function.Function;
  * JSON; {@code created_at}/{@code modified_at} are ISO-8601 timestamps; every other field is {@code text}. The
  * {@code definition} field is not filterable; the other 8 are scalar and filterable. The KeyForge
  * {@code workflowid} PK, {@code record_hash}, lineage envelope and soft-delete columns are excluded. No native
- * {@code modifiedAfter} (the workflow client has no server-side modified filter → full-scan only).
+ * {@code modifiedAfter} is forwarded to the plugin when supplied; filtering is source-side where supported.
  */
 public final class NativeWorkflowDefinitionRestService {
 

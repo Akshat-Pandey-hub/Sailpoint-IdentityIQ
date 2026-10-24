@@ -55,15 +55,19 @@ final class NativeAccessHistoryScan {
         }
 
         List<T> page = ah.getObjects(cls, qo);
-        if (page != null) {
-            for (T o : page) {
-                if (o == null) {
-                    continue;
+        try {
+            if (page != null) {
+                for (T o : page) {
+                    if (o != null) {
+                        out.add(mapper.map(o));
+                    }
                 }
-                try {
-                    out.add(mapper.map(o));
-                } finally {
-                    ah.decache(o);
+            }
+        } finally {
+            // getObjects materializes the whole page; release all of it even if mapping one row fails.
+            if (page != null) {
+                for (T o : page) {
+                    if (o != null) ah.decache(o);
                 }
             }
         }

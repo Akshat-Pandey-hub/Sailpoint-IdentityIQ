@@ -70,48 +70,52 @@ public final class NativeManagedAttributeInspector {
         TreeMap<String, Integer> extendedKeys = new TreeMap<String, Integer>();
 
         Iterator<Object[]> ids = context.search(ManagedAttribute.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            ManagedAttribute ma = context.getObjectById(ManagedAttribute.class, id);
-            if (ma == null) {
-                continue;
-            }
-            try {
-                Map<String, Object> getters = ReflectiveProperties.of(ma);   // native property names
-                Map<String, Object> attrs = safeAttributes(ma.getAttributes());
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                ManagedAttribute ma = context.getObjectById(ManagedAttribute.class, id);
+                if (ma == null) {
+                    continue;
+                }
+                try {
+                    Map<String, Object> getters = ReflectiveProperties.of(ma);   // native property names
+                    Map<String, Object> attrs = safeAttributes(ma.getAttributes());
 
-                for (Map.Entry<String, Object> e : getters.entrySet()) {
-                    int[] c = counts.get(e.getKey());
-                    if (c == null) {
-                        c = new int[3];
-                        counts.put(e.getKey(), c);
+                    for (Map.Entry<String, Object> e : getters.entrySet()) {
+                        int[] c = counts.get(e.getKey());
+                        if (c == null) {
+                            c = new int[3];
+                            counts.put(e.getKey(), c);
+                        }
+                        c[0]++;
+                        if (isPopulated(e.getValue())) {
+                            c[1]++;
+                        } else {
+                            c[2]++;
+                        }
+                        if (!kinds.containsKey(e.getKey()) || "null".equals(kinds.get(e.getKey()))) {
+                            kinds.put(e.getKey(), kindOf(e.getValue()));
+                        }
                     }
-                    c[0]++;
-                    if (isPopulated(e.getValue())) {
-                        c[1]++;
-                    } else {
-                        c[2]++;
+                    for (String k : attrs.keySet()) {
+                        Integer n = extendedKeys.get(k);
+                        extendedKeys.put(k, Integer.valueOf(n == null ? 1 : n.intValue() + 1));
                     }
-                    if (!kinds.containsKey(e.getKey()) || "null".equals(kinds.get(e.getKey()))) {
-                        kinds.put(e.getKey(), kindOf(e.getValue()));
-                    }
-                }
-                for (String k : attrs.keySet()) {
-                    Integer n = extendedKeys.get(k);
-                    extendedKeys.put(k, Integer.valueOf(n == null ? 1 : n.intValue() + 1));
-                }
 
-                Map<String, Object> rec = new LinkedHashMap<String, Object>();
-                rec.put("_native_id", ma.getId());
-                rec.put("_native_getters", getters);
-                rec.put("_native_attributes", attrs);
-                if (includeXml) {
-                    rec.put("_native_xml", toXml(ma));
+                    Map<String, Object> rec = new LinkedHashMap<String, Object>();
+                    rec.put("_native_id", ma.getId());
+                    rec.put("_native_getters", getters);
+                    rec.put("_native_attributes", attrs);
+                    if (includeXml) {
+                        rec.put("_native_xml", toXml(ma));
+                    }
+                    records.add(rec);
+                } finally {
+                    context.decache(ma);
                 }
-                records.add(rec);
-            } finally {
-                context.decache(ma);
             }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         Map<String, Object> propertySummary = new LinkedHashMap<String, Object>();

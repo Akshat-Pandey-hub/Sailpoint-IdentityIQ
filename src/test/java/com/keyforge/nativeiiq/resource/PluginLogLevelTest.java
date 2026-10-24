@@ -21,4 +21,19 @@ class PluginLogLevelTest {
         assertEquals(Level.DEBUG, PluginLogLevel.levelFor(" DEBUG "));
         assertEquals(Level.OFF, PluginLogLevel.levelFor("off"));
     }
+
+    @Test
+    void explicitAdminLoggerConfigurationWins() {
+        assertEquals(false, PluginLogLevel.shouldApplyPluginLevel(true, false));
+        assertEquals(true, PluginLogLevel.shouldApplyPluginLevel(false, false));
+        assertEquals(true, PluginLogLevel.shouldApplyPluginLevel(true, true));
+    }
+
+    @Test
+    void configurationReloadReevaluatesOwnership() {
+        // A reloaded Configuration is not the configuration/logger pair recorded as plugin-owned.
+        // No exact logger entry means plugin settings are reapplied; an exact entry is treated as admin-owned.
+        assertEquals(true, PluginLogLevel.shouldApplyPluginLevel(false, false));
+        assertEquals(false, PluginLogLevel.shouldApplyPluginLevel(true, false));
+    }
 }

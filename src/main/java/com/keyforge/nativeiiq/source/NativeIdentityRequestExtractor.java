@@ -53,19 +53,23 @@ public final class NativeIdentityRequestExtractor {
                 NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
 
         Iterator<Object[]> ids = context.search(IdentityRequest.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            IdentityRequest r = context.getObjectById(IdentityRequest.class, id);
-            if (r == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                IdentityRequest r = context.getObjectById(IdentityRequest.class, id);
+                if (r == null) {
+                    continue;
+                }
+                try {
+                    NativeIdentityRequestRow row = NativeIdentityRequestMapper.map(
+                            r, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getRows().add(row);
+                } finally {
+                    context.decache(r);
+                }
             }
-            try {
-                NativeIdentityRequestRow row = NativeIdentityRequestMapper.map(
-                        r, config.getSourceSystem(), config.getExtractionRunId());
-                result.getRows().add(row);
-            } finally {
-                context.decache(r);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
         result.setFinishedAt(Instant.now());
         return result;

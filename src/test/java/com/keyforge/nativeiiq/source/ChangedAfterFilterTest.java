@@ -43,6 +43,8 @@ class ChangedAfterFilterTest {
         assertTrue(NativeIncrementalQuery.changedAfter(null, after, bound));
         assertTrue(!NativeIncrementalQuery.changedAfter(null, before, bound));
         assertTrue(!NativeIncrementalQuery.changedAfter(before, after, bound));
+        assertTrue(!NativeIncrementalQuery.changedAfter(null, null, bound),
+                "an undated TaskSchedule is not changed after a supplied bound");
     }
 
 }

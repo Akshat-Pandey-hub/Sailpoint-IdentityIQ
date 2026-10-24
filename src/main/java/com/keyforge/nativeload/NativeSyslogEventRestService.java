@@ -27,7 +27,7 @@ import java.util.function.Function;
  * fields are filterable. Excluded as technical: the KeyForge {@code syslogid} PK, {@code record_hash} and
  * the lineage envelope ({@code source_system}/{@code source_interface}/{@code source_object_type}/
  * {@code extraction_run_id}/{@code extracted_at}). SyslogEvent is append-only (no soft-delete columns). No
- * native {@code modifiedAfter} (the client has no server-side modified filter → full-scan only).
+ * {@code modifiedAfter} is forwarded to the plugin when supplied; filtering is source-side where supported.
  */
 public final class NativeSyslogEventRestService {
 

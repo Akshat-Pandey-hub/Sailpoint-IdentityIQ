@@ -35,7 +35,7 @@ import java.util.function.Function;
  * {@code src_event_ts}/{@code src_interface}/{@code extraction_run_id}/{@code raw_ref}/{@code derived_at}/
  * {@code extracted_at}) — the {@code src_*} columns are lineage echoes of the business fields
  * ({@code src_object_id}=source_id, {@code src_created}=created_at, {@code src_modified}=modified_at,
- * {@code src_event_ts}=created), not additional business data. No native {@code modifiedAfter} (the client has
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  * no server-side modified filter → full-scan only).
  */
 public final class NativeCertificationArchiveRestService {

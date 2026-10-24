@@ -49,19 +49,23 @@ public final class NativeIdentityRoleExtractor {
 
         int identities = 0;
         Iterator<Object[]> ids = context.search(Identity.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            Identity identity = context.getObjectById(Identity.class, id);
-            if (identity == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                Identity identity = context.getObjectById(Identity.class, id);
+                if (identity == null) {
+                    continue;
+                }
+                try {
+                    identities++;
+                    NativeIdentityRoleMapper.mapInto(
+                            identity, result.getRows(), config.getSourceSystem(), config.getExtractionRunId());
+                } finally {
+                    context.decache(identity);
+                }
             }
-            try {
-                identities++;
-                NativeIdentityRoleMapper.mapInto(
-                        identity, result.getRows(), config.getSourceSystem(), config.getExtractionRunId());
-            } finally {
-                context.decache(identity);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
         result.setIdentityCount(identities);
         result.setFinishedAt(Instant.now());

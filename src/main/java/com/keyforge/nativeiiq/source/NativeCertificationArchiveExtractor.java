@@ -60,19 +60,23 @@ public final class NativeCertificationArchiveExtractor {
                 NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter)));
 
         Iterator<Object[]> ids = context.search(CertificationArchive.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            CertificationArchive a = context.getObjectById(CertificationArchive.class, id);
-            if (a == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                CertificationArchive a = context.getObjectById(CertificationArchive.class, id);
+                if (a == null) {
+                    continue;
+                }
+                try {
+                    NativeCertificationArchiveRow row = NativeCertificationArchiveMapper.map(
+                            a, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getCertificationArchives().add(row);
+                } finally {
+                    context.decache(a);
+                }
             }
-            try {
-                NativeCertificationArchiveRow row = NativeCertificationArchiveMapper.map(
-                        a, config.getSourceSystem(), config.getExtractionRunId());
-                result.getCertificationArchives().add(row);
-            } finally {
-                context.decache(a);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

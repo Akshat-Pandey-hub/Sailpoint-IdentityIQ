@@ -57,19 +57,23 @@ public final class NativeTaskResultExtractor {
                 config.getSourceSystem(), config.getExtractionRunId(), "TaskResult", Instant.now());
 
         Iterator<Object[]> ids = context.search(TaskResult.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            TaskResult tr = context.getObjectById(TaskResult.class, id);
-            if (tr == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                TaskResult tr = context.getObjectById(TaskResult.class, id);
+                if (tr == null) {
+                    continue;
+                }
+                try {
+                    NativeTaskResultRow row = NativeTaskResultMapper.map(
+                            tr, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getTaskResults().add(row);
+                } finally {
+                    context.decache(tr);
+                }
             }
-            try {
-                NativeTaskResultRow row = NativeTaskResultMapper.map(
-                        tr, config.getSourceSystem(), config.getExtractionRunId());
-                result.getTaskResults().add(row);
-            } finally {
-                context.decache(tr);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

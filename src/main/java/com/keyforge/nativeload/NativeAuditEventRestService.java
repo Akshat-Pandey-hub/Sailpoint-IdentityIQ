@@ -27,7 +27,7 @@ import java.util.function.Function;
  * every other field is text. The 18 scalar fields are filterable. The KeyForge {@code auditid} PK,
  * {@code record_hash} and the lineage envelope ({@code source_system}/{@code source_interface}/
  * {@code source_object_type}/{@code extraction_run_id}/{@code extracted_at}) are excluded. AuditEvent is
- * append-only (no soft-delete columns). No native {@code modifiedAfter} (the client has no server-side
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  * modified filter → full-scan only).
  */
 public final class NativeAuditEventRestService {

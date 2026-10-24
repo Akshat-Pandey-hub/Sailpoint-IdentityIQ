@@ -60,19 +60,23 @@ public final class NativeAuditEventExtractor {
                 NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter)));
 
         Iterator<Object[]> ids = context.search(AuditEvent.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            AuditEvent a = context.getObjectById(AuditEvent.class, id);
-            if (a == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                AuditEvent a = context.getObjectById(AuditEvent.class, id);
+                if (a == null) {
+                    continue;
+                }
+                try {
+                    NativeAuditEventRow row = NativeAuditEventMapper.map(
+                            a, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getAuditEvents().add(row);
+                } finally {
+                    context.decache(a);
+                }
             }
-            try {
-                NativeAuditEventRow row = NativeAuditEventMapper.map(
-                        a, config.getSourceSystem(), config.getExtractionRunId());
-                result.getAuditEvents().add(row);
-            } finally {
-                context.decache(a);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

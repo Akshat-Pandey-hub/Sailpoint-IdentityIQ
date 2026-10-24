@@ -32,7 +32,7 @@ import java.util.function.Function;
  * {@code approved} boolean / {@code approval_item_count}+{@code approval_index} integers / timestamps) and
  * filterable. The KeyForge {@code identityrequestapprovalid} PK (generated — the native record exposes no
  * business source id), {@code record_hash}, {@code is_deleted}/{@code deleted_at} (not in the native
- * record) and the lineage envelope are excluded. No {@code source_hash}; no native {@code modifiedAfter}
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  * (full-scan only).
  */
 public final class NativeIdentityRequestApprovalRestService {

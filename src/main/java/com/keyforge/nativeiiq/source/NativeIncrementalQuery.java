@@ -14,8 +14,8 @@ import java.util.Date;
  * incremental native extraction can ask IdentityIQ to return <b>only</b> the objects changed after a
  * watermark, reducing reads (not just writes).
  *
- * <p>The predicate is {@code Filter.gt("modified", watermark)} on the standard
- * {@code sailpoint.object.SailPointObject.modified} column (verified against the 8.4
+ * <p>The predicate is {@code modified > watermark}, OR {@code modified IS NULL AND created > watermark},
+ * on the standard {@code sailpoint.object.SailPointObject} timestamps (verified against the 8.4
  * {@code identityiq.jar}: {@code Filter.gt(String, Object)} + {@code QueryOptions.addFilter(Filter)}).
  * Strict {@code >}; the caller already lowers the watermark by the configured overlap window before
  * passing it here, so boundary records are re-admitted and the idempotent upserts absorb the harmless
@@ -26,6 +26,9 @@ import java.util.Date;
  * dependency on the KeyForge loader module), since it is compiled into the IIQ plugin.
  */
 public final class NativeIncrementalQuery {
+
+    /** Above this id set, omit the child-derived IN predicate and safely scan all parent objects. */
+    public static final int MAX_CHANGED_PARENT_IDS = 1000;
 
     /** The native source change-time property name — the watermark cursor for CSS incremental. */
     public static final String MODIFIED_PROPERTY = "modified";
@@ -41,8 +44,9 @@ public final class NativeIncrementalQuery {
     }
 
     /**
-     * Adds a server-side {@code modified > modifiedAfter} filter to {@code qo} when a watermark is
-     * supplied. A {@code null} {@code qo} or {@code null} {@code modifiedAfter} is a no-op (full scan).
+     * Adds the shared changed-after predicate to {@code qo} when a watermark is supplied:
+     * {@code modified > modifiedAfter OR (modified IS NULL AND created > modifiedAfter)}.
+     * A {@code null} {@code qo} or {@code null} {@code modifiedAfter} is a no-op (full scan).
      *
      * @return the same {@link QueryOptions} instance, for fluent use
      */
@@ -75,6 +79,11 @@ public final class NativeIncrementalQuery {
     /** Same changed-after rule for objects already loaded in memory (used for TaskSchedule). */
     public static boolean changedAfter(Date modified, Date created, Date bound) {
         return bound == null || (modified != null ? modified.after(bound) : created != null && created.after(bound));
+    }
+
+    /** Shared guard for child-derived parent ids used in Filter.in predicates. */
+    public static boolean exceedsChangedParentIdLimit(java.util.Set<?> ids) {
+        return ids != null && ids.size() > MAX_CHANGED_PARENT_IDS;
     }
 
     /**

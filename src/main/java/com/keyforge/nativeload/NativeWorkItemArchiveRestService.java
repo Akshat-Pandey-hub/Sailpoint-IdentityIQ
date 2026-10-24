@@ -34,8 +34,8 @@ import java.util.function.Function;
  * {@code src_created}/{@code src_modified}/{@code src_event_ts}/{@code src_interface}/{@code extraction_run_id}/
  * {@code raw_ref}/{@code derived_at}/{@code extracted_at}) — the {@code src_*} columns are lineage echoes of
  * the business fields ({@code src_object_id}=source_id, {@code src_created}=created_at, {@code src_modified}=
- * modified_at, {@code src_event_ts}=archived_ts), not additional business data. No native {@code modifiedAfter}
- * (the client has no server-side modified filter → full-scan only).
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
+ * {@code modifiedAfter} is forwarded to the plugin when supplied; filtering is source-side where supported.
  */
 public final class NativeWorkItemArchiveRestService {
 

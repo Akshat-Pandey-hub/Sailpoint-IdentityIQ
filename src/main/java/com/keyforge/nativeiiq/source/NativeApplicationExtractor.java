@@ -39,7 +39,7 @@ public final class NativeApplicationExtractor {
     /**
      * Paginated read with an optional server-side CSS incremental bound: when {@code modifiedAfter} is
      * non-null, IIQ returns only applications whose {@code modified} time is after it (native
-     * {@code Filter.gt("modified", ...)} via {@link NativeIncrementalQuery}). {@code null} = full scan.
+     * {@link NativeIncrementalQuery#changedAfterFilter(java.util.Date)}). {@code null} = full scan.
      */
     public NativeApplicationExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
@@ -59,19 +59,23 @@ public final class NativeApplicationExtractor {
                 config.getSourceSystem(), config.getExtractionRunId(), "Application", Instant.now());
 
         Iterator<Object[]> ids = context.search(Application.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            Application app = context.getObjectById(Application.class, id);
-            if (app == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                Application app = context.getObjectById(Application.class, id);
+                if (app == null) {
+                    continue;
+                }
+                try {
+                    NativeApplicationRow row = NativeApplicationMapper.map(
+                            app, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getApplications().add(row);
+                } finally {
+                    context.decache(app);
+                }
             }
-            try {
-                NativeApplicationRow row = NativeApplicationMapper.map(
-                        app, config.getSourceSystem(), config.getExtractionRunId());
-                result.getApplications().add(row);
-            } finally {
-                context.decache(app);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

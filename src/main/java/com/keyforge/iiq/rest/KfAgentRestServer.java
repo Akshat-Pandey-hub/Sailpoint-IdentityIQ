@@ -361,6 +361,11 @@ public final class KfAgentRestServer {
                         + "' — implemented: 'entitlements', 'identities', 'applications', 'accounts', 'workgroups', 'roles', 'identity-roles', 'identity-entitlements', 'account-entitlements', 'role-entitlements', 'identity-requests', 'identity-request-items', 'identity-request-approvals', 'policies', 'provisioning-items', 'provisioning-transactions', 'work-items', 'workflow-definitions', 'certifications', 'certification-entities', 'certification-items', 'audit-events', 'policy-constraints', 'task-results', 'task-schedules', 'access-history', 'access-history/identity-events', 'access-history/role-events', 'access-history/certifications', 'role-hierarchy', 'group-definitions', 'workitem-archives', 'certification-archives', 'policy-violations', 'workgroupmember', 'entitlement-assignment', 'workgroup-members', 'entitlement-certification', 'entitlement-certification-status', 'syslog-events'"));
             }
         } catch (Exception e) {
+            if (e instanceof com.keyforge.iiq.client.IiqApiException
+                    && upstreamFailureStatus(((com.keyforge.iiq.client.IiqApiException) e).getStatusCode()) == 400) {
+                writeJson(ex, 400, error(pluginRejection(e.getMessage())));
+                return;
+            }
             // generic message to the caller; the details stay in the server log (never credentials/headers)
             com.keyforge.iiq.debug.DebugLog.failure(LOG, ex.getRequestMethod() + " " + ex.getRequestURI().getPath()
                     + " failed; returned HTTP 500", e, "query/filters", ex.getRequestURI().getRawQuery());
@@ -670,7 +675,7 @@ public final class KfAgentRestServer {
         Integer limit = intOrNull(q.get("limit"));
 
         // Existing native WorkItemArchive extraction (append-only CEC history). The service collects records
-        // in memory (no DB). No modifiedAfter support on the client (full-scan only); modifiedAfter reserved.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound (created after); absent = full population
         NativeWorkItemArchivePageSource source = new NativeWorkItemArchiveClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
@@ -693,7 +698,7 @@ public final class KfAgentRestServer {
         Integer limit = intOrNull(q.get("limit"));
 
         // Existing native CertificationArchive extraction (append-only CEC history). The service collects
-        // records in memory (no DB). No modifiedAfter support (full-scan only); modifiedAfter reserved.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound (created after); absent = full population
         NativeCertificationArchivePageSource source = new NativeCertificationArchiveClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
@@ -901,8 +906,8 @@ public final class KfAgentRestServer {
     /**
      * Native SyslogEvent (IIQ's own immutable operational/diagnostic log — server-side logging events,
      * distinct from AuditEvent). Reuses the EXISTING native {@link NativeSyslogEventClient} page source +
-     * import (append-only); the service collects records in memory (no DB). No modifiedAfter support on the
-     * client (full-scan only); modifiedAfter stays reserved. No PostgreSQL on this path. An unfiltered request
+     * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
+     * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
      * with a limit reads only its window from the plugin (no full scan per page); the plugin's source count is
      * returned in the {@value NativeSyslogEventRestService#SOURCE_COUNT_HEADER} header for completeness checks.
      */
@@ -962,7 +967,7 @@ public final class KfAgentRestServer {
         Integer limit = intOrNull(q.get("limit"));
 
         // Items are extracted by the SHARED IdentityRequest native import; the item service collects only
-        // the item rows. No modifiedAfter support (full-scan only); modifiedAfter stays reserved/ignored.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound on the PARENT's change time (children of parents changed after it)
         NativeIdentityRequestPageSource source = new NativeIdentityRequestClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
@@ -985,7 +990,7 @@ public final class KfAgentRestServer {
         Integer limit = intOrNull(q.get("limit"));
 
         // Approvals are extracted by the SHARED IdentityRequest native import; the approval service collects
-        // only the approval rows. No modifiedAfter support (full-scan only); modifiedAfter stays reserved.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound on the PARENT's change time (children of parents changed after it)
         NativeIdentityRequestPageSource source = new NativeIdentityRequestClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
@@ -1029,7 +1034,7 @@ public final class KfAgentRestServer {
         Integer limit = intOrNull(q.get("limit"));
 
         // Items are derived by the SHARED ProvisioningTransaction native import; the item service collects
-        // only the item rows. No modifiedAfter support (full-scan only); modifiedAfter stays reserved.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound on the PARENT's change time (children of parents changed after it)
         NativeProvisioningTxnPageSource source = new NativeProvisioningTxnClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
@@ -1052,7 +1057,7 @@ public final class KfAgentRestServer {
         Integer limit = intOrNull(q.get("limit"));
 
         // Same SHARED native ProvisioningTransaction extraction as the DB path; the txn service collects only the
-        // transaction rows (derived items untouched). No modifiedAfter support (full-scan); modifiedAfter stays reserved.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound (changed after); absent = full population
         NativeProvisioningTxnPageSource source = new NativeProvisioningTxnClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
@@ -1075,7 +1080,7 @@ public final class KfAgentRestServer {
         Integer limit = intOrNull(q.get("limit"));
 
         // Existing native WorkItem extraction; the service collects records in memory (no DB). No modifiedAfter
-        // support on the WorkItem client (full-scan only); modifiedAfter stays reserved.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound (changed after); absent = full population
         NativeWorkItemPageSource source = new NativeWorkItemClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
@@ -1141,7 +1146,7 @@ public final class KfAgentRestServer {
         Integer limit = intOrNull(q.get("limit"));
 
         // Existing native CertificationEntity extraction; the service collects records in memory (no DB). No
-        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound (changed after); absent = full population
         NativeCertificationEntityPageSource source = new NativeCertificationEntityClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
@@ -1164,7 +1169,7 @@ public final class KfAgentRestServer {
         Integer limit = intOrNull(q.get("limit"));
 
         // Existing native CertificationItem extraction; the service collects records in memory (no DB). No
-        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound (changed after); absent = full population
         NativeCertificationItemPageSource source = new NativeCertificationItemClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
@@ -1187,7 +1192,7 @@ public final class KfAgentRestServer {
         Integer limit = intOrNull(q.get("limit"));
 
         // Existing native AuditEvent extraction (append-only); the service collects records in memory (no DB).
-        // No modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound (created after); absent = full population
         NativeAuditEventPageSource source = new NativeAuditEventClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
@@ -1231,7 +1236,7 @@ public final class KfAgentRestServer {
         Integer limit = intOrNull(q.get("limit"));
 
         // Existing native TaskResult extraction; the service collects records in memory (no DB). No
-        // modifiedAfter support on the client (full-scan only); modifiedAfter stays reserved.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound (changed after); absent = full population
         NativeTaskResultPageSource source = new NativeTaskResultClient(session).withModifiedAfter(q.get("modifiedAfter"));
 
@@ -1276,7 +1281,7 @@ public final class KfAgentRestServer {
 
         // Existing native Access-History entitlement-capture extraction (append-only, immutable). The
         // import service is DB-coupled, so it is not used here; the client + envelope are reused directly and
-        // the service collects rows in memory (no DB). No modifiedAfter support; it stays reserved.
+        // modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
         // optional incremental bound (created after); absent = full population
         NativeAccessHistoryClient client =
                 new NativeAccessHistoryClient(session).withModifiedAfter(q.get("modifiedAfter"));
@@ -1415,6 +1420,22 @@ public final class KfAgentRestServer {
             }
         }
         return null;
+    }
+
+    /** Only an upstream plugin's client error is a client error here; all other upstream failures remain 500. */
+    static int upstreamFailureStatus(int upstreamStatus) {
+        return upstreamStatus == 400 ? 400 : 500;
+    }
+
+    /**
+     * The caller-facing reason for a plugin 400: the plugin's own validation message (the part after
+     * "IdentityIQ says: "), without the internal IdentityIQ URL that precedes it in the exception message.
+     */
+    static String pluginRejection(String exceptionMessage) {
+        String marker = "IdentityIQ says: ";
+        int at = exceptionMessage == null ? -1 : exceptionMessage.indexOf(marker);
+        return at < 0 ? "IdentityIQ plugin rejected the request"
+                : "IdentityIQ plugin rejected the request: " + exceptionMessage.substring(at + marker.length());
     }
 
     /** SQL-report limit: a negative value means "no limit", as on every other endpoint. */

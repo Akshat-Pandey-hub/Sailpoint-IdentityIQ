@@ -29,8 +29,8 @@ import java.util.function.Function;
  * text ({@code factory_id} is the native GroupFactory id — a source value, not a KeyForge UUID). All 15 are
  * filterable. The only excluded columns are genuinely technical: the KeyForge {@code groupid} PK (a canonical
  * UUID), {@code record_hash}, and the lineage envelope ({@code source_system}/{@code source_interface}/
- * {@code source_object_type}/{@code extraction_run_id}/{@code extracted_at}). No native {@code modifiedAfter}
- * (the client has no server-side modified filter → full-scan only).
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
+ * {@code modifiedAfter} is forwarded to the plugin when supplied; filtering is source-side where supported.
  */
 public final class NativeGroupDefinitionRestService {
 

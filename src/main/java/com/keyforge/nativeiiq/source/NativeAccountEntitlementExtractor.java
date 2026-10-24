@@ -60,19 +60,23 @@ public final class NativeAccountEntitlementExtractor {
 
         int links = 0;
         Iterator<Object[]> ids = context.search(Link.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            Link link = context.getObjectById(Link.class, id);
-            if (link == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                Link link = context.getObjectById(Link.class, id);
+                if (link == null) {
+                    continue;
+                }
+                try {
+                    links++;
+                    NativeAccountEntitlementMapper.mapInto(
+                            link, result.getRows(), config.getSourceSystem(), config.getExtractionRunId());
+                } finally {
+                    context.decache(link);
+                }
             }
-            try {
-                links++;
-                NativeAccountEntitlementMapper.mapInto(
-                        link, result.getRows(), config.getSourceSystem(), config.getExtractionRunId());
-            } finally {
-                context.decache(link);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setLinkCount(links);

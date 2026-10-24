@@ -31,7 +31,7 @@ import java.util.function.Function;
  * {@code launched_at}/{@code completed_at}/{@code expiration_at}/{@code verified_at}/{@code created_at}/
  * {@code modified_at} are ISO-8601 timestamps; every other field is text. The 24 scalar fields are
  * filterable. The KeyForge {@code taskresultid} PK, {@code record_hash}, lineage envelope and soft-delete
- * columns are excluded. No native {@code modifiedAfter} (the client has no server-side modified filter →
+ * modifiedAfter is forwarded when supplied; the plugin applies the source-side filter where supported.
  * full-scan only).
  */
 public final class NativeTaskResultRestService {

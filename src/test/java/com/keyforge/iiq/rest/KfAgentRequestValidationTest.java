@@ -68,6 +68,22 @@ class KfAgentRequestValidationTest {
                 .contains("URL-encoded"), "an unencoded '+' decodes to a space");
     }
 
+    @Test
+    void onlyUpstreamPluginBadRequestRemainsClientError() {
+        assertEquals(400, KfAgentRestServer.upstreamFailureStatus(400));
+        assertEquals(500, KfAgentRestServer.upstreamFailureStatus(401));
+        assertEquals(500, KfAgentRestServer.upstreamFailureStatus(500));
+        assertEquals(500, KfAgentRestServer.upstreamFailureStatus(-1));
+    }
+
+    @Test
+    void pluginRejectionKeepsThePluginsReasonButNotTheInternalUrl() {
+        String message = KfAgentRestServer.pluginRejection("IdentityIQ request to http://iiq/plugin/rest/keyForgeNativeIIQ/"
+                + "roles?limit=x failed with HTTP 400: IdentityIQ says: invalid 'limit': expected a 32-bit integer");
+        assertEquals("IdentityIQ plugin rejected the request: invalid 'limit': expected a 32-bit integer", message);
+        assertEquals("IdentityIQ plugin rejected the request", KfAgentRestServer.pluginRejection(null));
+    }
+
     // --- over real HTTP: bad requests get JSON errors and the server keeps serving --------------------------
 
     private static int freePort() throws IOException {

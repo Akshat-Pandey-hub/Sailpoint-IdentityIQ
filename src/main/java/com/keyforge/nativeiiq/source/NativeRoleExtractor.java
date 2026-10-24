@@ -36,7 +36,7 @@ public final class NativeRoleExtractor {
     /**
      * Paginated read with an optional server-side CSS incremental bound: when {@code modifiedAfter} is
      * non-null, IIQ returns only roles whose {@code modified} time is after it (native
-     * {@code Filter.gt("modified", ...)} via {@link NativeIncrementalQuery}). {@code null} = full scan.
+     * {@link NativeIncrementalQuery#changedAfterFilter(java.util.Date)}). {@code null} = full scan.
      */
     public NativeRoleExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
         QueryOptions qo = new QueryOptions();
@@ -56,18 +56,22 @@ public final class NativeRoleExtractor {
                 config.getSourceSystem(), config.getExtractionRunId(), "Bundle", Instant.now());
 
         Iterator<Object[]> ids = context.search(Bundle.class, qo, "id");
-        while (ids != null && ids.hasNext()) {
-            String id = (String) ids.next()[0];
-            Bundle bundle = context.getObjectById(Bundle.class, id);
-            if (bundle == null) {
-                continue;
+        try {
+            while (ids != null && ids.hasNext()) {
+                String id = (String) ids.next()[0];
+                Bundle bundle = context.getObjectById(Bundle.class, id);
+                if (bundle == null) {
+                    continue;
+                }
+                try {
+                    NativeRoleRow row = NativeRoleMapper.map(bundle, config.getSourceSystem(), config.getExtractionRunId());
+                    result.getRoles().add(row);
+                } finally {
+                    context.decache(bundle);
+                }
             }
-            try {
-                NativeRoleRow row = NativeRoleMapper.map(bundle, config.getSourceSystem(), config.getExtractionRunId());
-                result.getRoles().add(row);
-            } finally {
-                context.decache(bundle);
-            }
+        } finally {
+            sailpoint.tools.Util.flushIterator(ids);
         }
 
         result.setFinishedAt(Instant.now());

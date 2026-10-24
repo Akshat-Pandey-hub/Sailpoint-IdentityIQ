@@ -35,7 +35,7 @@ import java.util.function.Function;
  * {@code automatic_closing_date} is plain {@code text} (not a timestamp); every other field is {@code text}.
  * The four structured fields are not filterable; the other 39 are scalar and filterable. The KeyForge
  * {@code certificationid} PK, {@code record_hash}, lineage envelope and soft-delete columns are excluded. No
- * native {@code modifiedAfter} (the certification client has no server-side modified filter → full-scan only).
+ * {@code modifiedAfter} is forwarded to the plugin when supplied; filtering is source-side where supported.
  */
 public final class NativeCertificationRestService {
 
