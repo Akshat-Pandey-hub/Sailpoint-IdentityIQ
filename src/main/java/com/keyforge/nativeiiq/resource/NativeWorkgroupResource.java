@@ -1,5 +1,8 @@
 package com.keyforge.nativeiiq.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.keyforge.nativeiiq.model.NativeWorkgroupExtractionResult;
 import com.keyforge.nativeiiq.service.NativeWorkgroupExtractionService;
 import com.keyforge.nativeiiq.wire.NativeWorkgroupWire;
@@ -18,8 +21,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Plugin REST resource exporting native IdentityIQ Workgroup data (workgroup {@code Identity} objects)
@@ -32,8 +33,7 @@ import java.util.logging.Logger;
  */
 @Path("keyForgeNativeIIQ")
 public class NativeWorkgroupResource extends BasePluginResource {
-
-    private static final Logger LOG = Logger.getLogger(NativeWorkgroupResource.class.getName());
+    private static final Log LOG = LogFactory.getLog(NativeWorkgroupResource.class);
 
     static final int MAX_LIMIT = 1000;
     static final int DEFAULT_LIMIT = 100;
@@ -50,6 +50,8 @@ public class NativeWorkgroupResource extends BasePluginResource {
     public Response getWorkgroups(@QueryParam("start") @DefaultValue("0") int start,
                                   @QueryParam("limit") @DefaultValue("100") int limit,
                                   @QueryParam("modifiedAfter") String modifiedAfter) {
+        long requestStartedAt = System.currentTimeMillis();
+        LOG.info("KeyForgeNativeIIQ request endpoint=" + "workgroups" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
         java.util.Date bound = com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
             return error(Response.Status.BAD_REQUEST, com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
@@ -57,8 +59,11 @@ public class NativeWorkgroupResource extends BasePluginResource {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         String stage = "start";
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("KeyForgeNativeIIQ query endpoint=" + "workgroups" + ", firstRow=" + safeStart + ", resultLimit=" + safeLimit + ", incrementalFilter=" + (bound != null));
+        }
         try {
-            LOG.fine("KeyForgeNativeIIQ workgroups: entering (start=" + safeStart + ", limit=" + safeLimit + ")");
+            LOG.debug("KeyForgeNativeIIQ workgroups: entering (start=" + safeStart + ", limit=" + safeLimit + ")");
 
             stage = "getContext";
             SailPointContext context = getContext();
@@ -70,20 +75,23 @@ public class NativeWorkgroupResource extends BasePluginResource {
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeWorkgroupWire.envelope(result, safeStart, safeLimit);
 
-            LOG.fine("KeyForgeNativeIIQ workgroups: returning " + result.getCount() + " record(s)");
+            LOG.info("KeyForgeNativeIIQ workgroups: returning " + result.getCount() + " record(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
             // Return the Map so the provider serializes once to a JSON object (never a double-encoded String).
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.log(Level.WARNING, "KeyForgeNativeIIQ workgroups: authorization denied at stage=" + stage, e);
+            LOG.warn("KeyForgeNativeIIQ workgroups: authorization denied at stage=" + stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.log(Level.SEVERE, "KeyForgeNativeIIQ workgroups: failed at stage=" + stage, t);
+            LOG.error("KeyForgeNativeIIQ workgroups: failed at stage=" + stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     /** Returns the error map as the entity; the JSON provider serializes it once (a JSON object). */
     private static Response error(Response.Status status, Throwable t) {
+        if (status == Response.Status.BAD_REQUEST) {
+            LOG.info("KeyForgeNativeIIQ request rejected endpoint=workgroup reason=" + LogText.safe(t == null ? null : t.getMessage()));
+        }
         return Response.status(status)
                 .entity(NativeWorkgroupWire.errorEnvelope(status.getStatusCode(), t))
                 .type(MediaType.APPLICATION_JSON)

@@ -1,5 +1,8 @@
 package com.keyforge.nativeiiq.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import sailpoint.api.SailPointContext;
 import sailpoint.authorization.UnauthorizedAccessException;
 import sailpoint.object.Configuration;
@@ -30,13 +33,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /** Read-only export of deployed LCM workflow approval declarations; never executes workflow code. */
 @Path("keyForgeNativeIIQ")
 public class NativeApprovalConfigResource extends BasePluginResource {
-    private static final Logger LOG = Logger.getLogger(NativeApprovalConfigResource.class.getName());
+    private static final Log LOG = LogFactory.getLog(NativeApprovalConfigResource.class);
+
     private static final String DEFAULT_FLOW = "EntitlementsRequest";
     private static final int MAX_APPROVAL_DEPTH = 16;
     private static final int MAX_SOURCE_CHARS = 12000;
@@ -53,10 +55,13 @@ public class NativeApprovalConfigResource extends BasePluginResource {
     @SystemAdmin
     @Produces(MediaType.APPLICATION_JSON)
     public Response getApprovalConfig(@QueryParam("flow") @DefaultValue(DEFAULT_FLOW) String flow) {
+        long requestStartedAt = System.currentTimeMillis();
+        LOG.info("KeyForgeNativeIIQ request endpoint=" + "approval-config" + ", start=" + "<not set>" + ", limit=" + "<not set>" + ", modifiedAfter=" + "<not set>");
         String stage = "validateFlow";
-        try {
+try {
             String flowName = flow == null || flow.trim().isEmpty() ? DEFAULT_FLOW : flow.trim();
             if (!FLOW_NAME.matcher(flowName).matches()) {
+                LOG.info("KeyForgeNativeIIQ request rejected endpoint=approval-config reason=Invalid flow name");
                 return Response.status(Response.Status.BAD_REQUEST).entity(error(400, "Invalid flow name")).type(MediaType.APPLICATION_JSON).build();
             }
             stage = "getContext";
@@ -69,6 +74,8 @@ public class NativeApprovalConfigResource extends BasePluginResource {
             if (workflowName == null || workflowName.trim().isEmpty()) {
                 result.put("configurationFound", Boolean.FALSE);
                 result.put("message", "The configuration key has no workflow value.");
+                LOG.info("KeyForgeNativeIIQ result endpoint=approval-config status=200 rows=not-applicable, elapsedMs="
+                        + (System.currentTimeMillis() - requestStartedAt));
                 return Response.ok(result).type(MediaType.APPLICATION_JSON).build();
             }
             stage = "loadWorkflow";
@@ -77,6 +84,8 @@ public class NativeApprovalConfigResource extends BasePluginResource {
                 result.put("configurationFound", Boolean.TRUE);
                 result.put("workflowFound", Boolean.FALSE);
                 result.put("message", "The configured workflow name did not resolve to a Workflow object.");
+                LOG.info("KeyForgeNativeIIQ result endpoint=approval-config status=200 rows=not-applicable, elapsedMs="
+                        + (System.currentTimeMillis() - requestStartedAt));
                 return Response.ok(result).type(MediaType.APPLICATION_JSON).build();
             }
             stage = "buildWorkflowTrace";
@@ -86,12 +95,14 @@ public class NativeApprovalConfigResource extends BasePluginResource {
             result.put("readOnly", Boolean.TRUE);
             result.put("rulesExecuted", Boolean.FALSE);
             result.put("scriptsExecuted", Boolean.FALSE);
+            LOG.info("KeyForgeNativeIIQ result endpoint=approval-config status=200 rows=not-applicable, elapsedMs="
+                    + (System.currentTimeMillis() - requestStartedAt));
             return Response.ok(result).type(MediaType.APPLICATION_JSON).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.log(Level.WARNING, "Approval config trace authorization denied at stage=" + stage, e);
+            LOG.warn("Approval config trace authorization denied at stage=" + stage, e);
             return Response.status(Response.Status.FORBIDDEN).entity(error(403, e.getClass().getName() + ": " + String.valueOf(e.getMessage()))).type(MediaType.APPLICATION_JSON).build();
         } catch (Throwable t) {
-            LOG.log(Level.SEVERE, "Approval config trace failed at stage=" + stage, t);
+            LOG.error("Approval config trace failed at stage=" + stage, t);
             Map<String, Object> error = error(500, t.getClass().getName() + " at " + stage + ": " + String.valueOf(t.getMessage()));
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(error).type(MediaType.APPLICATION_JSON).build();
         }

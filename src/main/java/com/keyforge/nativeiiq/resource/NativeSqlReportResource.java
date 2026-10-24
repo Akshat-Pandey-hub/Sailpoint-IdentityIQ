@@ -1,5 +1,8 @@
 package com.keyforge.nativeiiq.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import sailpoint.api.SailPointContext;
 import sailpoint.authorization.UnauthorizedAccessException;
 import sailpoint.rest.plugin.BasePluginResource;
@@ -26,8 +29,6 @@ import java.sql.Statement;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Plugin REST resource that executes a <b>business-authored SQL report</b> against the IdentityIQ
@@ -49,8 +50,7 @@ import java.util.logging.Logger;
  */
 @Path("keyForgeNativeIIQ")
 public class NativeSqlReportResource extends BasePluginResource {
-
-    private static final Logger LOG = Logger.getLogger(NativeSqlReportResource.class.getName());
+    private static final Log LOG = LogFactory.getLog(NativeSqlReportResource.class);
 
     /** Report name -> bundled SQL resource path (on the plugin classpath). Baked, never client-supplied. */
     private static final Map<String, String> REPORTS = new LinkedHashMap<String, String>();
@@ -140,8 +140,10 @@ public class NativeSqlReportResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response runReport(@PathParam("report") String report, @QueryParam("modifiedAfter") String modifiedAfter,
                               @Context UriInfo uriInfo) {
+        long requestStartedAt = System.currentTimeMillis();
+        LOG.info("KeyForgeNativeIIQ request endpoint=" + "sqlReport/" + LogText.safe(report) + ", start=" + LogText.safe(uriInfo.getQueryParameters().getFirst("start")) + ", limit=" + LogText.safe(uriInfo.getQueryParameters().getFirst("limit")) + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
         String stage = "start";
-        try {
+try {
             String resourcePath = REPORTS.get(report);
             if (resourcePath == null) {
                 Map<String, Object> err = new LinkedHashMap<String, Object>();
@@ -188,19 +190,20 @@ public class NativeSqlReportResource extends BasePluginResource {
 
             stage = "execute";
             Map<String, Object> envelope = NativeSqlReportExecutor.execute(
-                    conn, report, sql, filters, start, limit, modifiedAfterMillis);
+                    conn, report, sql, filters, start, limit, modifiedAfterMillis, LOG);
 
-            LOG.fine("KeyForgeNativeIIQ sqlReport[" + report + "]: returned "
-                    + envelope.get("returned") + " row(s)");
+            LOG.info("KeyForgeNativeIIQ sqlReport[" + report + "]: returned "
+                    + envelope.get("returned") + " row(s), hasMore=" + envelope.get("hasMore")
+                    + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.log(Level.WARNING, "KeyForgeNativeIIQ sqlReport: authorization denied at stage=" + stage, e);
+            LOG.warn("KeyForgeNativeIIQ sqlReport: authorization denied at stage=" + stage, e);
             return error(Response.Status.FORBIDDEN, report, "Access denied.");
         } catch (NativeSqlReportExecutor.BadRequest e) {
             return error(Response.Status.BAD_REQUEST, report, e.getMessage());
         } catch (Throwable t) {
             // Broader than Exception on purpose: contain Errors so IIQ returns a JSON 500, never exception.jsf.
-            LOG.log(Level.SEVERE, "KeyForgeNativeIIQ sqlReport: failed at stage=" + stage, t);
+            LOG.error("KeyForgeNativeIIQ sqlReport: failed at stage=" + stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, report,
                     "SQL report could not be completed. Check the IdentityIQ server log.");
         }
@@ -250,6 +253,10 @@ public class NativeSqlReportResource extends BasePluginResource {
     }
 
     private Response error(Response.Status status, String report, String message) {
+        if (status == Response.Status.BAD_REQUEST) {
+            LOG.info("KeyForgeNativeIIQ request rejected endpoint=sqlReport/" + LogText.safe(report)
+                    + " reason=" + LogText.safe(message));
+        }
         Map<String, Object> error = new LinkedHashMap<String, Object>();
         error.put("message", message);
         Map<String, Object> env = new LinkedHashMap<String, Object>();

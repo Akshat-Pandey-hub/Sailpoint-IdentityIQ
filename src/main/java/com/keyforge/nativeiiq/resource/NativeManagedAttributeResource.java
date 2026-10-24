@@ -1,5 +1,8 @@
 package com.keyforge.nativeiiq.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.keyforge.nativeiiq.model.NativeManagedAttributeExtractionResult;
 import com.keyforge.nativeiiq.service.NativeManagedAttributeExtractionService;
 import com.keyforge.nativeiiq.source.NativeManagedAttributeInspector;
@@ -19,8 +22,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Plugin REST resource exporting native IdentityIQ ManagedAttribute (entitlement) data as JSON, read
@@ -32,8 +33,7 @@ import java.util.logging.Logger;
  */
 @Path("keyForgeNativeIIQ")
 public class NativeManagedAttributeResource extends BasePluginResource {
-
-    private static final Logger LOG = Logger.getLogger(NativeManagedAttributeResource.class.getName());
+    private static final Log LOG = LogFactory.getLog(NativeManagedAttributeResource.class);
 
     static final int MAX_LIMIT = 1000;
     static final int DEFAULT_LIMIT = 100;
@@ -50,6 +50,8 @@ public class NativeManagedAttributeResource extends BasePluginResource {
     public Response getEntitlements(@QueryParam("start") @DefaultValue("0") int start,
                                     @QueryParam("limit") @DefaultValue("100") int limit,
                                     @QueryParam("modifiedAfter") String modifiedAfter) {
+        long requestStartedAt = System.currentTimeMillis();
+        LOG.info("KeyForgeNativeIIQ request endpoint=" + "entitlements" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         java.util.Date modifiedAfterDate =
@@ -60,8 +62,11 @@ public class NativeManagedAttributeResource extends BasePluginResource {
         }
         // Authorization enforced by IIQ's PluginAuthorizationFilter via @SystemAdmin (required 8.4 gate).
         String stage = "start";
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("KeyForgeNativeIIQ query endpoint=" + "entitlements" + ", firstRow=" + safeStart + ", resultLimit=" + safeLimit + ", incrementalFilter=" + (modifiedAfterDate != null));
+        }
         try {
-            LOG.fine("KeyForgeNativeIIQ entitlements: entering (start=" + safeStart + ", limit=" + safeLimit + ")");
+            LOG.debug("KeyForgeNativeIIQ entitlements: entering (start=" + safeStart + ", limit=" + safeLimit + ")");
 
             stage = "getContext";
             SailPointContext context = getContext();
@@ -73,15 +78,15 @@ public class NativeManagedAttributeResource extends BasePluginResource {
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeManagedAttributeWire.envelope(result, safeStart, safeLimit);
 
-            LOG.fine("KeyForgeNativeIIQ entitlements: returning " + result.getCount() + " record(s)");
+            LOG.info("KeyForgeNativeIIQ entitlements: returning " + result.getCount() + " record(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
             // Hand the JAX-RS JSON provider the Map so it is serialized to a JSON OBJECT exactly once
             // (passing a JsonHelper.toJson(...) String double-encodes it into a quoted JSON string).
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.log(Level.WARNING, "KeyForgeNativeIIQ entitlements: authorization denied at stage=" + stage, e);
+            LOG.warn("KeyForgeNativeIIQ entitlements: authorization denied at stage=" + stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.log(Level.SEVERE, "KeyForgeNativeIIQ entitlements: failed at stage=" + stage, t);
+            LOG.error("KeyForgeNativeIIQ entitlements: failed at stage=" + stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
@@ -101,25 +106,35 @@ public class NativeManagedAttributeResource extends BasePluginResource {
     public Response getEntitlementsSource(@QueryParam("start") @DefaultValue("0") int start,
                                           @QueryParam("limit") @DefaultValue("0") int limit,
                                           @QueryParam("includeXml") @DefaultValue("true") boolean includeXml) {
+        long requestStartedAt = System.currentTimeMillis();
+        LOG.info("KeyForgeNativeIIQ request endpoint=" + "entitlements-source" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + "<not set>");
         String stage = "start";
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("KeyForgeNativeIIQ query endpoint=" + "entitlements-source" + ", firstRow=" + start + ", resultLimit=" + limit + ", incrementalFilter=" + false);
+        }
         try {
             stage = "getContext";
             SailPointContext context = getContext();
             stage = "inspect";
             Map<String, Object> envelope =
                     new NativeManagedAttributeInspector(includeXml).inspect(context, Math.max(0, start), limit);
+            LOG.info("KeyForgeNativeIIQ result endpoint=entitlements-source status=200 rows="
+                    + envelope.get("count") + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.log(Level.WARNING, "KeyForgeNativeIIQ entitlements-source: denied at stage=" + stage, e);
+            LOG.warn("KeyForgeNativeIIQ entitlements-source: denied at stage=" + stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.log(Level.SEVERE, "KeyForgeNativeIIQ entitlements-source: failed at stage=" + stage, t);
+            LOG.error("KeyForgeNativeIIQ entitlements-source: failed at stage=" + stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     /** Returns the error map as the entity; the JSON provider serializes it once (a JSON object). */
     private static Response error(Response.Status status, Throwable t) {
+        if (status == Response.Status.BAD_REQUEST) {
+            LOG.info("KeyForgeNativeIIQ request rejected endpoint=managedattribute reason=" + LogText.safe(t == null ? null : t.getMessage()));
+        }
         return Response.status(status)
                 .entity(NativeManagedAttributeWire.errorEnvelope(status.getStatusCode(), t))
                 .type(MediaType.APPLICATION_JSON)

@@ -1,5 +1,8 @@
 package com.keyforge.nativeiiq.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.keyforge.nativeiiq.model.NativeAuditEventExtractionResult;
 import com.keyforge.nativeiiq.service.NativeAuditEventExtractionService;
 import com.keyforge.nativeiiq.wire.NativeAuditEventWire;
@@ -18,8 +21,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Plugin REST resource exporting native {@code AuditEvent} data as JSON. Strictly read-only,
@@ -27,8 +28,7 @@ import java.util.logging.Logger;
  */
 @Path("keyForgeNativeIIQ")
 public class NativeAuditEventResource extends BasePluginResource {
-
-    private static final Logger LOG = Logger.getLogger(NativeAuditEventResource.class.getName());
+    private static final Log LOG = LogFactory.getLog(NativeAuditEventResource.class);
     static final int MAX_LIMIT = 1000;
     static final int DEFAULT_LIMIT = 200;
 
@@ -44,6 +44,8 @@ public class NativeAuditEventResource extends BasePluginResource {
     public Response getAuditEvents(@QueryParam("start") @DefaultValue("0") int start,
                                    @QueryParam("limit") @DefaultValue("200") int limit,
                                    @QueryParam("modifiedAfter") String modifiedAfter) {
+        long requestStartedAt = System.currentTimeMillis();
+        LOG.info("KeyForgeNativeIIQ request endpoint=" + "audit-events" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
@@ -55,25 +57,35 @@ public class NativeAuditEventResource extends BasePluginResource {
                     com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
         }
         String stage = "start";
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("KeyForgeNativeIIQ query endpoint=" + "audit-events" + ", firstRow=" + safeStart + ", resultLimit=" + safeLimit + ", incrementalFilter=" + (createdAfter != null));
+        }
         try {
             stage = "getContext";
             SailPointContext context = getContext();
             stage = "extract";
             NativeAuditEventExtractionResult result =
                     new NativeAuditEventExtractionService().extract(context, safeStart, safeLimit, createdAfter);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("KeyForgeNativeIIQ source endpoint=audit-events count=" + result.getSourceCount());
+            }
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeAuditEventWire.envelope(result, safeStart, safeLimit);
+            LOG.info("KeyForgeNativeIIQ result endpoint=audit-events status=200 rows=" + result.getCount() + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.log(Level.WARNING, "KeyForgeNativeIIQ audit-events: authorization denied at stage=" + stage, e);
+            LOG.warn("KeyForgeNativeIIQ audit-events: authorization denied at stage=" + stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.log(Level.SEVERE, "KeyForgeNativeIIQ audit-events: failed at stage=" + stage, t);
+            LOG.error("KeyForgeNativeIIQ audit-events: failed at stage=" + stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     private static Response error(Response.Status status, Throwable t) {
+        if (status == Response.Status.BAD_REQUEST) {
+            LOG.info("KeyForgeNativeIIQ request rejected endpoint=auditevent reason=" + LogText.safe(t == null ? null : t.getMessage()));
+        }
         return Response.status(status)
                 .entity(NativeAuditEventWire.errorEnvelope(status.getStatusCode(), t))
                 .type(MediaType.APPLICATION_JSON)

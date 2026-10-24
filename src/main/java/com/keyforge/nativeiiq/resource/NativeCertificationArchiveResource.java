@@ -1,5 +1,8 @@
 package com.keyforge.nativeiiq.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.keyforge.nativeiiq.model.NativeCertificationArchiveExtractionResult;
 import com.keyforge.nativeiiq.service.NativeCertificationArchiveExtractionService;
 import com.keyforge.nativeiiq.wire.NativeCertificationArchiveWire;
@@ -18,8 +21,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Plugin REST resource exporting native IdentityIQ {@code CertificationArchive} data (the immutable
@@ -32,8 +33,7 @@ import java.util.logging.Logger;
  */
 @Path("keyForgeNativeIIQ")
 public class NativeCertificationArchiveResource extends BasePluginResource {
-
-    private static final Logger LOG = Logger.getLogger(NativeCertificationArchiveResource.class.getName());
+    private static final Log LOG = LogFactory.getLog(NativeCertificationArchiveResource.class);
 
     static final int MAX_LIMIT = 1000;
     static final int DEFAULT_LIMIT = 100;
@@ -50,6 +50,8 @@ public class NativeCertificationArchiveResource extends BasePluginResource {
     public Response getCertificationArchives(@QueryParam("start") @DefaultValue("0") int start,
                                              @QueryParam("limit") @DefaultValue("100") int limit,
                                              @QueryParam("modifiedAfter") String modifiedAfter) {
+        long requestStartedAt = System.currentTimeMillis();
+        LOG.info("KeyForgeNativeIIQ request endpoint=" + "certification-archives" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         // Optional incremental bound (ISO-8601). These objects are append-only, so it bounds on "created".
@@ -61,8 +63,11 @@ public class NativeCertificationArchiveResource extends BasePluginResource {
                     com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
         }
         String stage = "start";
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("KeyForgeNativeIIQ query endpoint=" + "certification-archives" + ", firstRow=" + safeStart + ", resultLimit=" + safeLimit + ", incrementalFilter=" + (createdAfter != null));
+        }
         try {
-            LOG.fine("KeyForgeNativeIIQ certification-archives: entering (start=" + safeStart + ", limit=" + safeLimit + ")");
+            LOG.debug("KeyForgeNativeIIQ certification-archives: entering (start=" + safeStart + ", limit=" + safeLimit + ")");
 
             stage = "getContext";
             SailPointContext context = getContext();
@@ -70,24 +75,30 @@ public class NativeCertificationArchiveResource extends BasePluginResource {
             stage = "extract";
             NativeCertificationArchiveExtractionResult result =
                     new NativeCertificationArchiveExtractionService().extract(context, safeStart, safeLimit, createdAfter);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("KeyForgeNativeIIQ source endpoint=certification-archives count=" + result.getSourceCount());
+            }
 
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeCertificationArchiveWire.envelope(result, safeStart, safeLimit);
 
-            LOG.fine("KeyForgeNativeIIQ certification-archives: returning " + result.getCount() + " record(s)");
+            LOG.info("KeyForgeNativeIIQ certification-archives: returning " + result.getCount() + " record(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
             // Return the Map so the provider serializes once to a JSON object (never a double-encoded String).
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.log(Level.WARNING, "KeyForgeNativeIIQ certification-archives: authorization denied at stage=" + stage, e);
+            LOG.warn("KeyForgeNativeIIQ certification-archives: authorization denied at stage=" + stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.log(Level.SEVERE, "KeyForgeNativeIIQ certification-archives: failed at stage=" + stage, t);
+            LOG.error("KeyForgeNativeIIQ certification-archives: failed at stage=" + stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     /** Returns the error map as the entity; the JSON provider serializes it once (a JSON object). */
     private static Response error(Response.Status status, Throwable t) {
+        if (status == Response.Status.BAD_REQUEST) {
+            LOG.info("KeyForgeNativeIIQ request rejected endpoint=certificationarchive reason=" + LogText.safe(t == null ? null : t.getMessage()));
+        }
         return Response.status(status)
                 .entity(NativeCertificationArchiveWire.errorEnvelope(status.getStatusCode(), t))
                 .type(MediaType.APPLICATION_JSON)

@@ -28,6 +28,13 @@ final class NativeSqlReportExecutor {
     static Map<String, Object> execute(Connection conn, String report, String sql,
                                        Map<String, String> filters, Integer requestedStart,
                                        Integer requestedLimit, Long modifiedAfter) throws Exception {
+        return execute(conn, report, sql, filters, requestedStart, requestedLimit, modifiedAfter, null);
+    }
+
+    static Map<String, Object> execute(Connection conn, String report, String sql,
+                                       Map<String, String> filters, Integer requestedStart,
+                                       Integer requestedLimit, Long modifiedAfter,
+                                       org.apache.commons.logging.Log log) throws Exception {
         validatePage(requestedStart, requestedLimit);
         int start = requestedStart == null ? 0 : requestedStart.intValue();
         int pageLimit = requestedLimit == null ? MAX_ROWS : requestedLimit.intValue();
@@ -52,6 +59,11 @@ final class NativeSqlReportExecutor {
                 }
             }
             int maxRows = jdbcMaxRows(start, pageLimit, filters);
+            if (log != null && log.isDebugEnabled()) {
+                log.debug("KeyForgeNativeIIQ sqlReport[" + report + "]: boundMillis="
+                        + (modifiedAfter == null ? "<not set>" : modifiedAfter)
+                        + ", start=" + start + ", limit=" + pageLimit + ", maxRows=" + maxRows);
+            }
             if (maxRows > 0) {
                 st.setMaxRows(maxRows);
             }
@@ -96,6 +108,10 @@ final class NativeSqlReportExecutor {
                 }
                 rows.add(row);
                 matched++;
+            }
+            if (log != null && log.isDebugEnabled()) {
+                log.debug("KeyForgeNativeIIQ sqlReport[" + report + "]: rowsSkipped="
+                        + Math.min(matched, start) + ", returned=" + rows.size() + ", hasMore=" + hasMore);
             }
         } finally {
             if (rs != null) {

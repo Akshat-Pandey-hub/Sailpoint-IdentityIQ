@@ -1,5 +1,8 @@
 package com.keyforge.nativeiiq.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.keyforge.nativeiiq.model.NativeIdentityEntitlementExtractionResult;
 import com.keyforge.nativeiiq.service.NativeIdentityEntitlementExtractionService;
 import com.keyforge.nativeiiq.wire.NativeIdentityEntitlementWire;
@@ -18,8 +21,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Plugin REST resource exporting native IdentityIQ {@code IdentityEntitlement} data (identity&nbsp;&harr;&nbsp;
@@ -31,8 +32,7 @@ import java.util.logging.Logger;
  */
 @Path("keyForgeNativeIIQ")
 public class NativeIdentityEntitlementResource extends BasePluginResource {
-
-    private static final Logger LOG = Logger.getLogger(NativeIdentityEntitlementResource.class.getName());
+    private static final Log LOG = LogFactory.getLog(NativeIdentityEntitlementResource.class);
 
     static final int MAX_LIMIT = 2000;
     static final int DEFAULT_LIMIT = 500;
@@ -49,6 +49,8 @@ public class NativeIdentityEntitlementResource extends BasePluginResource {
     public Response getIdentityEntitlements(@QueryParam("start") @DefaultValue("0") int start,
                                             @QueryParam("limit") @DefaultValue("500") int limit,
                                             @QueryParam("modifiedAfter") String modifiedAfter) {
+        long requestStartedAt = System.currentTimeMillis();
+        LOG.info("KeyForgeNativeIIQ request endpoint=" + "identity-entitlements" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         // Optional incremental bound (ISO-8601): objects changed after it (modified after it, or never modified and
@@ -60,6 +62,9 @@ public class NativeIdentityEntitlementResource extends BasePluginResource {
                     com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
         }
         String stage = "start";
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("KeyForgeNativeIIQ query endpoint=" + "identity-entitlements" + ", firstRow=" + safeStart + ", resultLimit=" + safeLimit + ", incrementalFilter=" + (modifiedAfterDate != null));
+        }
         try {
             stage = "getContext";
             SailPointContext context = getContext();
@@ -67,22 +72,28 @@ public class NativeIdentityEntitlementResource extends BasePluginResource {
             stage = "extract";
             NativeIdentityEntitlementExtractionResult result =
                     new NativeIdentityEntitlementExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("KeyForgeNativeIIQ source endpoint=identity-entitlements count=" + result.getSourceCount());
+            }
 
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeIdentityEntitlementWire.envelope(result, safeStart, safeLimit);
 
-            LOG.fine("KeyForgeNativeIIQ identity-entitlements: returning " + result.getCount() + " record(s)");
+            LOG.info("KeyForgeNativeIIQ identity-entitlements: returning " + result.getCount() + " record(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.log(Level.WARNING, "KeyForgeNativeIIQ identity-entitlements: authorization denied at stage=" + stage, e);
+            LOG.warn("KeyForgeNativeIIQ identity-entitlements: authorization denied at stage=" + stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.log(Level.SEVERE, "KeyForgeNativeIIQ identity-entitlements: failed at stage=" + stage, t);
+            LOG.error("KeyForgeNativeIIQ identity-entitlements: failed at stage=" + stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     private static Response error(Response.Status status, Throwable t) {
+        if (status == Response.Status.BAD_REQUEST) {
+            LOG.info("KeyForgeNativeIIQ request rejected endpoint=identityentitlement reason=" + LogText.safe(t == null ? null : t.getMessage()));
+        }
         return Response.status(status)
                 .entity(NativeIdentityEntitlementWire.errorEnvelope(status.getStatusCode(), t))
                 .type(MediaType.APPLICATION_JSON)

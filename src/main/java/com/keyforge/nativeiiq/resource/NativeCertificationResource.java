@@ -1,5 +1,8 @@
 package com.keyforge.nativeiiq.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.keyforge.nativeiiq.model.NativeCertificationExtractionResult;
 import com.keyforge.nativeiiq.service.NativeCertificationExtractionService;
 import com.keyforge.nativeiiq.wire.NativeCertificationWire;
@@ -18,8 +21,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Plugin REST resource exporting native {@code Certification} data as JSON. Read-only, {@code @SystemAdmin},
@@ -27,8 +28,7 @@ import java.util.logging.Logger;
  */
 @Path("keyForgeNativeIIQ")
 public class NativeCertificationResource extends BasePluginResource {
-
-    private static final Logger LOG = Logger.getLogger(NativeCertificationResource.class.getName());
+    private static final Log LOG = LogFactory.getLog(NativeCertificationResource.class);
 
     static final int MAX_LIMIT = 1000;
     static final int DEFAULT_LIMIT = 100;
@@ -45,6 +45,8 @@ public class NativeCertificationResource extends BasePluginResource {
     public Response getCertifications(@QueryParam("start") @DefaultValue("0") int start,
                                       @QueryParam("limit") @DefaultValue("100") int limit,
                                       @QueryParam("modifiedAfter") String modifiedAfter) {
+        long requestStartedAt = System.currentTimeMillis();
+        LOG.info("KeyForgeNativeIIQ request endpoint=" + "certifications" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
         java.util.Date bound = com.keyforge.nativeiiq.source.NativeIncrementalQuery.parseIsoToDate(modifiedAfter);
         if (com.keyforge.nativeiiq.source.NativeIncrementalQuery.isInvalid(modifiedAfter)) {
             return error(Response.Status.BAD_REQUEST, com.keyforge.nativeiiq.source.NativeIncrementalQuery.invalidTimestamp());
@@ -52,26 +54,35 @@ public class NativeCertificationResource extends BasePluginResource {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         String stage = "start";
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("KeyForgeNativeIIQ query endpoint=" + "certifications" + ", firstRow=" + safeStart + ", resultLimit=" + safeLimit + ", incrementalFilter=" + (bound != null));
+        }
         try {
             stage = "getContext";
             SailPointContext context = getContext();
             stage = "extract";
             NativeCertificationExtractionResult result =
                     new NativeCertificationExtractionService().extract(context, safeStart, safeLimit, bound);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("KeyForgeNativeIIQ source endpoint=certifications count=" + result.getSourceCount());
+            }
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeCertificationWire.envelope(result, safeStart, safeLimit);
-            LOG.fine("KeyForgeNativeIIQ certifications: returning " + result.getCount() + " record(s)");
+            LOG.info("KeyForgeNativeIIQ certifications: returning " + result.getCount() + " record(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.log(Level.WARNING, "KeyForgeNativeIIQ certifications: denied at stage=" + stage, e);
+            LOG.warn("KeyForgeNativeIIQ certifications: denied at stage=" + stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.log(Level.SEVERE, "KeyForgeNativeIIQ certifications: failed at stage=" + stage, t);
+            LOG.error("KeyForgeNativeIIQ certifications: failed at stage=" + stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     private static Response error(Response.Status status, Throwable t) {
+        if (status == Response.Status.BAD_REQUEST) {
+            LOG.info("KeyForgeNativeIIQ request rejected endpoint=certification reason=" + LogText.safe(t == null ? null : t.getMessage()));
+        }
         return Response.status(status)
                 .entity(NativeCertificationWire.errorEnvelope(status.getStatusCode(), t))
                 .type(MediaType.APPLICATION_JSON)

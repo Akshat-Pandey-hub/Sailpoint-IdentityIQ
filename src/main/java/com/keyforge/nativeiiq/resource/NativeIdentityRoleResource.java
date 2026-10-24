@@ -1,5 +1,8 @@
 package com.keyforge.nativeiiq.resource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.keyforge.nativeiiq.model.NativeIdentityRoleExtractionResult;
 import com.keyforge.nativeiiq.service.NativeIdentityRoleExtractionService;
 import com.keyforge.nativeiiq.source.NativeIncrementalQuery;
@@ -19,8 +22,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Plugin REST resource exporting native identity&nbsp;&harr;&nbsp;role edges (from Identity role
@@ -29,8 +30,7 @@ import java.util.logging.Logger;
  */
 @Path("keyForgeNativeIIQ")
 public class NativeIdentityRoleResource extends BasePluginResource {
-
-    private static final Logger LOG = Logger.getLogger(NativeIdentityRoleResource.class.getName());
+    private static final Log LOG = LogFactory.getLog(NativeIdentityRoleResource.class);
 
     static final int MAX_LIMIT = 1000;
     static final int DEFAULT_LIMIT = 200;
@@ -47,6 +47,8 @@ public class NativeIdentityRoleResource extends BasePluginResource {
     public Response getIdentityRoles(@QueryParam("start") @DefaultValue("0") int start,
                                      @QueryParam("limit") @DefaultValue("200") int limit,
                                      @QueryParam("modifiedAfter") String modifiedAfter) {
+        long requestStartedAt = System.currentTimeMillis();
+        LOG.info("KeyForgeNativeIIQ request endpoint=" + "identity-roles" + ", start=" + start + ", limit=" + limit + ", modifiedAfter=" + (modifiedAfter == null || modifiedAfter.trim().isEmpty() ? "<not set>" : LogText.safe(modifiedAfter)));
         if (NativeIncrementalQuery.isInvalid(modifiedAfter)) {
             return error(Response.Status.BAD_REQUEST, NativeIncrementalQuery.invalidTimestamp());
         }
@@ -54,26 +56,35 @@ public class NativeIdentityRoleResource extends BasePluginResource {
         int safeStart = Math.max(0, start);
         int safeLimit = limit <= 0 ? DEFAULT_LIMIT : Math.min(limit, MAX_LIMIT);
         String stage = "start";
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("KeyForgeNativeIIQ query endpoint=" + "identity-roles" + ", firstRow=" + safeStart + ", resultLimit=" + safeLimit + ", incrementalFilter=" + (modifiedAfterDate != null));
+        }
         try {
             stage = "getContext";
             SailPointContext context = getContext();
             stage = "extract";
             NativeIdentityRoleExtractionResult result =
                     new NativeIdentityRoleExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("KeyForgeNativeIIQ source endpoint=identity-roles count=" + result.getSourceCount());
+            }
             stage = "buildEnvelope";
             Map<String, Object> envelope = NativeIdentityRoleWire.envelope(result, safeStart, safeLimit);
-            LOG.fine("KeyForgeNativeIIQ identity-roles: returning " + result.getCount() + " edge(s)");
+            LOG.info("KeyForgeNativeIIQ identity-roles: returning " + result.getCount() + " edge(s)" + ", elapsedMs=" + (System.currentTimeMillis() - requestStartedAt));
             return Response.ok(envelope).build();
         } catch (UnauthorizedAccessException e) {
-            LOG.log(Level.WARNING, "KeyForgeNativeIIQ identity-roles: denied at stage=" + stage, e);
+            LOG.warn("KeyForgeNativeIIQ identity-roles: denied at stage=" + stage, e);
             return error(Response.Status.FORBIDDEN, e);
         } catch (Throwable t) {
-            LOG.log(Level.SEVERE, "KeyForgeNativeIIQ identity-roles: failed at stage=" + stage, t);
+            LOG.error("KeyForgeNativeIIQ identity-roles: failed at stage=" + stage, t);
             return error(Response.Status.INTERNAL_SERVER_ERROR, t);
         }
     }
 
     private static Response error(Response.Status status, Throwable t) {
+        if (status == Response.Status.BAD_REQUEST) {
+            LOG.info("KeyForgeNativeIIQ request rejected endpoint=identityrole reason=" + LogText.safe(t == null ? null : t.getMessage()));
+        }
         return Response.status(status)
                 .entity(NativeIdentityRoleWire.errorEnvelope(status.getStatusCode(), t))
                 .type(MediaType.APPLICATION_JSON)

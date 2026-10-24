@@ -8,6 +8,8 @@ import sailpoint.object.TaskResult;
 import sailpoint.object.TaskSchedule;
 import sailpoint.task.AbstractTaskExecutor;
 import sailpoint.tools.JsonHelper;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -34,11 +36,12 @@ import java.util.Map;
  *   <li>{@code start} / {@code limit} — pagination; {@code limit<=0} (default) exports the full population;</li>
  *   <li>{@code includeXml} — include IIQ's native {@code XMLObjectFactory} serialization per record
  *       (default {@code true}); this is the authoritative persisted-name view;</li>
- *   <li>{@code echoStdout} — also print the full JSON to the server log (default {@code false}; a summary
- *       is always printed).</li>
+ *   <li>The task writes the JSON file and logs a summary; record data is not written to the server log.</li>
  * </ul>
  */
 public class NativeManagedAttributeInspectTask extends AbstractTaskExecutor {
+
+    private static final Log LOG = LogFactory.getLog(NativeManagedAttributeInspectTask.class);
 
     private volatile boolean terminated = false;
 
@@ -48,7 +51,6 @@ public class NativeManagedAttributeInspectTask extends AbstractTaskExecutor {
         int start = argInt(args, "start", 0);
         int limit = argInt(args, "limit", 0);           // 0 = full population
         boolean includeXml = argBool(args, "includeXml", true);
-        boolean echoStdout = argBool(args, "echoStdout", false);
         String outputFile = arg(args, "outputFile");
         if (outputFile == null || outputFile.trim().isEmpty()) {
             outputFile = Paths.get(System.getProperty("java.io.tmpdir"),
@@ -66,16 +68,13 @@ public class NativeManagedAttributeInspectTask extends AbstractTaskExecutor {
         List<String> propNames = keysOf(envelope.get("native_getter_property_summary"));
         List<String> extKeys = stringList(envelope.get("native_extended_attribute_keys"));
 
-        System.out.println("[KeyForge] ManagedAttribute source inspection: object_type="
+        LOG.info("[KeyForge] ManagedAttribute source inspection: object_type="
                 + envelope.get("object_type") + " count=" + count
                 + " native_getter_properties=" + propNames.size()
                 + " extended_attribute_keys=" + extKeys.size());
-        System.out.println("[KeyForge] native getter properties: " + propNames);
-        System.out.println("[KeyForge] extended attribute keys:  " + extKeys);
-        System.out.println("[KeyForge] JSON written to: " + out.toAbsolutePath());
-        if (echoStdout) {
-            System.out.println(json);
-        }
+        LOG.info("[KeyForge] native getter properties: " + propNames);
+        LOG.info("[KeyForge] extended attribute keys:  " + extKeys);
+        LOG.info("[KeyForge] JSON written to: " + out.toAbsolutePath());
 
         if (result != null) {
             result.setAttribute("object_type", envelope.get("object_type"));
