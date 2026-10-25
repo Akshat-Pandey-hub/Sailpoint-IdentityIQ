@@ -59,9 +59,10 @@
             <version>${postgresql.version}</version>
         </dependency>
 
-        <!-- Logging: the code logs through the SLF4J API only; Log4j2 is the backend, configured by
-             log4j2.properties (bundled default; override with -Dlog4j2.configurationFile=...). These are
-             NOT part of the IIQ plugin jar (that jar contains com/keyforge/nativeiiq/** classes only). -->
+        <!-- Logging: the code logs through the SLF4J API only; Log4j2 is the backend, configured by the
+             separately deployed log4j2.properties (-Dlog4j2.configurationFile=... or LOG4J_CONFIGURATION_FILE).
+             The configuration is deliberately excluded from the executable JAR. These libraries are NOT part
+             of the IIQ plugin jar (that jar contains com/keyforge/nativeiiq/** classes only). -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -162,6 +163,7 @@
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>log4j2.properties</exclude>
                                     </excludes>
                                 </filter>
                             </filters>

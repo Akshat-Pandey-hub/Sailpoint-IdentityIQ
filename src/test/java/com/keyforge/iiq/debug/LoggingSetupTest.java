@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** KF_LOG_LEVEL → Log4j2 level, and the bundled log4j2.properties (console + bounded rolling file). */
+/** KF_LOG_LEVEL → Log4j2 level, and the repository log4j2.properties configuration template. */
 class LoggingSetupTest {
 
     @Test
@@ -45,13 +45,13 @@ class LoggingSetupTest {
     }
 
     @Test
-    void bundledConfigurationHasConsoleAndBoundedRollingFile() throws Exception {
+    void sourceConfigurationHasConsoleAndBoundedRollingFile() throws Exception {
         File logDir = new File("target/log4j2-config-test");
         String oldLevel = System.getProperty(LoggingSetup.PROP_LEVEL);
         String oldDir = System.getProperty(LoggingSetup.PROP_DIR);
         System.setProperty(LoggingSetup.PROP_LEVEL, "INFO");
         System.setProperty(LoggingSetup.PROP_DIR, logDir.getPath());
-        // A private context: parse the bundled file without replacing the shared logging context other tests use.
+        // A private context: parse the source file without replacing the shared logging context other tests use.
         LoggerContext ctx = new LoggerContext("bundled-config-test");
         File file1 = new File("src/main/resources/log4j2.properties");
         Configuration config = new PropertiesConfigurationFactory().getConfiguration(ctx,

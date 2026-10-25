@@ -236,8 +236,8 @@ public final class Main {
         String command = args[0];
         extractionMode = ExtractionMode.fromArgs(args);
 
-        // Debug audit log (KF_DEBUG, on by default for now): what is running, every setting it loaded, and any
-        // error that escapes a thread.
+        // Audit log (KF_LOG_LEVEL defaults to normal; legacy KF_DEBUG is used only when KF_LOG_LEVEL is unset):
+        // what is running; debug mode adds loaded settings; uncaught thread errors are always reported.
         com.keyforge.iiq.debug.DebugLog.begin("cmd");
         com.keyforge.iiq.debug.DebugLog.settings(String.join(" ", args), commandPurpose(command));
         Thread.setDefaultUncaughtExceptionHandler((thread, t) ->
@@ -3236,7 +3236,7 @@ public final class Main {
             Account acc = accounts.get(i);
             String appLabel = acc.getApplication() == null ? "-" : acc.getApplication().getDisplayName();
             String idLabel = acc.getIdentity() == null ? "-" : acc.getIdentity().getDisplayName();
-            // nativeIdentity is a source key, not a credential; safe to print.
+            // This sample includes the source nativeIdentity and may contain a sensitive identifier.
             System.out.printf("  - nativeIdentity=%s application=%s identity=%s hasEntitlements=%s extraAttrs=%d%n",
                     acc.getNativeIdentity(),
                     appLabel,
@@ -3362,7 +3362,7 @@ public final class Main {
         System.out.println("Sample (first " + sampleSize + "):");
         for (int i = 0; i < sampleSize; i++) {
             Identity id = identities.get(i);
-            // Deliberately avoids printing email/PII; enough to confirm extraction worked.
+            // This sample includes identity IDs, usernames, and display names; it does not include email addresses.
             System.out.printf("  - id=%s userName=%s displayName=%s active=%s accounts=%d%n",
                     id.getId(),
                     id.getUserName(),

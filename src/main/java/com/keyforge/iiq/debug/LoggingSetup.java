@@ -1,7 +1,8 @@
 package com.keyforge.iiq.debug;
 
 /**
- * Prepares the Log4j2 configuration before the first SLF4J logger is created. {@code log4j2.properties} reads its
+ * Prepares application logging settings before the first SLF4J logger is created. The separately deployed
+ * {@code log4j2.properties} reads its
  * level from the system property {@code kf.log.level} and its folder from {@code kf.log.dir}; this maps the
  * application settings onto them:
  * <ul>

@@ -6,14 +6,16 @@
 |---|------|-----------|---------|
 | 1 | `iiq-migration-tool.jar` (~78 MB) | the **KF Agent Linux server**, in one folder (e.g. `/opt/kfagent/`) | the whole application — REST service + all extraction jobs |
 | 2 | `kfagent.env` (made from `kfagent.env.example`) | **same folder** on the server | the credentials / settings (env vars) |
-| 3 | `KeyForgeNativeIIQ-1.0.zip` (~465 KB) | **inside IdentityIQ** (plugin admin UI) — NOT the KF Agent folder | the IIQ plugin the app reads data from. **Required**, installed separately in IIQ |
+| 3 | `log4j2.properties` (from `src/main/resources/log4j2.properties`) | **same folder** on the KF Agent Linux server, e.g. `/opt/kfagent/` | external console + rolling-file logging configuration; deliberately not bundled in the JAR |
+| 4 | `KeyForgeNativeIIQ-1.0.zip` (~465 KB) | **inside IdentityIQ** (plugin admin UI) — NOT the KF Agent folder | the IIQ plugin the app reads data from. **Required**, installed separately in IIQ |
 
 You do **NOT** upload: the source code, the `target/` folder, `.git`, Maven, or anything else.
 You do **NOT** compile on the server — the JAR is already built on Windows (`mvn package`). The
 server only needs **Java 17** to run it.
 
-The JAR is a self-contained "fat jar" (all libraries, incl. the Linux DuckDB native, are inside it),
-so nothing else needs to be uploaded beside it.
+The JAR is a self-contained "fat jar" (all libraries, incl. the Linux DuckDB native, are inside it). The
+`log4j2.properties` file is intentionally separate and must be handed over beside it for the configured console
+and rolling-file appenders. The JAR does not contain a bundled fallback configuration.
 
 ## 2. Prerequisites for the server (the admin confirms these)
 
@@ -29,6 +31,7 @@ so nothing else needs to be uploaded beside it.
 ```
 /opt/kfagent/
 ├── iiq-migration-tool.jar
+├── log4j2.properties       # separate Log4j2 configuration file
 ├── kfagent.env              # from kfagent.env.example, real values, chmod 600
 ├── logs/                    # kfagent.log + rotated kfagent-YYYY-MM-DD-N.log.gz (KF_LOG_DIR)
 └── parquet-data/            # (optional) only if you use the Parquet query endpoints
@@ -47,8 +50,10 @@ java -version                          # must be 17+
 
 ### Start the REST service (long-running; KF Agent + Parquet query on ONE port 8100)
 ```bash
-java -jar iiq-migration-tool.jar start-kfagent
+java -Dlog4j2.configurationFile=/opt/kfagent/log4j2.properties -jar iiq-migration-tool.jar start-kfagent
 ```
+Alternatively, set `LOG4J_CONFIGURATION_FILE=/opt/kfagent/log4j2.properties` in the service environment before
+starting Java. The external file is selected by Log4j2 before the application's first logger is initialized.
 Serves on `http://<server>:8100/` :
 - `/health`
 - `/kfagent/*`            (native data as JSON)
@@ -90,9 +95,9 @@ a long-running service.
   IdentityIQ call (IIQ_PASSWORD is never printed); `off` drops routine lines but still logs errors with reasons.
 - **Rotation:** the file rolls daily and at 10 MB into `kfagent-YYYY-MM-DD-N.log.gz`; at most 10 per day are kept
   and rolled files older than 30 days are deleted (checked whenever a roll happens).
-- **Own configuration:** to change format, sizes or retention without rebuilding, copy `log4j2.properties` out
-  of the jar and start with `-Dlog4j2.configurationFile=/opt/kfagent/log4j2.properties`
-  (or `LOG4J_CONFIGURATION_FILE=...`).
+- **Own configuration:** change the separately deployed `log4j2.properties` for format, sizes or retention.
+  Point Log4j2 to it with `-Dlog4j2.configurationFile=/opt/kfagent/log4j2.properties` or set
+  `LOG4J_CONFIGURATION_FILE=/opt/kfagent/log4j2.properties`. There is no bundled configuration fallback.
 
 ## 7. Updating later
 
