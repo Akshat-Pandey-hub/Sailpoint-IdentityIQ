@@ -13,7 +13,7 @@
 -->
 <Plugin name="KeyForgeNativeIIQ"
         displayName="KeyForge Native IIQ Extractor"
-        version="1.0"
+        version="1.1"
         minSystemVersion="8.4"
         certificationLevel="None">
     <Attributes>

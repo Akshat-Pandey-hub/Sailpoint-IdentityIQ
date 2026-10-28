@@ -97,6 +97,11 @@ SELECT DISTINCT
         WHEN ie.granted_by_role = TRUE
              AND b.id IS NOT NULL
              AND ir.id IS NOT NULL
+             AND (
+                    iri.name = b.name
+                    OR iri.value = b.name
+                    OR iri.value = b.id
+                 )
         THEN CONCAT(
              'Entitlement is provided by role: ',
              b.name,
@@ -105,6 +110,23 @@ SELECT DISTINCT
 
         WHEN ie.granted_by_role = TRUE
              AND b.id IS NOT NULL
+             AND NOT EXISTS (
+                 SELECT 1
+                 FROM spt_identity_request_item iri2
+                 INNER JOIN spt_identity_request ir2
+                     ON ir2.id = iri2.identity_request_id
+                 WHERE ir2.target_id = i.id
+                   AND (
+                        iri2.name = b.name
+                        OR iri2.value = b.name
+                        OR iri2.value = b.id
+                   )
+                   AND (
+                        iri2.operation = 'Add'
+                        OR iri2.operation = 'RoleAdd'
+                        OR iri2.operation = 'Assign'
+                   )
+             )
         THEN CONCAT(
              'Entitlement is provided by role: ',
              b.name,
@@ -151,6 +173,12 @@ LEFT JOIN spt_identity_request_item iri
         OR iri.name = b.name
         OR iri.value = b.name
         OR iri.value = b.id
+   )
+   AND EXISTS (
+        SELECT 1
+        FROM spt_identity_request ir_match
+        WHERE ir_match.id = iri.identity_request_id
+          AND ir_match.target_id = i.id
    )
 
 LEFT JOIN spt_identity_request ir

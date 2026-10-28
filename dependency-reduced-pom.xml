@@ -55,6 +55,7 @@
                     <exclude>META-INF/*.SF</exclude>
                     <exclude>META-INF/*.DSA</exclude>
                     <exclude>META-INF/*.RSA</exclude>
+                    <exclude>log4j2.properties</exclude>
                   </excludes>
                 </filter>
               </filters>
@@ -159,7 +160,7 @@
       </dependencies>
       <properties>
         <iiq.java.release>8</iiq.java.release>
-        <plugin.zip.version>1.0</plugin.zip.version>
+        <plugin.zip.version>1.1</plugin.zip.version>
         <plugin.name>KeyForgeNativeIIQ</plugin.name>
       </properties>
     </profile>

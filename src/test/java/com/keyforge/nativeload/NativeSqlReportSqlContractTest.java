@@ -4,7 +4,9 @@ import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -80,6 +82,57 @@ class NativeSqlReportSqlContractTest {
                         < sql("entitlementCertificationStatus.sql").lastIndexOf("\nWHERE\n(") ,
                 "the certification-history CTE predicate remains in place and the new filter is on the outer query");
     }
+
+    @Test
+    void assignmentRequestRowsAreTargetScopedAndRoleReasonUsesTheRoleMatch() throws Exception {
+        for (String resource : new String[] {
+                "entitlementAssignment.sql", "entitlementAssignment.oracle.sql"}) {
+            String text = sql(resource);
+            int itemJoin = text.indexOf("LEFT JOIN spt_identity_request_item iri");
+            int requestJoin = text.indexOf("LEFT JOIN spt_identity_request ir", itemJoin);
+            assertTrue(itemJoin >= 0 && requestJoin > itemJoin, resource + " has the request-item join");
+            String join = text.substring(itemJoin, requestJoin);
+            assertTrue(join.contains("FROM spt_identity_request ir_match")
+                            && join.contains("ir_match.id = iri.identity_request_id")
+                            && join.contains("ir_match.target_id = i.id"),
+                    resource + " only attaches items whose parent request targets the entitlement identity");
+
+            int reason = text.indexOf("END AS " + (resource.endsWith("oracle.sql")
+                    ? "\"assignment_reason\"" : "assignment_reason"));
+            int reasonStart = text.lastIndexOf("    CASE", reason);
+            String reasonCase = text.substring(reasonStart, reason);
+            List<String> branches = whenConditions(reasonCase);
+            assertTrue(branches.size() >= 2, resource + " has both role reason branches");
+            assertTrue(branches.get(0).contains("iri.name = b.name")
+                            && branches.get(0).contains("iri.value = b.name")
+                            && branches.get(0).contains("iri.value = b.id"),
+                    resource + " role-request reason branch has the same role match");
+            assertTrue(branches.get(1).contains("NOT EXISTS")
+                            && branches.get(1).contains("ir2.target_id = i.id")
+                            && branches.get(1).contains("iri2.operation = 'Add'")
+                            && branches.get(1).contains("iri2.operation = 'RoleAdd'")
+                            && branches.get(1).contains("iri2.operation = 'Assign'"),
+                    resource + " no-role-request reason branch matches the birthright classification condition");
+
+            assertTrue(text.contains("SELECT DISTINCT") && text.contains("ir.id AS")
+                            && text.contains("iri.operation AS"),
+                    resource + " retains request-level report rows and their operation details");
+        }
+    }
+
+    private static List<String> whenConditions(String caseExpression) {
+        List<String> conditions = new ArrayList<>();
+        int cursor = 0;
+        while (true) {
+            int when = caseExpression.indexOf("WHEN", cursor);
+            if (when < 0) return conditions;
+            int then = caseExpression.indexOf("THEN", when);
+            if (then < 0) return conditions;
+            conditions.add(caseExpression.substring(when + 4, then).replaceAll("\\s+", " ").trim());
+            cursor = then + 4;
+        }
+    }
+
 
     private static int selectWidth(String sql, int start) {
         int depth = 0;
