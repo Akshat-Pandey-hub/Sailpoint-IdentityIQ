@@ -88,7 +88,8 @@ public final class NativePolicyConstraintImportService {
 
         int start = 0;
         while (true) {
-            String json = source.fetchPage(start, pageSize);
+            // Count once, on the first page: the completeness baseline. Later pages are not counted.
+            String json = source.fetchPage(start, pageSize, start == 0);
             int pageSource = parser.sourceCount(json);
             if (pageSource >= 0) {
                 sourcePolicyCount = pageSource;

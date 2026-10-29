@@ -38,6 +38,16 @@ public final class NativeIdentityRequestExtractor {
      * source count uses the same bound, so the caller's complete-scan guard compares like with like.
      */
     public NativeIdentityRequestExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
+        return extract(start, limit, modifiedAfter, true);
+    }
+
+    /**
+     * One page; the population is counted only when {@code includeCount} is true. Counting reads the whole
+     * (bounded) population, so a caller that only needs the page must not ask for it; the result then reports
+     * {@code -1} (not counted).
+     */
+    public NativeIdentityRequestExtractionResult extract(int start, int limit, java.util.Date modifiedAfter,
+            boolean includeCount) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         qo.addOrdering("id", true);
@@ -49,8 +59,10 @@ public final class NativeIdentityRequestExtractor {
         }
         NativeIdentityRequestExtractionResult result = new NativeIdentityRequestExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "IdentityRequest", Instant.now());
-        result.setSourceCount(context.countObjects(IdentityRequest.class,
-                NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
+        if (includeCount) {
+            result.setSourceCount(context.countObjects(IdentityRequest.class,
+                    NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
+        }
 
         Iterator<Object[]> ids = context.search(IdentityRequest.class, qo, "id");
         try {

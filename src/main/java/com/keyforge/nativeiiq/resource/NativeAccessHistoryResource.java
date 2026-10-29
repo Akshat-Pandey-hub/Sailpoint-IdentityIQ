@@ -64,7 +64,8 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getEntitlementCaptures(@QueryParam("start") @DefaultValue("0") int start,
                                            @QueryParam("limit") @DefaultValue("1000") int limit,
-                                           @QueryParam("modifiedAfter") String modifiedAfter) {
+                                           @QueryParam("modifiedAfter") String modifiedAfter,
+                                           @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "access-history/entitlement-captures", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -86,7 +87,8 @@ public class NativeAccessHistoryResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeAccessHistoryPage<NativeHistEntitlementCaptureRow> page =
-                    new NativeAccessHistoryExtractionService().extractEntitlementCaptures(context, safeStart, safeLimit, createdAfter);
+                    new NativeAccessHistoryExtractionService().extractEntitlementCaptures(context, safeStart, safeLimit, createdAfter,
+                            includeCount);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.entitlementCaptureEnvelope(page, safeStart, safeLimit);
             PluginLog.result(LOG, "access-history/entitlement-captures", page.getReturned(), requestStartedAt);
@@ -104,7 +106,8 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getIdentityEvents(@QueryParam("start") @DefaultValue("0") int start,
                                       @QueryParam("limit") @DefaultValue("1000") int limit,
-                                      @QueryParam("modifiedAfter") String modifiedAfter) {
+                                      @QueryParam("modifiedAfter") String modifiedAfter,
+                                      @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "access-history/identity-events", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -126,7 +129,8 @@ public class NativeAccessHistoryResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeAccessHistoryPage<NativeHistIdentityEventRow> page =
-                    new NativeAccessHistoryExtractionService().extractIdentityEvents(context, safeStart, safeLimit, createdAfter);
+                    new NativeAccessHistoryExtractionService().extractIdentityEvents(context, safeStart, safeLimit, createdAfter,
+                            includeCount);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.identityEventEnvelope(page, safeStart, safeLimit);
             PluginLog.result(LOG, "access-history/identity-events", page.getReturned(), requestStartedAt);
@@ -144,7 +148,8 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRoleEvents(@QueryParam("start") @DefaultValue("0") int start,
                                   @QueryParam("limit") @DefaultValue("1000") int limit,
-                                  @QueryParam("modifiedAfter") String modifiedAfter) {
+                                  @QueryParam("modifiedAfter") String modifiedAfter,
+                                  @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "access-history/role-events", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -166,7 +171,8 @@ public class NativeAccessHistoryResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeAccessHistoryPage<NativeHistRoleEventRow> page =
-                    new NativeAccessHistoryExtractionService().extractRoleEvents(context, safeStart, safeLimit, createdAfter);
+                    new NativeAccessHistoryExtractionService().extractRoleEvents(context, safeStart, safeLimit, createdAfter,
+                            includeCount);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.roleEventEnvelope(page, safeStart, safeLimit);
             PluginLog.result(LOG, "access-history/role-events", page.getReturned(), requestStartedAt);
@@ -184,7 +190,8 @@ public class NativeAccessHistoryResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getCertifications(@QueryParam("start") @DefaultValue("0") int start,
                                       @QueryParam("limit") @DefaultValue("1000") int limit,
-                                      @QueryParam("modifiedAfter") String modifiedAfter) {
+                                      @QueryParam("modifiedAfter") String modifiedAfter,
+                                      @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "access-history/certifications", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -206,7 +213,8 @@ public class NativeAccessHistoryResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeAccessHistoryPage<NativeHistCertificationRow> page =
-                    new NativeAccessHistoryExtractionService().extractCertifications(context, safeStart, safeLimit, createdAfter);
+                    new NativeAccessHistoryExtractionService().extractCertifications(context, safeStart, safeLimit, createdAfter,
+                            includeCount);
             stage = "buildEnvelope";
             Map<String, Object> env = NativeAccessHistoryWire.certificationEnvelope(page, safeStart, safeLimit);
             PluginLog.result(LOG, "access-history/certifications", page.getReturned(), requestStartedAt);

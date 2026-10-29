@@ -14,7 +14,7 @@ public final class NativeWorkItemArchiveExtractionResult {
     private final String extractionRunId;
     private final String entityType;
     private final Instant startedAt;
-    private int sourceCount;
+    private int sourceCount = -1;
     private Instant finishedAt;
     private final List<NativeWorkItemArchiveRow> workItemArchives = new ArrayList<NativeWorkItemArchiveRow>();
 

@@ -39,6 +39,16 @@ public final class NativeWorkItemArchiveExtractor {
      * uses the same bound, so the caller's complete-scan guard compares like with like.
      */
     public NativeWorkItemArchiveExtractionResult extract(int start, int limit, java.util.Date createdAfter) throws GeneralException {
+        return extract(start, limit, createdAfter, true);
+    }
+
+    /**
+     * One page; the population is counted only when {@code includeCount} is true. Counting reads the whole
+     * (bounded) population, so a caller that only needs the page must not ask for it; the result then reports
+     * {@code -1} (not counted).
+     */
+    public NativeWorkItemArchiveExtractionResult extract(int start, int limit, java.util.Date createdAfter,
+            boolean includeCount) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         NativeIncrementalQuery.applyCreatedAfter(qo, createdAfter);
         qo.addOrdering("id", true);
@@ -48,16 +58,19 @@ public final class NativeWorkItemArchiveExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
-        return extract(qo, createdAfter);
+        return extract(qo, createdAfter, includeCount);
     }
 
-    private NativeWorkItemArchiveExtractionResult extract(QueryOptions qo, java.util.Date createdAfter) throws GeneralException {
+    private NativeWorkItemArchiveExtractionResult extract(QueryOptions qo, java.util.Date createdAfter,
+            boolean includeCount) throws GeneralException {
         NativeWorkItemArchiveExtractionResult result = new NativeWorkItemArchiveExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "WorkItemArchive", Instant.now());
 
         // Count independently of the requested page for full-scan reconciliation by the client.
-        result.setSourceCount(context.countObjects(WorkItemArchive.class,
-                NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter)));
+        if (includeCount) {
+            result.setSourceCount(context.countObjects(WorkItemArchive.class,
+                    NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter)));
+        }
 
         Iterator<Object[]> ids = context.search(WorkItemArchive.class, qo, "id");
         try {

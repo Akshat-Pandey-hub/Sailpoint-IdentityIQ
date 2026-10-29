@@ -48,7 +48,8 @@ public class NativeAccountEntitlementResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAccountEntitlements(@QueryParam("start") @DefaultValue("0") int start,
                                            @QueryParam("limit") @DefaultValue("200") int limit,
-                                           @QueryParam("modifiedAfter") String modifiedAfter) {
+                                           @QueryParam("modifiedAfter") String modifiedAfter,
+                                           @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "account-entitlements", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -71,7 +72,7 @@ public class NativeAccountEntitlementResource extends BasePluginResource {
 
             stage = "extract";
             NativeAccountEntitlementExtractionResult result =
-                    new NativeAccountEntitlementExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
+                    new NativeAccountEntitlementExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate, includeCount);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("KeyForgeNativeIIQ source endpoint=account-entitlements count=" + result.getSourceCount());
             }

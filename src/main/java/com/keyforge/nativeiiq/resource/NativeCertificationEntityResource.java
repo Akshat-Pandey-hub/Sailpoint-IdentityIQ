@@ -44,7 +44,8 @@ public class NativeCertificationEntityResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getCertificationEntities(@QueryParam("start") @DefaultValue("0") int start,
                                              @QueryParam("limit") @DefaultValue("500") int limit,
-                                             @QueryParam("modifiedAfter") String modifiedAfter) {
+                                             @QueryParam("modifiedAfter") String modifiedAfter,
+                                             @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "certification-entities", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -66,7 +67,7 @@ public class NativeCertificationEntityResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeCertificationEntityExtractionResult result =
-                    new NativeCertificationEntityExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
+                    new NativeCertificationEntityExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate, includeCount);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("KeyForgeNativeIIQ source endpoint=certification-entities count=" + result.getSourceCount());
             }

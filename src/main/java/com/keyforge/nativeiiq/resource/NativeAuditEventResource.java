@@ -43,7 +43,8 @@ public class NativeAuditEventResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAuditEvents(@QueryParam("start") @DefaultValue("0") int start,
                                    @QueryParam("limit") @DefaultValue("1000") int limit,
-                                   @QueryParam("modifiedAfter") String modifiedAfter) {
+                                   @QueryParam("modifiedAfter") String modifiedAfter,
+                                   @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "audit-events", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -65,7 +66,7 @@ public class NativeAuditEventResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeAuditEventExtractionResult result =
-                    new NativeAuditEventExtractionService().extract(context, safeStart, safeLimit, createdAfter);
+                    new NativeAuditEventExtractionService().extract(context, safeStart, safeLimit, createdAfter, includeCount);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("KeyForgeNativeIIQ source endpoint=audit-events count=" + result.getSourceCount());
             }

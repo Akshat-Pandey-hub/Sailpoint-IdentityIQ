@@ -26,10 +26,16 @@ public final class NativeIdentityRoleExtractionService {
     }
 
     public NativeIdentityRoleExtractionResult extract(SailPointContext context, int start, int limit,
-                                                       java.util.Date modifiedAfter)
-            throws GeneralException {
+                      java.util.Date modifiedAfter) throws GeneralException {
+        return extract(context, start, limit, modifiedAfter, true);
+    }
+
+    /** One page; counts the population only when {@code includeCount} is true ({@code -1} otherwise). */
+    public NativeIdentityRoleExtractionResult extract(SailPointContext context, int start, int limit,
+                      java.util.Date modifiedAfter, boolean includeCount) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeIdentityRoleExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
+        return new NativeIdentityRoleExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter,
+                includeCount);
     }
 
     public NativeIdentityRoleExtractionResult extractAll(SailPointContext context) throws GeneralException {

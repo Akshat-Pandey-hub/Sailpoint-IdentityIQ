@@ -57,6 +57,37 @@ class NativeRoleRelationshipImportServiceTest {
         assertEquals(0,sink.entitlementSweeps);assertEquals(0,sink.hierarchySweeps);
     }
 
+    /** Behaves like the plugin: counts only when asked, and reports -1 otherwise. */
+    private static final class CountOnRequestPages implements NativeRoleRelationshipPageSource {
+        final int total; final List<Boolean> countAsked=new ArrayList<>();
+        CountOnRequestPages(int total){this.total=total;}
+        public String fetchPage(int start,int limit,String run){return fetchPage(start,limit,run,false);}
+        public String fetchPage(int start,int limit,String run,boolean includeCount){
+            countAsked.add(includeCount);
+            return page(includeCount?total:-1,Math.max(0,Math.min(limit,total-start)),run,"");
+        }
+    }
+
+    @Test void countsOnlyTheFirstPageAndStillVerifiesTheScanBeforeSweeping() throws SQLException {
+        CountOnRequestPages pages=new CountOnRequestPages(5);Sink sink=new Sink();
+        NativeRoleRelationshipImportService.Result result=new NativeRoleRelationshipImportService(pages,sink,2).run();
+        assertEquals(List.of(true,false,false),pages.countAsked);
+        assertEquals(5,result.bundles);assertEquals(5,result.sourceCount);
+        assertEquals(1,sink.entitlementSweeps);assertEquals(1,sink.hierarchySweeps);
+    }
+
+    @Test void firstPageWithoutACountFailsBeforeSweeps() {
+        Pages pages=new Pages(page(-1,2,"RUN",""),page(-1,1,"RUN",""));Sink sink=new Sink();
+        assertThrows(NativeImportException.class,()->new NativeRoleRelationshipImportService(pages,sink,2).run());
+        assertEquals(0,sink.entitlementSweeps);assertEquals(0,sink.hierarchySweeps);
+    }
+
+    @Test void firstPageCountStillCatchesAnIncompleteScan() {
+        Pages pages=new Pages(page(4,2,"RUN",""),page(-1,1,"RUN",""));Sink sink=new Sink();
+        assertThrows(NativeImportException.class,()->new NativeRoleRelationshipImportService(pages,sink,2).run());
+        assertEquals(0,sink.entitlementSweeps);assertEquals(0,sink.hierarchySweeps);
+    }
+
     @Test void runIdMustRemainConsistentAcrossPages() {
         Pages pages=new Pages(page(2,1,"RUN",""),page(2,1,"another",""));Sink sink=new Sink();
         assertThrows(NativeImportException.class,()->new NativeRoleRelationshipImportService(pages,sink,1).run());

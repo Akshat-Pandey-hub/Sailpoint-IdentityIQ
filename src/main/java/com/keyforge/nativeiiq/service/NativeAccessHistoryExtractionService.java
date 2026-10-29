@@ -101,8 +101,15 @@ public final class NativeAccessHistoryExtractionService {
     public NativeAccessHistoryPage<NativeHistEntitlementCaptureRow> extractEntitlementCaptures(
             SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter)
             throws GeneralException {
-        return runOne(runtimeContext,
-                (ah, cfg, out) -> new NativeHistEntitlementCaptureExtractor(ah, cfg).extract(start, limit, createdAfter, out));
+        return extractEntitlementCaptures(runtimeContext, start, limit, createdAfter, true);
+    }
+
+    /** Same; counts the population only when {@code includeCount} is true ({@code -1} otherwise). */
+    public NativeAccessHistoryPage<NativeHistEntitlementCaptureRow> extractEntitlementCaptures(
+            SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter,
+            boolean includeCount) throws GeneralException {
+        return runOne(runtimeContext, (ah, cfg, out) ->
+                new NativeHistEntitlementCaptureExtractor(ah, cfg).extract(start, limit, createdAfter, includeCount, out));
     }
 
     /** One page of {@code HistoricalIdentityEvent} rows + the live source count. */
@@ -115,8 +122,15 @@ public final class NativeAccessHistoryExtractionService {
     public NativeAccessHistoryPage<NativeHistIdentityEventRow> extractIdentityEvents(
             SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter)
             throws GeneralException {
-        return runOne(runtimeContext,
-                (ah, cfg, out) -> new NativeHistIdentityEventExtractor(ah, cfg).extract(start, limit, createdAfter, out));
+        return extractIdentityEvents(runtimeContext, start, limit, createdAfter, true);
+    }
+
+    /** Same; counts the population only when {@code includeCount} is true ({@code -1} otherwise). */
+    public NativeAccessHistoryPage<NativeHistIdentityEventRow> extractIdentityEvents(
+            SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter,
+            boolean includeCount) throws GeneralException {
+        return runOne(runtimeContext, (ah, cfg, out) ->
+                new NativeHistIdentityEventExtractor(ah, cfg).extract(start, limit, createdAfter, includeCount, out));
     }
 
     /** One page of {@code HistoricalRoleEvent} rows + the live source count. */
@@ -129,8 +143,15 @@ public final class NativeAccessHistoryExtractionService {
     public NativeAccessHistoryPage<NativeHistRoleEventRow> extractRoleEvents(
             SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter)
             throws GeneralException {
-        return runOne(runtimeContext,
-                (ah, cfg, out) -> new NativeHistRoleEventExtractor(ah, cfg).extract(start, limit, createdAfter, out));
+        return extractRoleEvents(runtimeContext, start, limit, createdAfter, true);
+    }
+
+    /** Same; counts the population only when {@code includeCount} is true ({@code -1} otherwise). */
+    public NativeAccessHistoryPage<NativeHistRoleEventRow> extractRoleEvents(
+            SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter,
+            boolean includeCount) throws GeneralException {
+        return runOne(runtimeContext, (ah, cfg, out) ->
+                new NativeHistRoleEventExtractor(ah, cfg).extract(start, limit, createdAfter, includeCount, out));
     }
 
     /** One page of {@code HistoricalCertification} rows + the live source count. */
@@ -143,8 +164,15 @@ public final class NativeAccessHistoryExtractionService {
     public NativeAccessHistoryPage<NativeHistCertificationRow> extractCertifications(
             SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter)
             throws GeneralException {
-        return runOne(runtimeContext,
-                (ah, cfg, out) -> new NativeHistCertificationExtractor(ah, cfg).extract(start, limit, createdAfter, out));
+        return extractCertifications(runtimeContext, start, limit, createdAfter, true);
+    }
+
+    /** Same; counts the population only when {@code includeCount} is true ({@code -1} otherwise). */
+    public NativeAccessHistoryPage<NativeHistCertificationRow> extractCertifications(
+            SailPointContext runtimeContext, int start, int limit, java.util.Date createdAfter,
+            boolean includeCount) throws GeneralException {
+        return runOne(runtimeContext, (ah, cfg, out) ->
+                new NativeHistCertificationExtractor(ah, cfg).extract(start, limit, createdAfter, includeCount, out));
     }
 
     /** Runs one extractor against a freshly-opened ACCESS_HISTORY context, releasing it afterwards. */

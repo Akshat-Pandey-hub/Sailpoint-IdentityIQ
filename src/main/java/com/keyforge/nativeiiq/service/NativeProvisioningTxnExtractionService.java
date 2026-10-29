@@ -28,8 +28,15 @@ public final class NativeProvisioningTxnExtractionService {
     /** One page, bounded to objects changed after {@code modifiedAfter} ({@code null} = full population). */
     public NativeProvisioningTxnExtractionResult extract(SailPointContext context, int start, int limit,
                       java.util.Date modifiedAfter) throws GeneralException {
+        return extract(context, start, limit, modifiedAfter, true);
+    }
+
+    /** One page; counts the population only when {@code includeCount} is true ({@code -1} otherwise). */
+    public NativeProvisioningTxnExtractionResult extract(SailPointContext context, int start, int limit,
+                      java.util.Date modifiedAfter, boolean includeCount) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeProvisioningTxnExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
+        return new NativeProvisioningTxnExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter,
+                includeCount);
     }
 
     public NativeProvisioningTxnExtractionResult extractAll(SailPointContext context) throws GeneralException {

@@ -48,7 +48,8 @@ public class NativeIdentityEntitlementResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getIdentityEntitlements(@QueryParam("start") @DefaultValue("0") int start,
                                             @QueryParam("limit") @DefaultValue("500") int limit,
-                                            @QueryParam("modifiedAfter") String modifiedAfter) {
+                                            @QueryParam("modifiedAfter") String modifiedAfter,
+                                            @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "identity-entitlements", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -71,7 +72,7 @@ public class NativeIdentityEntitlementResource extends BasePluginResource {
 
             stage = "extract";
             NativeIdentityEntitlementExtractionResult result =
-                    new NativeIdentityEntitlementExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
+                    new NativeIdentityEntitlementExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate, includeCount);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("KeyForgeNativeIIQ source endpoint=identity-entitlements count=" + result.getSourceCount());
             }

@@ -33,11 +33,12 @@ public final class NativeRoleRelationshipImportService {
         int start=0, sourceCount=-1, bundles=0, e=0, ei=0, eu=0, h=0, hi=0, hu=0, failed=0;
         Set<String> keepEntitlements=new LinkedHashSet<String>(), keepHierarchy=new LinkedHashSet<String>();
         while (true) {
-            NativeRoleRelationshipPage page=parser.parse(source.fetchPage(start,pageSize,runId));
+            // Count once, on the first page: the completeness baseline. Later pages are not counted.
+            NativeRoleRelationshipPage page=parser.parse(source.fetchPage(start,pageSize,runId,start==0));
             if (!runId.equals(page.runId)) throw new NativeImportException("Role relationship page run ID mismatch; no deletion sweep performed");
-            if (page.sourceCount<0 || page.returnedBundles<0) throw new NativeImportException("Native role relationship response has invalid scan counts");
-            if (sourceCount>=0 && sourceCount!=page.sourceCount) throw new NativeImportException("Bundle source count changed during scan; no deletion sweep performed");
-            sourceCount=page.sourceCount;
+            if ((start==0 && page.sourceCount<0) || page.returnedBundles<0) throw new NativeImportException("Native role relationship response has invalid scan counts");
+            if (sourceCount>=0 && page.sourceCount>=0 && sourceCount!=page.sourceCount) throw new NativeImportException("Bundle source count changed during scan; no deletion sweep performed");
+            if (page.sourceCount>=0) sourceCount=page.sourceCount;
             bundles+=page.returnedBundles;
             for (NativeRoleRelationshipRecord r:page.entitlements) {
                 e++;

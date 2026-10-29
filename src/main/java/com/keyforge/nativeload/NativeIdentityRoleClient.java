@@ -27,11 +27,19 @@ public final class NativeIdentityRoleClient implements NativeIdentityRolePageSou
 
     @Override
     public String fetchPage(int start, int limit) {
+        return fetchPage(start, limit, false);
+    }
+
+    @Override
+    public String fetchPage(int start, int limit, boolean includeCount) {
         session.warmCsrfToken();
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
         if (modifiedAfter != null) params.put("modifiedAfter", modifiedAfter);
+        if (includeCount) {
+            params.put("includeCount", "true"); // the plugin counts only when asked
+        }
         return session.get(IDENTITY_ROLES_PATH, params);
     }
 }

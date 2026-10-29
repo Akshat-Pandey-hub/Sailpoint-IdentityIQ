@@ -45,7 +45,7 @@ public final class NativeWorkItemArchiveWire {
         env.put("start", Integer.valueOf(start));
         env.put("limit", Integer.valueOf(limit));
         env.put("returned", Integer.valueOf(rows.size()));
-        env.put("sourceCount", Integer.valueOf(result == null ? 0 : result.getSourceCount()));
+        env.put("sourceCount", Integer.valueOf(result == null ? -1 : result.getSourceCount()));
         env.put("rows", rows);
         return env;
     }

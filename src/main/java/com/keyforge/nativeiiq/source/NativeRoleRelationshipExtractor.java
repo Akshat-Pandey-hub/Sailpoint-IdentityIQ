@@ -22,11 +22,17 @@ public final class NativeRoleRelationshipExtractor {
         return extract(start, limit, null);
     }
     public NativeRoleRelationshipExtractionResult extract(int start,int limit,Date modifiedAfter)throws GeneralException{
+        return extract(start, limit, modifiedAfter, true);
+    }
+    /** One page; the Bundle population is counted only when {@code includeCount} is true ({@code -1} otherwise). */
+    public NativeRoleRelationshipExtractionResult extract(int start,int limit,Date modifiedAfter,boolean includeCount)throws GeneralException{
         Set<String> changedBundleIds = changedProfileParents(modifiedAfter);
         QueryOptions qo=new QueryOptions();qo.addOrdering("id",true);addIncrementalFilter(qo, modifiedAfter, changedBundleIds);if(start>0)qo.setFirstRow(start);if(limit>0)qo.setResultLimit(limit);
         NativeRoleRelationshipExtractionResult out=new NativeRoleRelationshipExtractionResult();
         QueryOptions countOptions = new QueryOptions();addIncrementalFilter(countOptions, modifiedAfter, changedBundleIds);
-        out.setSourceCount(context.countObjects(Bundle.class,countOptions));
+        if (includeCount) {
+            out.setSourceCount(context.countObjects(Bundle.class,countOptions));
+        }
         Iterator<Object[]> ids=context.search(Bundle.class,qo,"id");
         try {
 while(ids!=null&&ids.hasNext()){String id=(String)ids.next()[0];Bundle b=context.getObjectById(Bundle.class,id);if(b==null)continue;

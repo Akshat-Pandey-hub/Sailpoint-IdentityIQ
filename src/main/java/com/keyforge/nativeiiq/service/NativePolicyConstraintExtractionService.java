@@ -26,9 +26,15 @@ public final class NativePolicyConstraintExtractionService {
     }
 
     public NativePolicyConstraintExtractionResult extract(SailPointContext context, int start, int limit,
-                                                           java.util.Date modifiedAfter)
-            throws GeneralException {
+                      java.util.Date modifiedAfter) throws GeneralException {
+        return extract(context, start, limit, modifiedAfter, true);
+    }
+
+    /** One page; counts the population only when {@code includeCount} is true ({@code -1} otherwise). */
+    public NativePolicyConstraintExtractionResult extract(SailPointContext context, int start, int limit,
+                      java.util.Date modifiedAfter, boolean includeCount) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativePolicyConstraintExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
+        return new NativePolicyConstraintExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter,
+                includeCount);
     }
 }

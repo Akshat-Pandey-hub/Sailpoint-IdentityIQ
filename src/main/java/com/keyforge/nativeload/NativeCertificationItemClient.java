@@ -32,12 +32,20 @@ public final class NativeCertificationItemClient implements NativeCertificationI
 
     @Override
     public String fetchPage(int start, int limit) {
+        return fetchPage(start, limit, false);
+    }
+
+    @Override
+    public String fetchPage(int start, int limit, boolean includeCount) {
         session.warmCsrfToken();
         Map<String, String> params = new LinkedHashMap<>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
         if (modifiedAfter != null) {
             params.put("modifiedAfter", modifiedAfter); // server-side incremental bound
+        }
+        if (includeCount) {
+            params.put("includeCount", "true"); // the plugin counts only when asked
         }
         return session.get(CERTIFICATION_ITEMS_PATH, params);
     }

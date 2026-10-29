@@ -45,7 +45,8 @@ public class NativeCertificationItemResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getCertificationItems(@QueryParam("start") @DefaultValue("0") int start,
                                           @QueryParam("limit") @DefaultValue("500") int limit,
-                                          @QueryParam("modifiedAfter") String modifiedAfter) {
+                                          @QueryParam("modifiedAfter") String modifiedAfter,
+                                          @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "certification-items", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -67,7 +68,7 @@ public class NativeCertificationItemResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeCertificationItemExtractionResult result =
-                    new NativeCertificationItemExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
+                    new NativeCertificationItemExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate, includeCount);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("KeyForgeNativeIIQ source endpoint=certification-items count=" + result.getSourceCount());
             }

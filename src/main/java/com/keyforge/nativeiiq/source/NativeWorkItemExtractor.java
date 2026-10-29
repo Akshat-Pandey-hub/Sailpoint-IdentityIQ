@@ -37,6 +37,16 @@ public final class NativeWorkItemExtractor {
      * source count uses the same bound, so the caller's complete-scan guard compares like with like.
      */
     public NativeWorkItemExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
+        return extract(start, limit, modifiedAfter, true);
+    }
+
+    /**
+     * One page; the population is counted only when {@code includeCount} is true. Counting reads the whole
+     * (bounded) population, so a caller that only needs the page must not ask for it; the result then reports
+     * {@code -1} (not counted).
+     */
+    public NativeWorkItemExtractionResult extract(int start, int limit, java.util.Date modifiedAfter,
+            boolean includeCount) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         qo.addOrdering("id", true);
@@ -48,8 +58,10 @@ public final class NativeWorkItemExtractor {
         }
         NativeWorkItemExtractionResult result = new NativeWorkItemExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "WorkItem", Instant.now());
-        result.setSourceCount(context.countObjects(WorkItem.class,
-                NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
+        if (includeCount) {
+            result.setSourceCount(context.countObjects(WorkItem.class,
+                    NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
+        }
 
         Iterator<Object[]> ids = context.search(WorkItem.class, qo, "id");
         try {

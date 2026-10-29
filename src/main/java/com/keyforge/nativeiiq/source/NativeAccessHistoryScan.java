@@ -41,8 +41,19 @@ final class NativeAccessHistoryScan {
     static <T extends SailPointObject, R> int scan(SailPointContext ah, Class<T> cls, int start, int limit,
                                                    java.util.Date createdAfter, RowMapper<T, R> mapper,
                                                    List<R> out) throws GeneralException {
-        int sourceCount = ah.countObjects(cls,
-                NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter));
+        return scan(ah, cls, start, limit, createdAfter, true, mapper, out);
+    }
+
+    /**
+     * Same; the population is counted only when {@code includeCount} is true. Counting reads the whole (bounded)
+     * population, so a caller that only needs the page must not ask for it; {@code -1} is returned then.
+     */
+    static <T extends SailPointObject, R> int scan(SailPointContext ah, Class<T> cls, int start, int limit,
+                                                   java.util.Date createdAfter, boolean includeCount,
+                                                   RowMapper<T, R> mapper, List<R> out) throws GeneralException {
+        int sourceCount = includeCount
+                ? ah.countObjects(cls, NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter))
+                : -1;
 
         QueryOptions qo = new QueryOptions();
         NativeIncrementalQuery.applyCreatedAfter(qo, createdAfter);

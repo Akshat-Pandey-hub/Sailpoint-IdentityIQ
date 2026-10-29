@@ -41,12 +41,20 @@ public final class NativeAccessHistoryClient {
 
     /** Fetches one page of the given Access-History endpoint (raw JSON envelope body). */
     public String fetchPage(String path, int start, int limit) {
+        return fetchPage(path, start, limit, false);
+    }
+
+    /** One page; asks the plugin to count the population only when {@code includeCount} is true. */
+    public String fetchPage(String path, int start, int limit, boolean includeCount) {
         session.warmCsrfToken();
         Map<String, String> params = new LinkedHashMap<String, String>();
         params.put("start", Integer.toString(Math.max(0, start)));
         params.put("limit", Integer.toString(limit));
         if (modifiedAfter != null) {
             params.put("modifiedAfter", modifiedAfter); // server-side incremental bound (created >)
+        }
+        if (includeCount) {
+            params.put("includeCount", "true"); // the plugin counts only when asked
         }
         return session.get(path, params);
     }

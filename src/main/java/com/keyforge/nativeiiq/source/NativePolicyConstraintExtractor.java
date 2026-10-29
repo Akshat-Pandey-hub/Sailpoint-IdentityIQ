@@ -41,6 +41,16 @@ public final class NativePolicyConstraintExtractor {
     }
 
     public NativePolicyConstraintExtractionResult extract(int start, int limit, Date modifiedAfter) throws GeneralException {
+        return extract(start, limit, modifiedAfter, true);
+    }
+
+    /**
+     * One page; the population is counted only when {@code includeCount} is true. Counting reads the whole
+     * (bounded) population, so a caller that only needs the page must not ask for it; the result then reports
+     * {@code -1} (not counted).
+     */
+    public NativePolicyConstraintExtractionResult extract(int start, int limit, Date modifiedAfter,
+            boolean includeCount) throws GeneralException {
         Set<String> childChangedPolicyIds = changedConstraintParents(modifiedAfter);
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("id", true);
@@ -56,7 +66,9 @@ public final class NativePolicyConstraintExtractor {
                 config.getSourceSystem(), config.getExtractionRunId(), "PolicyConstraint", Instant.now());
         QueryOptions countOptions = new QueryOptions();
         addIncrementalFilter(countOptions, modifiedAfter, childChangedPolicyIds);
-        result.setSourceCount(context.countObjects(Policy.class, countOptions));
+        if (includeCount) {
+            result.setSourceCount(context.countObjects(Policy.class, countOptions));
+        }
 
         int policies = 0;
         Iterator<Object[]> ids = context.search(Policy.class, qo, "id");

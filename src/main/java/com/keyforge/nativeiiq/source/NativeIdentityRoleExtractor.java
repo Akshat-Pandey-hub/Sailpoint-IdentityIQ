@@ -32,6 +32,16 @@ public final class NativeIdentityRoleExtractor {
     }
 
     public NativeIdentityRoleExtractionResult extract(int start, int limit, Date modifiedAfter) throws GeneralException {
+        return extract(start, limit, modifiedAfter, true);
+    }
+
+    /**
+     * One page; the population is counted only when {@code includeCount} is true. Counting reads the whole
+     * (bounded) population, so a caller that only needs the page must not ask for it; the result then reports
+     * {@code -1} (not counted).
+     */
+    public NativeIdentityRoleExtractionResult extract(int start, int limit, Date modifiedAfter,
+            boolean includeCount) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("id", true);
         NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
@@ -45,7 +55,9 @@ public final class NativeIdentityRoleExtractor {
                 config.getSourceSystem(), config.getExtractionRunId(), "IdentityRole", Instant.now());
         QueryOptions countOptions = new QueryOptions();
         NativeIncrementalQuery.applyModifiedAfter(countOptions, modifiedAfter);
-        result.setSourceCount(context.countObjects(Identity.class, countOptions));
+        if (includeCount) {
+            result.setSourceCount(context.countObjects(Identity.class, countOptions));
+        }
 
         int identities = 0;
         Iterator<Object[]> ids = context.search(Identity.class, qo, "id");

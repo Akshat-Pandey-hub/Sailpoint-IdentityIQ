@@ -45,7 +45,8 @@ public class NativeIdentityRequestResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getIdentityRequests(@QueryParam("start") @DefaultValue("0") int start,
                                         @QueryParam("limit") @DefaultValue("100") int limit,
-                                        @QueryParam("modifiedAfter") String modifiedAfter) {
+                                        @QueryParam("modifiedAfter") String modifiedAfter,
+                                        @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "identity-requests", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -67,7 +68,7 @@ public class NativeIdentityRequestResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeIdentityRequestExtractionResult result =
-                    new NativeIdentityRequestExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
+                    new NativeIdentityRequestExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate, includeCount);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("KeyForgeNativeIIQ source endpoint=identity-requests count=" + result.getSourceCount());
             }

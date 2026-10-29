@@ -45,7 +45,8 @@ public class NativeProvisioningTxnResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getProvisioningTransactions(@QueryParam("start") @DefaultValue("0") int start,
                                                 @QueryParam("limit") @DefaultValue("1000") int limit,
-                                                @QueryParam("modifiedAfter") String modifiedAfter) {
+                                                @QueryParam("modifiedAfter") String modifiedAfter,
+                                                @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "provisioning-transactions", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -67,7 +68,7 @@ public class NativeProvisioningTxnResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeProvisioningTxnExtractionResult result =
-                    new NativeProvisioningTxnExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
+                    new NativeProvisioningTxnExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate, includeCount);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("KeyForgeNativeIIQ source endpoint=provisioning-transactions count=" + result.getSourceCount());
             }

@@ -33,8 +33,15 @@ public final class NativeWorkItemArchiveExtractionService {
     /** One page, bounded to objects created after {@code createdAfter} ({@code null} = full population). */
     public NativeWorkItemArchiveExtractionResult extract(SailPointContext context, int start, int limit,
                       java.util.Date createdAfter) throws GeneralException {
+        return extract(context, start, limit, createdAfter, true);
+    }
+
+    /** One page; counts the population only when {@code includeCount} is true ({@code -1} otherwise). */
+    public NativeWorkItemArchiveExtractionResult extract(SailPointContext context, int start, int limit,
+                      java.util.Date createdAfter, boolean includeCount) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeWorkItemArchiveExtractor(context, config).extract(Math.max(0, start), limit, createdAfter);
+        return new NativeWorkItemArchiveExtractor(context, config).extract(Math.max(0, start), limit, createdAfter,
+                includeCount);
     }
 
     public NativeWorkItemArchiveExtractionResult extractAll(SailPointContext context) throws GeneralException {

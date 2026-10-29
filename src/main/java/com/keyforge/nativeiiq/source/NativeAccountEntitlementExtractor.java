@@ -39,6 +39,16 @@ public final class NativeAccountEntitlementExtractor {
      * The source count uses the same bound, so the caller's complete-scan guard compares like with like.
      */
     public NativeAccountEntitlementExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
+        return extract(start, limit, modifiedAfter, true);
+    }
+
+    /**
+     * One page; the population is counted only when {@code includeCount} is true. Counting reads the whole
+     * (bounded) population, so a caller that only needs the page must not ask for it; the result then reports
+     * {@code -1} (not counted).
+     */
+    public NativeAccountEntitlementExtractionResult extract(int start, int limit, java.util.Date modifiedAfter,
+            boolean includeCount) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         qo.addOrdering("id", true);
@@ -48,15 +58,18 @@ public final class NativeAccountEntitlementExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
-        return extract(qo, modifiedAfter);
+        return extract(qo, modifiedAfter, includeCount);
     }
 
-    private NativeAccountEntitlementExtractionResult extract(QueryOptions qo, java.util.Date modifiedAfter) throws GeneralException {
+    private NativeAccountEntitlementExtractionResult extract(QueryOptions qo, java.util.Date modifiedAfter,
+            boolean includeCount) throws GeneralException {
         NativeAccountEntitlementExtractionResult result = new NativeAccountEntitlementExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "AccountEntitlement", Instant.now());
 
-        result.setSourceCount(context.countObjects(Link.class,
-                NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
+        if (includeCount) {
+            result.setSourceCount(context.countObjects(Link.class,
+                    NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
+        }
 
         int links = 0;
         Iterator<Object[]> ids = context.search(Link.class, qo, "id");

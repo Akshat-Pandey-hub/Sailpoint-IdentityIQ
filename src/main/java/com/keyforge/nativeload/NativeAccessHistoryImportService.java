@@ -79,7 +79,8 @@ public final class NativeAccessHistoryImportService {
 
         int start = 0;
         while (true) {
-            JsonNode envelope = parse(client.fetchPage(path, start, pageSize));
+            // Count once, on the first page: the completeness baseline. Later pages are not counted.
+            JsonNode envelope = parse(client.fetchPage(path, start, pageSize, start == 0));
             JsonNode err = envelope.get("error");
             if (err != null && !err.isNull()) {
                 throw new NativeImportException(repo.entity() + " endpoint returned an error: "

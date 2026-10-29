@@ -33,8 +33,14 @@ public final class NativeHistEntitlementCaptureExtractor {
     /** Same, bounded to records created after {@code createdAfter} ({@code null} = all records). */
     public int extract(int start, int limit, java.util.Date createdAfter, List<NativeHistEntitlementCaptureRow> out)
             throws GeneralException {
+        return extract(start, limit, createdAfter, true, out);
+    }
+
+    /** Same; counts the population only when {@code includeCount} is true ({@code -1} otherwise). */
+    public int extract(int start, int limit, java.util.Date createdAfter, boolean includeCount,
+                       List<NativeHistEntitlementCaptureRow> out) throws GeneralException {
         return NativeAccessHistoryScan.scan(
-                ahContext, HistoricalEntitlementCapture.class, start, limit, createdAfter,
+                ahContext, HistoricalEntitlementCapture.class, start, limit, createdAfter, includeCount,
                 o -> NativeHistEntitlementCaptureMapper.map(o, config.getSourceSystem(), config.getExtractionRunId()),
                 out);
     }

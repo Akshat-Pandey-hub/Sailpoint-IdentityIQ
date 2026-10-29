@@ -45,7 +45,8 @@ public class NativePolicyConstraintResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPolicyConstraints(@QueryParam("start") @DefaultValue("0") int start,
                                          @QueryParam("limit") @DefaultValue("100") int limit,
-                                         @QueryParam("modifiedAfter") String modifiedAfter) {
+                                         @QueryParam("modifiedAfter") String modifiedAfter,
+                                         @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "policy-constraints", start, limit, modifiedAfter);
         if (NativeIncrementalQuery.isInvalid(modifiedAfter)) {
@@ -63,7 +64,7 @@ public class NativePolicyConstraintResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativePolicyConstraintExtractionResult result =
-                    new NativePolicyConstraintExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
+                    new NativePolicyConstraintExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate, includeCount);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("KeyForgeNativeIIQ source endpoint=policy-constraints count=" + result.getSourceCount());
             }

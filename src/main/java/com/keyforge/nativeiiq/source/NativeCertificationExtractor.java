@@ -33,6 +33,16 @@ public final class NativeCertificationExtractor {
     }
 
     public NativeCertificationExtractionResult extract(int start, int limit, Date modifiedAfter) throws GeneralException {
+        return extract(start, limit, modifiedAfter, true);
+    }
+
+    /**
+     * One page; the population is counted only when {@code includeCount} is true. Counting reads the whole
+     * (bounded) population, so a caller that only needs the page must not ask for it; the result then reports
+     * {@code -1} (not counted).
+     */
+    public NativeCertificationExtractionResult extract(int start, int limit, Date modifiedAfter,
+            boolean includeCount) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         qo.addOrdering("id", true);
         NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
@@ -44,7 +54,9 @@ public final class NativeCertificationExtractor {
         }
         NativeCertificationExtractionResult result = new NativeCertificationExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "Certification", Instant.now());
-        result.setSourceCount(context.countObjects(Certification.class, NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
+        if (includeCount) {
+            result.setSourceCount(context.countObjects(Certification.class, NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
+        }
 
         Iterator<Object[]> ids = context.search(Certification.class, qo, "id");
         try {

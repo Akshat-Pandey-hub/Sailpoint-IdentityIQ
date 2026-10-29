@@ -28,8 +28,15 @@ public final class NativeWorkItemExtractionService {
     /** One page, bounded to objects changed after {@code modifiedAfter} ({@code null} = full population). */
     public NativeWorkItemExtractionResult extract(SailPointContext context, int start, int limit,
                       java.util.Date modifiedAfter) throws GeneralException {
+        return extract(context, start, limit, modifiedAfter, true);
+    }
+
+    /** One page; counts the population only when {@code includeCount} is true ({@code -1} otherwise). */
+    public NativeWorkItemExtractionResult extract(SailPointContext context, int start, int limit,
+                      java.util.Date modifiedAfter, boolean includeCount) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeWorkItemExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter);
+        return new NativeWorkItemExtractor(context, config).extract(Math.max(0, start), limit, modifiedAfter,
+                includeCount);
     }
 
     public NativeWorkItemExtractionResult extractAll(SailPointContext context) throws GeneralException {

@@ -41,6 +41,16 @@ public final class NativeIdentityEntitlementExtractor {
      * The source count uses the same bound, so the caller's complete-scan guard compares like with like.
      */
     public NativeIdentityEntitlementExtractionResult extract(int start, int limit, java.util.Date modifiedAfter) throws GeneralException {
+        return extract(start, limit, modifiedAfter, true);
+    }
+
+    /**
+     * One page; the population is counted only when {@code includeCount} is true. Counting reads the whole
+     * (bounded) population, so a caller that only needs the page must not ask for it; the result then reports
+     * {@code -1} (not counted).
+     */
+    public NativeIdentityEntitlementExtractionResult extract(int start, int limit, java.util.Date modifiedAfter,
+            boolean includeCount) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         NativeIncrementalQuery.applyModifiedAfter(qo, modifiedAfter);
         qo.addOrdering("id", true);
@@ -50,15 +60,18 @@ public final class NativeIdentityEntitlementExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
-        return extract(qo, modifiedAfter);
+        return extract(qo, modifiedAfter, includeCount);
     }
 
-    private NativeIdentityEntitlementExtractionResult extract(QueryOptions qo, java.util.Date modifiedAfter) throws GeneralException {
+    private NativeIdentityEntitlementExtractionResult extract(QueryOptions qo, java.util.Date modifiedAfter,
+            boolean includeCount) throws GeneralException {
         NativeIdentityEntitlementExtractionResult result = new NativeIdentityEntitlementExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "IdentityEntitlement", Instant.now());
 
-        result.setSourceCount(context.countObjects(IdentityEntitlement.class,
-                NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
+        if (includeCount) {
+            result.setSourceCount(context.countObjects(IdentityEntitlement.class,
+                    NativeIncrementalQuery.applyModifiedAfter(new QueryOptions(), modifiedAfter)));
+        }
 
         Iterator<Object[]> ids = context.search(IdentityEntitlement.class, qo, "id");
         try {

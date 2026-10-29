@@ -46,7 +46,8 @@ public class NativeIdentityRoleResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getIdentityRoles(@QueryParam("start") @DefaultValue("0") int start,
                                      @QueryParam("limit") @DefaultValue("200") int limit,
-                                     @QueryParam("modifiedAfter") String modifiedAfter) {
+                                     @QueryParam("modifiedAfter") String modifiedAfter,
+                                     @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "identity-roles", start, limit, modifiedAfter);
         if (NativeIncrementalQuery.isInvalid(modifiedAfter)) {
@@ -64,7 +65,7 @@ public class NativeIdentityRoleResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeIdentityRoleExtractionResult result =
-                    new NativeIdentityRoleExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
+                    new NativeIdentityRoleExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate, includeCount);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("KeyForgeNativeIIQ source endpoint=identity-roles count=" + result.getSourceCount());
             }

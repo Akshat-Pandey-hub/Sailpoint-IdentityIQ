@@ -5,5 +5,6 @@ public final class NativeRoleRelationshipClient implements NativeRoleRelationshi
  public static final String PATH="plugin/rest/keyForgeNativeIIQ/role-relationships";private final IiqSessionClient session;private String modifiedAfter;
  public NativeRoleRelationshipClient(IiqSessionClient s){session=s;}
  public NativeRoleRelationshipClient withModifiedAfter(String value){modifiedAfter=value==null||value.isBlank()?null:value.trim();return this;}
- public String fetchPage(int start,int limit,String runId){session.warmCsrfToken();Map<String,String>p=new LinkedHashMap<>();p.put("start",Integer.toString(Math.max(0,start)));p.put("limit",Integer.toString(limit));p.put("runId",runId);if(modifiedAfter!=null)p.put("modifiedAfter",modifiedAfter);return session.get(PATH,p);}
+ public String fetchPage(int start,int limit,String runId){return fetchPage(start,limit,runId,false);}
+ @Override public String fetchPage(int start,int limit,String runId,boolean includeCount){session.warmCsrfToken();Map<String,String>p=new LinkedHashMap<>();p.put("start",Integer.toString(Math.max(0,start)));p.put("limit",Integer.toString(limit));p.put("runId",runId);if(modifiedAfter!=null)p.put("modifiedAfter",modifiedAfter);if(includeCount)p.put("includeCount","true");return session.get(PATH,p);}
 }

@@ -44,7 +44,8 @@ public class NativeWorkItemResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getWorkItems(@QueryParam("start") @DefaultValue("0") int start,
                                  @QueryParam("limit") @DefaultValue("100") int limit,
-                                 @QueryParam("modifiedAfter") String modifiedAfter) {
+                                 @QueryParam("modifiedAfter") String modifiedAfter,
+                                 @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "workitems", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -66,7 +67,7 @@ public class NativeWorkItemResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeWorkItemExtractionResult result =
-                    new NativeWorkItemExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate);
+                    new NativeWorkItemExtractionService().extract(context, safeStart, safeLimit, modifiedAfterDate, includeCount);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("KeyForgeNativeIIQ source endpoint=workitems count=" + result.getSourceCount());
             }
