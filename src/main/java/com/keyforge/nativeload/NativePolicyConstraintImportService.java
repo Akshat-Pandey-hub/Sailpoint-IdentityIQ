@@ -10,8 +10,8 @@ import java.util.Set;
 
 /**
  * Orchestrates the native policy-constraint import. Rows are per-constraint but the paginated source unit
- * is the parent {@code Policy}, so this pages by policy: it advances until a page covers fewer policies
- * than the page size ({@code returnedPolicies < pageSize}), never on empty constraints (a policy with no
+ * is the parent {@code Policy}, so this pages by policy: it advances by the policies each page covered until
+ * a page covers none ({@code returnedPolicies == 0}), never on empty constraints (a policy with no
  * constraints yields zero rows but must not stop the scan). The authoritative total Policy count is
  * compared to the number scanned; an incomplete scan throws <b>before</b> sweeping.
  */
@@ -117,14 +117,19 @@ public final class NativePolicyConstraintImportService {
             }
 
             if (returnedPolicies >= 0) {
-                scannedPolicies += returnedPolicies;
-                if (returnedPolicies < pageSize) {
-                    break;
+                if (returnedPolicies == 0) {
+                    break; // no source object left: the end
                 }
-            } else if (page.isEmpty()) {
-                break;
+                scannedPolicies += returnedPolicies;
+                // A short page is not the end: an object deleted while IIQ loaded it shifts the later ones up,
+                // so advance by the objects actually received and read on until a page brings none.
+                start += returnedPolicies;
+            } else {
+                if (page.isEmpty()) {
+                    break; // fallback termination when the endpoint does not report its count
+                }
+                start += pageSize;
             }
-            start += pageSize;
         }
 
         if (sourcePolicyCount >= 0 && scannedPolicies != sourcePolicyCount) {

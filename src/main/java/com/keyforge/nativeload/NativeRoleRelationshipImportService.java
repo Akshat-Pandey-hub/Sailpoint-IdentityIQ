@@ -50,8 +50,9 @@ public final class NativeRoleRelationshipImportService {
                 try { String id=NativeRoleHierarchyRepository.id(r); NativeRoleHierarchyRepository.Outcome o=sink.hierarchy(r); keepHierarchy.add(id); if(o==NativeRoleHierarchyRepository.Outcome.INSERTED)hi++;else hu++; }
                 catch (Exception ex) { failed++; }
             }
-            if (page.returnedBundles<pageSize) break;
-            start+=pageSize;
+            // Only a page with no Bundle ends the read; a short page can follow a Bundle deleted mid-read.
+            if (page.returnedBundles==0) break;
+            start+=page.returnedBundles;
         }
         if (bundles!=sourceCount) throw new NativeImportException("Incomplete Bundle relationship scan: IIQ count="+sourceCount+", scanned="+bundles+"; deletion sweeps not run");
         if (failed>0) return new Result(runId,sourceCount,bundles,e,ei,eu,h,hi,hu,failed,0,0,true);

@@ -98,7 +98,9 @@ public final class NativeTaskScheduleRestService {
                     added++;
                 }
             }
-            if (page.size() < INTERNAL_PAGE_SIZE || added == 0) {
+            // Only an empty page ends the read (a short one can follow a deletion mid-read); a page that adds
+            // nothing new means the plugin ignored start, so stop rather than loop.
+            if (page.isEmpty() || added == 0) {
                 return new ArrayList<>(byId.values());
             }
             start += page.size();

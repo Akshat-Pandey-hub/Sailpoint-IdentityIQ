@@ -12,10 +12,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class NativeWorkItemArchiveImportServiceTest {
     private static final class Pages implements NativeWorkItemArchivePageSource {
         private final List<String> values;
+        private int served;
         Pages(List<String> values) { this.values = values; }
         @Override public String fetchPage(int start, int limit) {
-            int index = start / limit;
-            return index < values.size() ? values.get(index) : "{\"sourceCount\":1,\"rows\":[]}";
+            if (start == 0) {
+                served = 0; // a new read starts over
+            }
+            int index = served++; // each call returns the next canned page, as an offset-honouring plugin would
+            return index < values.size() ? values.get(index) : "{\"rows\":[]}";
         }
     }
 

@@ -74,15 +74,15 @@ final class KfAgentExpandedPagedReader<R> {
                 if (result.size() >= wanted) return result;
             }
 
-            scannedSourceRows += page.nextStart - sourceStart;
-            if (page.done || page.nextStart - sourceStart < readPageSize) {
+            // Only a page that brings no new source object ends the read. A short page is not the end: an object
+            // deleted while IIQ loaded it shifts the later ones up, so read on from nextStart (the objects received).
+            if (page.nextStart <= sourceStart) {
                 if (page.sourceTotal >= 0 && scannedSourceRows != page.sourceTotal)
                     throw new NativeImportException("Incomplete expanded entity scan: source count="
                             + page.sourceTotal + ", scanned=" + scannedSourceRows);
                 return result;
             }
-            if (page.nextStart <= sourceStart)
-                throw new NativeImportException("Expanded entity pagination did not advance (start=" + sourceStart + ")");
+            scannedSourceRows += page.nextStart - sourceStart;
             sourceStart = page.nextStart;
         }
     }

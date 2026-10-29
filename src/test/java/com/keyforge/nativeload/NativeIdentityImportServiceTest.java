@@ -29,11 +29,15 @@ class NativeIdentityImportServiceTest {
     /** Serves canned JSON pages by page index (start / pageSize). */
     private static final class FakePages implements NativeIdentityPageSource {
         private final List<String> pages;
+        private int served;
         final List<Integer> starts = new ArrayList<>();
         FakePages(List<String> pages) { this.pages = pages; }
         @Override public String fetchPage(int start, int limit) {
             starts.add(start);
-            int idx = limit > 0 ? start / limit : 0;
+            if (start == 0) {
+                served = 0; // a new read starts over
+            }
+            int idx = served++; // each call returns the next canned page, as an offset-honouring plugin would
             return idx < pages.size() ? pages.get(idx) : "{\"rows\":[]}";
         }
     }
@@ -84,7 +88,7 @@ class NativeIdentityImportServiceTest {
         assertEquals(3, r.getPersisted());
         assertEquals(3, r.getInserted());
         assertEquals(0, r.getFailed());
-        assertEquals(List.of(0, 2), src.starts, "should page start=0 then start=2, then stop on short page");
+        assertEquals(List.of(0, 2, 3), src.starts, "start=0, then start=2, then one empty call at 3 confirms the end");
         assertTrue(r.isSweepRan());
         assertFalse(r.isSweepSkipped());
         assertEquals(3, sink.sweptKeep.size(), "keep-set = every source id seen");

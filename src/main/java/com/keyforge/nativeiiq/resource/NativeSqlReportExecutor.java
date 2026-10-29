@@ -15,9 +15,35 @@ final class NativeSqlReportExecutor {
 
     static final int MAX_ROWS = 200000;
     static final int QUERY_TIMEOUT_SECONDS = 50;
+    /** Bounds for a caller-supplied query timeout (the KF Agent sends its own IIQ timeout minus a margin). */
+    static final int MIN_QUERY_TIMEOUT_SECONDS = 1;
+    static final int MAX_QUERY_TIMEOUT_SECONDS = 3590;
     static final int FETCH_SIZE = 500;
 
     private NativeSqlReportExecutor() { }
+
+    /** The query timeout actually applied: the caller's, or {@link #QUERY_TIMEOUT_SECONDS} when none was sent. */
+    static int effectiveQueryTimeout(Integer queryTimeoutSeconds) {
+        return queryTimeoutSeconds == null ? QUERY_TIMEOUT_SECONDS : queryTimeoutSeconds.intValue();
+    }
+
+    /** Parses the optional {@code queryTimeoutSeconds} request parameter; {@code null} when it was not sent. */
+    static Integer parseQueryTimeout(String raw) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return null;
+        }
+        int value;
+        try {
+            value = Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            throw new BadRequest("invalid 'queryTimeoutSeconds': '" + raw + "' is not an integer");
+        }
+        if (value < MIN_QUERY_TIMEOUT_SECONDS || value > MAX_QUERY_TIMEOUT_SECONDS) {
+            throw new BadRequest("invalid 'queryTimeoutSeconds': must be between " + MIN_QUERY_TIMEOUT_SECONDS
+                    + " and " + MAX_QUERY_TIMEOUT_SECONDS);
+        }
+        return Integer.valueOf(value);
+    }
 
     static final class BadRequest extends IllegalArgumentException {
         private static final long serialVersionUID = 1L;
@@ -34,6 +60,15 @@ final class NativeSqlReportExecutor {
                                        Map<String, String> filters, Integer requestedStart,
                                        Integer requestedLimit, Long modifiedAfter,
                                        org.apache.commons.logging.Log log) throws Exception {
+        return execute(conn, report, sql, filters, requestedStart, requestedLimit, modifiedAfter, log, null);
+    }
+
+    /** @param queryTimeoutSeconds the caller's query timeout, or {@code null} for {@link #QUERY_TIMEOUT_SECONDS} */
+    static Map<String, Object> execute(Connection conn, String report, String sql,
+                                       Map<String, String> filters, Integer requestedStart,
+                                       Integer requestedLimit, Long modifiedAfter,
+                                       org.apache.commons.logging.Log log, Integer queryTimeoutSeconds)
+            throws Exception {
         validatePage(requestedStart, requestedLimit);
         int start = requestedStart == null ? 0 : requestedStart.intValue();
         int pageLimit = requestedLimit == null ? MAX_ROWS : requestedLimit.intValue();
@@ -46,7 +81,7 @@ final class NativeSqlReportExecutor {
         ResultSet rs = null;
         try {
             st = conn.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-            st.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
+            st.setQueryTimeout(effectiveQueryTimeout(queryTimeoutSeconds));
             st.setFetchSize(FETCH_SIZE);
             // Counted from our own bundled SQL, not asked of the JDBC driver (getParameterMetaData support varies).
             int parameterCount = NativeSqlReportResources.placeholderCount(sql);

@@ -66,6 +66,7 @@ public class NativeSqlReportResource extends BasePluginResource {
         String stage = "start";
         NativeSqlReportDialect dialect = null;
         String sqlFile = null;
+        Integer queryTimeout = null;
         try {
             if (!NativeSqlReportResources.isRegistered(report)) {
                 Map<String, Object> err = new LinkedHashMap<String, Object>();
@@ -86,7 +87,8 @@ public class NativeSqlReportResource extends BasePluginResource {
             MultivaluedMap<String, String> query = uriInfo.getQueryParameters();
             for (Map.Entry<String, List<String>> entry : query.entrySet()) {
                 String key = entry.getKey();
-                if ("start".equals(key) || "limit".equals(key) || "modifiedAfter".equals(key)) {
+                if ("start".equals(key) || "limit".equals(key) || "modifiedAfter".equals(key)
+                        || "queryTimeoutSeconds".equals(key)) {
                     continue;
                 }
                 List<String> values = entry.getValue();
@@ -97,6 +99,7 @@ public class NativeSqlReportResource extends BasePluginResource {
             Integer start = NativeSqlReportExecutor.parsePageValue(query.getFirst("start"), "start");
             Integer limit = NativeSqlReportExecutor.parsePageValue(query.getFirst("limit"), "limit");
             NativeSqlReportExecutor.validatePage(start, limit);
+            queryTimeout = NativeSqlReportExecutor.parseQueryTimeout(query.getFirst("queryTimeoutSeconds"));
 
             stage = "getContext";
             SailPointContext context = getContext();
@@ -110,7 +113,8 @@ public class NativeSqlReportResource extends BasePluginResource {
             stage = "loadSql";
             String sqlPath = NativeSqlReportResources.resourcePathFor(report, dialect);
             sqlFile = NativeSqlReportResources.fileName(sqlPath);
-            PluginLog.sqlSource(LOG, "sqlReport/" + report, dialect.displayName(), databaseVersion(conn), sqlFile);
+            PluginLog.sqlSource(LOG, "sqlReport/" + report, dialect.displayName(), databaseVersion(conn), sqlFile,
+                    queryTimeout);
             String sql = NativeSqlReportResources.loadSql(sqlPath);
             if (!NativeSqlReportResources.isSingleSelect(sql)) {
                 throw new IllegalStateException("registered report SQL is not a single read-only SELECT");
@@ -118,7 +122,7 @@ public class NativeSqlReportResource extends BasePluginResource {
 
             stage = "execute";
             Map<String, Object> envelope = NativeSqlReportExecutor.execute(
-                    conn, report, sql, filters, start, limit, modifiedAfterMillis, LOG);
+                    conn, report, sql, filters, start, limit, modifiedAfterMillis, LOG, queryTimeout);
             envelope.put("database", dialect.displayName());
             envelope.put("sqlFile", sqlFile);
 
@@ -133,7 +137,8 @@ public class NativeSqlReportResource extends BasePluginResource {
             // Broader than Exception on purpose: contain Errors so IIQ returns a JSON 500, never exception.jsf.
             PluginLog.failed(LOG, "sqlReport/" + report, stage, t);
             try {
-                NativeSqlReportFailure failure = NativeSqlReportFailure.of(stage, t, dialect);
+                NativeSqlReportFailure failure = NativeSqlReportFailure.of(stage, t, dialect,
+                        NativeSqlReportExecutor.effectiveQueryTimeout(queryTimeout));
                 Map<String, Object> error = new LinkedHashMap<String, Object>();
                 error.put("message", failure.message());
                 error.putAll(failure.fields());

@@ -44,6 +44,7 @@ public final class NativeSqlReportClient {
             params.putAll(filters);
         }
         params.remove("modifiedAfter"); // reserved control parameter, never a report-column filter
+        params.remove("queryTimeoutSeconds"); // set only from KFAGENT_IIQ_TIMEOUT_SECONDS, never by a caller
         if (modifiedAfter != null && !modifiedAfter.trim().isEmpty()) {
             params.put("modifiedAfter", modifiedAfter.trim());
         }
@@ -52,6 +53,12 @@ public final class NativeSqlReportClient {
         }
         if (limit != null) {
             params.put("limit", limit.toString());
+        }
+        Integer queryTimeout = com.keyforge.iiq.client.IiqTimeouts.sqlReportQueryTimeout(
+                session.configuredTimeoutSeconds());
+        if (queryTimeout != null) {
+            // stop the query before the agent stops waiting, so the plugin's own timeout reason reaches our log
+            params.put("queryTimeoutSeconds", queryTimeout.toString());
         }
         return session.get(SQL_REPORT_PATH + report, params);
     }

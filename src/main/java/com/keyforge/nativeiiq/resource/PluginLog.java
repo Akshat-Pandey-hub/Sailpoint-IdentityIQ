@@ -31,9 +31,16 @@ final class PluginLog {
      * query runs, so it is in the log even when the query then fails.
      */
     static void sqlSource(Log log, String endpoint, String database, String databaseVersion, String sqlFile) {
+        sqlSource(log, endpoint, database, databaseVersion, sqlFile, null);
+    }
+
+    /** Same; also names the query timeout when the caller set one ({@code null}: the default, not shown). */
+    static void sqlSource(Log log, String endpoint, String database, String databaseVersion, String sqlFile,
+                          Integer queryTimeoutSeconds) {
         log.info("KeyForgeNativeIIQ SQL      | endpoint=" + LogText.safe(endpoint) + " | database=" + LogText.safe(database)
                 + (databaseVersion == null ? "" : " (" + LogText.safe(databaseVersion) + ")")
-                + " | sql=" + LogText.safe(sqlFile));
+                + " | sql=" + LogText.safe(sqlFile)
+                + (queryTimeoutSeconds == null ? "" : " | queryTimeout=" + queryTimeoutSeconds + " s"));
     }
 
     /** WARN: the request was rejected as invalid (HTTP 400), with the reason sent to the caller. */

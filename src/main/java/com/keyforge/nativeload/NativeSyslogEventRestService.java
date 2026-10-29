@@ -147,9 +147,8 @@ public final class NativeSyslogEventRestService {
             for (NativeSyslogEventRecord r : page) {
                 out.add(toJson(r));
             }
-            int effective = parser.pageLimit(json);
-            if (page.isEmpty() || page.size() < (effective > 0 ? Math.min(effective, chunk) : chunk)) {
-                break; // end of the population
+            if (page.isEmpty()) {
+                break; // only an empty page ends the read; a short one can follow a deletion mid-read
             }
             offset += page.size();
             remaining -= page.size();

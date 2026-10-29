@@ -59,10 +59,10 @@ class NativeSyslogEventRestServiceTest {
     }
 
     /** Build the plugin envelope {sourceCount, rows:[...]} the import service expects. */
-    private static String envelope(List<Map<String, Object>> rows) {
+    private static String envelope(List<Map<String, Object>> rows, int population) {
         Map<String, Object> env = new LinkedHashMap<>();
         env.put("entity", "SyslogEvent");
-        env.put("sourceCount", rows.size());
+        env.put("sourceCount", population);
         env.put("returned", rows.size());
         env.put("rows", rows);
         try {
@@ -78,7 +78,7 @@ class NativeSyslogEventRestServiceTest {
         return (start, limit) -> {
             int from = Math.min(Math.max(0, start), rows.size());
             int to = Math.min(rows.size(), from + (limit <= 0 ? 200 : limit));
-            return envelope(rows.subList(from, to));
+            return envelope(rows.subList(from, to), rows.size());
         };
     }
 

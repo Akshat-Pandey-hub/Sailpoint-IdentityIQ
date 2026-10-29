@@ -25,11 +25,15 @@ class NativeGroupDefinitionImportServiceTest {
 
     private static final class FakePages implements NativeGroupDefinitionPageSource {
         private final List<String> pages;
+        private int served;
         final List<Integer> starts = new ArrayList<>();
         FakePages(List<String> pages) { this.pages = pages; }
         @Override public String fetchPage(int start, int limit) {
             starts.add(start);
-            int idx = limit > 0 ? start / limit : 0;
+            if (start == 0) {
+                served = 0; // a new read starts over
+            }
+            int idx = served++; // each call returns the next canned page, as an offset-honouring plugin would
             return idx < pages.size() ? pages.get(idx) : "{\"rows\":[]}";
         }
     }

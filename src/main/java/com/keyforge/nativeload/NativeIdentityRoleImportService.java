@@ -10,8 +10,8 @@ import java.util.Set;
 
 /**
  * Orchestrates the native identity-role import. Rows are per-edge but the paginated source unit is the
- * {@code Identity}, so this pages by identity: it advances until a page covers fewer identities than the
- * page size ({@code returnedIdentities < pageSize}), never on empty edges (an identity with no roles yields
+ * {@code Identity}, so this pages by identity: it advances by the identities each page covered until a page
+ * covers none ({@code returnedIdentities == 0}), never on empty edges (an identity with no roles yields
  * zero edges but must not stop the scan). The authoritative total Identity count is compared to the number
  * scanned; an incomplete scan throws <b>before</b> sweeping so a partial pull never marks live edges deleted.
  */
@@ -117,14 +117,19 @@ public final class NativeIdentityRoleImportService {
             }
 
             if (returnedIdentities >= 0) {
-                scannedIdentities += returnedIdentities;
-                if (returnedIdentities < pageSize) {
-                    break;
+                if (returnedIdentities == 0) {
+                    break; // no source object left: the end
                 }
-            } else if (page.isEmpty()) {
-                break;
+                scannedIdentities += returnedIdentities;
+                // A short page is not the end: an object deleted while IIQ loaded it shifts the later ones up,
+                // so advance by the objects actually received and read on until a page brings none.
+                start += returnedIdentities;
+            } else {
+                if (page.isEmpty()) {
+                    break; // fallback termination when the endpoint does not report its count
+                }
+                start += pageSize;
             }
-            start += pageSize;
         }
 
         if (sourceIdentityCount >= 0 && scannedIdentities != sourceIdentityCount) {

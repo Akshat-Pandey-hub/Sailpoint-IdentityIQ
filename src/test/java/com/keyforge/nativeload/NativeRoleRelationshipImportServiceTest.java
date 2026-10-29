@@ -17,7 +17,7 @@ class NativeRoleRelationshipImportServiceTest {
     private static final class Pages implements NativeRoleRelationshipPageSource {
         final List<String> responses; int calls;
         Pages(String... responses){this.responses=List.of(responses);}
-        public String fetchPage(int start,int limit,String run){calls++;String r=responses.get(start/limit);return r.replace("RUN",run);}
+        public String fetchPage(int start,int limit,String run){calls++;String r=calls<=responses.size()?responses.get(calls-1):page(-1,0,"RUN","");return r.replace("RUN",run);}
     }
     private static final class Sink implements NativeRoleRelationshipSink {
         boolean ensured; int entitlementSweeps,hierarchySweeps; Collection<String> entitlementKeep,hierarchyKeep;
@@ -32,7 +32,7 @@ class NativeRoleRelationshipImportServiceTest {
     @Test void confirmedFullScanAllowsSeparateTypedSweeps() throws SQLException {
         Pages pages=new Pages(page(3,2,"RUN",""),page(3,1,"RUN","")); Sink sink=new Sink();
         NativeRoleRelationshipImportService.Result result=new NativeRoleRelationshipImportService(pages,sink,2).run();
-        assertTrue(sink.ensured);assertEquals(3,result.bundles);assertEquals(2,pages.calls);
+        assertTrue(sink.ensured);assertEquals(3,result.bundles);assertEquals(3,pages.calls); // 2 + 1, then an empty page confirms the end
         assertEquals(1,sink.entitlementSweeps);assertEquals(1,sink.hierarchySweeps);
         assertTrue(result.sweepsSkipped); // both source edge sets were genuinely empty
     }
@@ -71,7 +71,7 @@ class NativeRoleRelationshipImportServiceTest {
     @Test void countsOnlyTheFirstPageAndStillVerifiesTheScanBeforeSweeping() throws SQLException {
         CountOnRequestPages pages=new CountOnRequestPages(5);Sink sink=new Sink();
         NativeRoleRelationshipImportService.Result result=new NativeRoleRelationshipImportService(pages,sink,2).run();
-        assertEquals(List.of(true,false,false),pages.countAsked);
+        assertEquals(List.of(true,false,false,false),pages.countAsked);
         assertEquals(5,result.bundles);assertEquals(5,result.sourceCount);
         assertEquals(1,sink.entitlementSweeps);assertEquals(1,sink.hierarchySweeps);
     }

@@ -45,7 +45,10 @@ public class IiqSessionClient extends IiqApiClient {
     private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(IiqSessionClient.class);
 
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
+    /** How long to wait for one IdentityIQ call ({@link IiqTimeouts}: 60 s unless KFAGENT_IIQ_TIMEOUT_SECONDS is set). */
+    private final Duration requestTimeout;
+    /** KFAGENT_IIQ_TIMEOUT_SECONDS when set, else {@code null}. */
+    private final Integer configuredTimeoutSeconds;
 
     /** IdentityIQ 8.4 JSF login page — GET to seed the session, POST to authenticate. */
     static final String LOGIN_PATH = "login.jsf";
@@ -88,6 +91,8 @@ public class IiqSessionClient extends IiqApiClient {
         this.username = config.getUsername();
         this.password = config.getPassword();
         this.debug = debug;
+        this.configuredTimeoutSeconds = IiqTimeouts.configured();
+        this.requestTimeout = IiqTimeouts.requestTimeout(configuredTimeoutSeconds);
 
         this.cookieManager = new CookieManager();
         this.cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
@@ -111,6 +116,13 @@ public class IiqSessionClient extends IiqApiClient {
         this.httpClient = httpClient;
         this.cookieManager = null;
         this.debug = false;
+        this.configuredTimeoutSeconds = IiqTimeouts.configured();
+        this.requestTimeout = IiqTimeouts.requestTimeout(configuredTimeoutSeconds);
+    }
+
+    /** KFAGENT_IIQ_TIMEOUT_SECONDS when set, else {@code null} (the defaults apply). */
+    public Integer configuredTimeoutSeconds() {
+        return configuredTimeoutSeconds;
     }
 
     /**
@@ -155,7 +167,7 @@ public class IiqSessionClient extends IiqApiClient {
 
     private HttpResponse<String> sendGet(URI uri) {
         HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
-                .timeout(REQUEST_TIMEOUT)
+                .timeout(requestTimeout)
                 .header("Accept", "application/json, text/javascript, */*; q=0.01")
                 .header("X-Requested-With", "XMLHttpRequest")
                 .header("Referer", baseUrl + "/" + GROUPS_REFERER_PATH);
@@ -215,7 +227,7 @@ public class IiqSessionClient extends IiqApiClient {
 
         URI uri = buildUri(path, null);
         HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
-                .timeout(REQUEST_TIMEOUT)
+                .timeout(requestTimeout)
                 .header("Accept", "application/json, text/plain, */*")
                 .header("Content-Type", "application/json;charset=UTF-8")
                 .header("X-Requested-With", "XMLHttpRequest")
@@ -258,7 +270,7 @@ public class IiqSessionClient extends IiqApiClient {
 
         URI uri = buildUri(path, null);
         HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
-                .timeout(REQUEST_TIMEOUT)
+                .timeout(requestTimeout)
                 .header("Accept", "application/json, text/javascript, */*; q=0.01")
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .header("X-Requested-With", "XMLHttpRequest")
@@ -300,7 +312,7 @@ public class IiqSessionClient extends IiqApiClient {
 
         URI uri = buildUri(path, null);
         HttpRequest request = HttpRequest.newBuilder(uri)
-                .timeout(REQUEST_TIMEOUT)
+                .timeout(requestTimeout)
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .header("Referer", baseUrl + "/" + GROUPS_REFERER_PATH)
                 .POST(HttpRequest.BodyPublishers.ofString(
@@ -318,7 +330,7 @@ public class IiqSessionClient extends IiqApiClient {
             if (location != null && !location.isBlank()) {
                 URI target = uri.resolve(location);
                 HttpResponse<String> followed = send(HttpRequest.newBuilder(target)
-                        .timeout(REQUEST_TIMEOUT).header("Accept", "text/html").GET().build(), target);
+                        .timeout(requestTimeout).header("Accept", "text/html").GET().build(), target);
                 if (debug) {
                     LOG.debug("[IIQ]   -> follow GET {} -> HTTP {}", target, followed.statusCode());
                 }
@@ -359,7 +371,7 @@ public class IiqSessionClient extends IiqApiClient {
         URI page = buildUri(HOME_PATH, null);
         try {
             HttpResponse<String> resp = send(HttpRequest.newBuilder(page)
-                    .timeout(REQUEST_TIMEOUT).header("Accept", "text/html").GET().build(), page);
+                    .timeout(requestTimeout).header("Accept", "text/html").GET().build(), page);
             this.csrfTokenValue = extractCsrfToken(resp.body());
             if (debug) {
                 LOG.debug("[IIQ] GET {} -> HTTP {} (CSRF token {})", page, resp.statusCode(),
@@ -394,7 +406,7 @@ public class IiqSessionClient extends IiqApiClient {
         // 1. GET login.jsf: seed the JSESSIONID cookie and read the JSF ViewState token.
         URI loginUri = buildUri(LOGIN_PATH, null);
         HttpResponse<String> page = send(HttpRequest.newBuilder(loginUri)
-                .timeout(REQUEST_TIMEOUT).GET().build(), loginUri);
+                .timeout(requestTimeout).GET().build(), loginUri);
         if (debug) {
             LOG.debug("[IIQ] GET {} -> HTTP {} (login seed)", loginUri, page.statusCode());
         }
@@ -419,7 +431,7 @@ public class IiqSessionClient extends IiqApiClient {
         form.put(FIELD_VIEWSTATE, viewState);
 
         HttpRequest loginRequest = HttpRequest.newBuilder(loginUri)
-                .timeout(REQUEST_TIMEOUT)
+                .timeout(requestTimeout)
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .header("Referer", loginUri.toString())
                 .POST(HttpRequest.BodyPublishers.ofString(encodeForm(form), StandardCharsets.UTF_8))

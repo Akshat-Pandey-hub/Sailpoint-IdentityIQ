@@ -15,10 +15,14 @@ class NativeSyslogEventImportServiceTest {
 
     private static final class FakePages implements NativeSyslogEventPageSource {
         private final List<String> pages;
+        private int served;
         FakePages(List<String> pages) { this.pages = pages; }
         @Override public String fetchPage(int start, int limit) {
-            int idx = limit > 0 ? start / limit : 0;
-            return idx < pages.size() ? pages.get(idx) : "{\"sourceCount\":0,\"rows\":[]}";
+            if (start == 0) {
+                served = 0; // a new read starts over
+            }
+            int idx = served++; // each call returns the next canned page, as an offset-honouring plugin would
+            return idx < pages.size() ? pages.get(idx) : "{\"rows\":[]}";
         }
     }
 

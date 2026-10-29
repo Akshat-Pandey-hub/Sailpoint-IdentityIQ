@@ -137,7 +137,7 @@ class NativeEntitlementRestServicePagingTest {
         assertEquals(plugin.expected(i -> true, 2_990, 50), ids(svc.fetch(plugin, null, 2_990, 50)), "short last window");
         assertEquals(List.of(), ids(svc.fetch(plugin, null, 5_000, 10)), "past the end -> []");
         assertEquals(List.of(), ids(svc.fetch(plugin, null, 0, 0)), "limit=0 -> []");
-        assertEquals(2, plugin.calls.size(), "limit=0 makes no plugin call");
+        assertEquals(3, plugin.calls.size(), "short last window + its empty confirmation, past-the-end, and no call for limit=0");
     }
 
     @Test
@@ -155,7 +155,7 @@ class NativeEntitlementRestServicePagingTest {
         }
         assertEquals(plugin.expected(i -> true, 0, null), collected, "identical rows in identical order");
         assertEquals(3, requests, "500 + 500 + 234");
-        assertEquals(3, plugin.calls.size(), "one plugin call per page, never a full scan per page");
+        assertEquals(4, plugin.calls.size(), "one plugin call per page (plus one empty call after the short last page), never a full scan per page");
         assertEquals(1_234, plugin.rowsRead(), "every row read exactly once across the pages");
     }
 

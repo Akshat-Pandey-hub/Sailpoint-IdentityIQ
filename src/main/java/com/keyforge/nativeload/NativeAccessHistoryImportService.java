@@ -113,10 +113,9 @@ public final class NativeAccessHistoryImportService {
                     }
                 }
             }
-            if (rows.size() < pageSize) {
-                break;
-            }
-            start += pageSize;
+            // Only an empty page ends the read. A short page is not the end: an object deleted while IIQ
+            // loaded it shifts the later rows up, so advance by what was received and read on.
+            start += rows.size();
         }
 
         if (sourceCount >= 0 && extracted != sourceCount) {

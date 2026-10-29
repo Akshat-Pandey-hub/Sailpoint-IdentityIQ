@@ -4168,6 +4168,12 @@ public final class Main {
             int port = intEnvOrDefault("KFAGENT_PORT",
                     intEnvOrDefault("REST_PORT", com.keyforge.iiq.rest.KfAgentRestServer.DEFAULT_PORT));
             LOG.info("IdentityIQ: " + iiqConfig.getBaseUrl() + " (user '" + shownUser(iiqConfig.getUsername()) + "')");
+            Integer iiqTimeout = com.keyforge.iiq.client.IiqTimeouts.configured(); // logged only when set
+            if (iiqTimeout != null) {
+                LOG.info("IdentityIQ call timeout: " + iiqTimeout + " s (" + com.keyforge.iiq.client.IiqTimeouts.ENV
+                        + "); SQL reports stop their query after "
+                        + com.keyforge.iiq.client.IiqTimeouts.sqlReportQueryTimeout(iiqTimeout) + " s");
+            }
 
             // ONE HTTP server, ONE port: KF Agent (/health, /kfagent/*) and the Parquet query service
             // (/iiq_parquet/*, /native_parquet/*) are mounted as separate path contexts on the SAME port.

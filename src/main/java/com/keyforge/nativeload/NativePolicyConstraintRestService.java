@@ -68,7 +68,7 @@ public final class NativePolicyConstraintRestService {
                             int returned = parser.returnedPolicies(json);
                             List<NativePolicyConstraintRecord> page = parser.parse(json);
                             return new KfAgentExpandedPagedReader.Page<>(page,
-                                    offset + (returned < 0 ? requested : returned),
+                                    returned >= 0 ? offset + returned : (page.isEmpty() ? offset : offset + requested),
                                     returned < 0 ? page.isEmpty() : returned < requested,
                                     parser.sourceCount(json));
                         }, INTERNAL_PAGE_SIZE)

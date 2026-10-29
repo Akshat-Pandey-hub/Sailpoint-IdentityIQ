@@ -57,12 +57,11 @@ final class KfAgentPagedReader<R> {
         int remaining = limit;
         while (remaining > 0) {
             int chunk = Math.min(remaining, pluginMaxPage);
-            String json = fetch.fetchPage(offset, chunk);
-            List<R> page = parse.apply(json);
-            out.addAll(page);
-            if (isLastPage(json, page.size(), chunk)) {
+            List<R> page = parse.apply(fetch.fetchPage(offset, chunk));
+            if (isEnd(page)) {
                 break;
             }
+            out.addAll(page);
             offset += page.size();
             remaining -= page.size();
         }
@@ -83,8 +82,10 @@ final class KfAgentPagedReader<R> {
         int matched = 0;
         int offset = 0;
         while (true) {
-            String json = fetch.fetchPage(offset, scanPageSize);
-            List<R> page = parse.apply(json);
+            List<R> page = parse.apply(fetch.fetchPage(offset, scanPageSize));
+            if (isEnd(page)) {
+                return out;
+            }
             for (R r : page) {
                 if (!matches.test(r)) {
                     continue;
@@ -97,34 +98,17 @@ final class KfAgentPagedReader<R> {
                     return out;
                 }
             }
-            if (isLastPage(json, page.size(), scanPageSize)) {
-                return out;
-            }
             offset += page.size();
         }
     }
 
     /**
-     * True when this page ends the population: it is empty, or shorter than what was asked for (taking the plugin's
-     * echoed effective {@code limit} into account, in case it clamped the request).
+     * The end-of-data rule for every paged plugin read: only an EMPTY page ends it. A page shorter than asked is not
+     * the end, because an object deleted while IIQ loaded that page leaves it short and shifts the later objects up
+     * one place; the caller advances by what it received and reads on. At the true end this costs one extra call,
+     * which comes back empty.
      */
-    private static boolean isLastPage(String json, int returned, int requested) {
-        if (returned == 0) {
-            return true;
-        }
-        int effective = effectiveLimit(json);
-        int expected = effective > 0 ? Math.min(effective, requested) : requested;
-        return returned < expected;
-    }
-
-    /** The {@code limit} the plugin reports it applied, or -1 when absent. */
-    static int effectiveLimit(String json) {
-        try {
-            JsonNode root = MAPPER.readTree(json);
-            JsonNode n = root == null ? null : root.get("limit");
-            return n != null && n.canConvertToInt() ? n.asInt() : -1;
-        } catch (Exception malformed) {
-            return -1; // the parser reports a malformed body itself
-        }
+    static boolean isEnd(List<?> page) {
+        return page == null || page.isEmpty();
     }
 }

@@ -141,6 +141,36 @@ class NativeSqlReportResourceTest {
     }
 
     @Test
+    void queryTimeoutIsTheDefaultUnlessTheCallerSendsOne() throws Exception {
+        JdbcFixture defaulted = fixture("a");
+        NativeSqlReportExecutor.execute(defaulted.connection(), "test", "SELECT 1", null, 0, 1, null, null, null);
+        assertEquals(NativeSqlReportExecutor.QUERY_TIMEOUT_SECONDS, defaulted.timeout);
+
+        JdbcFixture sent = fixture("a");
+        NativeSqlReportExecutor.execute(sent.connection(), "test", "SELECT 1", null, 0, 1, null, null, Integer.valueOf(290));
+        assertEquals(290, sent.timeout);
+    }
+
+    @Test
+    void queryTimeoutParameterIsValidated() {
+        assertEquals(null, NativeSqlReportExecutor.parseQueryTimeout(null));
+        assertEquals(null, NativeSqlReportExecutor.parseQueryTimeout(" "));
+        assertEquals(Integer.valueOf(290), NativeSqlReportExecutor.parseQueryTimeout("290"));
+        assertThrows(NativeSqlReportExecutor.BadRequest.class, () -> NativeSqlReportExecutor.parseQueryTimeout("abc"));
+        assertThrows(NativeSqlReportExecutor.BadRequest.class, () -> NativeSqlReportExecutor.parseQueryTimeout("0"));
+        assertThrows(NativeSqlReportExecutor.BadRequest.class, () -> NativeSqlReportExecutor.parseQueryTimeout("3591"));
+    }
+
+    @Test
+    void timeoutFailureNamesTheTimeoutThatWasApplied() {
+        java.sql.SQLException cancelled = new java.sql.SQLTimeoutException("ORA-01013: user requested cancel", "72000", 1013);
+        assertTrue(NativeSqlReportFailure.of("execute", cancelled, NativeSqlReportDialect.ORACLE, 290).message()
+                .contains("query timed out after 290 s"));
+        assertTrue(NativeSqlReportFailure.of("execute", cancelled, NativeSqlReportDialect.ORACLE).message()
+                .contains("query timed out after " + NativeSqlReportExecutor.QUERY_TIMEOUT_SECONDS + " s"));
+    }
+
+    @Test
     void placeholderCountComesFromOurSqlNotFromTheDriver() throws Exception {
         JdbcFixture fixture = fixture("a");
         fixture.parameterCount = 0; // a driver that cannot report its parameters

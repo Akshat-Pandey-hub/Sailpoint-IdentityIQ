@@ -30,9 +30,11 @@ final class NativeSqlReportFailure {
     final boolean timedOut;
     final String detail;
     private final NativeSqlReportDialect dialect;
+    private final int queryTimeoutSeconds;
 
     private NativeSqlReportFailure(String stage, String errorType, String sqlState, Integer errorCode,
-                                   boolean timedOut, String detail, NativeSqlReportDialect dialect) {
+                                   boolean timedOut, String detail, NativeSqlReportDialect dialect,
+                                   int queryTimeoutSeconds) {
         this.stage = stage;
         this.errorType = errorType;
         this.sqlState = sqlState;
@@ -40,12 +42,18 @@ final class NativeSqlReportFailure {
         this.timedOut = timedOut;
         this.detail = detail;
         this.dialect = dialect;
+        this.queryTimeoutSeconds = queryTimeoutSeconds;
     }
 
     /**
      * @param dialect the detected database, or {@code null} when the failure happened before detection
      */
     static NativeSqlReportFailure of(String stage, Throwable t, NativeSqlReportDialect dialect) {
+        return of(stage, t, dialect, NativeSqlReportExecutor.QUERY_TIMEOUT_SECONDS);
+    }
+
+    /** @param queryTimeoutSeconds the query timeout that was applied, named in the message when the query timed out */
+    static NativeSqlReportFailure of(String stage, Throwable t, NativeSqlReportDialect dialect, int queryTimeoutSeconds) {
         SQLException sql = firstSqlException(t);
         Throwable reported = sql != null ? sql : rootCause(t);
         String sqlState = sql == null ? null : blankToNull(sql.getSQLState());
@@ -55,14 +63,15 @@ final class NativeSqlReportFailure {
                 || (errorCode != null && errorCode.intValue() == ORACLE_USER_REQUESTED_CANCEL);
         return new NativeSqlReportFailure(stage,
                 reported == null ? "UnknownError" : reported.getClass().getSimpleName(),
-                sqlState, errorCode, timedOut, firstLine(reported == null ? null : reported.getMessage()), dialect);
+                sqlState, errorCode, timedOut, firstLine(reported == null ? null : reported.getMessage()), dialect,
+                queryTimeoutSeconds);
     }
 
     /** One line, most important first, e.g. {@code ... stage 'execute': SQLSyntaxErrorException [ORA-00904, SQLState 42000]: ...}. */
     String message() {
         StringBuilder sb = new StringBuilder("SQL report failed at stage '").append(stage).append("': ");
         if (timedOut) {
-            sb.append("query timed out after ").append(NativeSqlReportExecutor.QUERY_TIMEOUT_SECONDS).append(" s; ");
+            sb.append("query timed out after ").append(queryTimeoutSeconds).append(" s; ");
         }
         sb.append(errorType);
         String codes = codes();

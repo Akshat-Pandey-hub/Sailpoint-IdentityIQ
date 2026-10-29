@@ -10,8 +10,8 @@ import java.util.Set;
 
 /**
  * Orchestrates the native account-entitlement import. Because rows are per-value edges but the paginated
- * source unit is the {@code Link}, this service pages by <b>Link</b>: it advances the window until a page
- * covers fewer Links than the page size ({@code returnedLinks < pageSize}), never on empty edges (a Link
+ * source unit is the {@code Link}, this service pages by <b>Link</b>: it advances the window by the Links each
+ * page covered until a page covers none ({@code returnedLinks == 0}), never on empty edges (a Link
  * with no entitlements yields zero edges but must not stop the scan). Pure orchestration, unit-testable
  * with fakes.
  *
@@ -122,14 +122,19 @@ public final class NativeAccountEntitlementImportService {
             }
 
             if (returnedLinks >= 0) {
-                scannedLinks += returnedLinks;
-                if (returnedLinks < pageSize) {
-                    break; // fewer Links than the window ⇒ scan complete
+                if (returnedLinks == 0) {
+                    break; // no source object left: the end
                 }
-            } else if (page.isEmpty()) {
-                break; // fallback termination when the endpoint does not report link counts
+                scannedLinks += returnedLinks;
+                // A short page is not the end: an object deleted while IIQ loaded it shifts the later ones up,
+                // so advance by the objects actually received and read on until a page brings none.
+                start += returnedLinks;
+            } else {
+                if (page.isEmpty()) {
+                    break; // fallback termination when the endpoint does not report its count
+                }
+                start += pageSize;
             }
-            start += pageSize;
         }
 
         // Incomplete-scan guard: never sweep unless every Link was scanned.

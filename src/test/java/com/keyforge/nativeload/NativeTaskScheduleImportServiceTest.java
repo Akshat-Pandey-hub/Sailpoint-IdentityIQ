@@ -25,11 +25,15 @@ class NativeTaskScheduleImportServiceTest {
 
     private static final class FakePages implements NativeTaskSchedulePageSource {
         private final List<String> pages;
+        private int served;
         final List<Integer> starts = new ArrayList<>();
         FakePages(List<String> pages) { this.pages = pages; }
         @Override public String fetchPage(int start, int limit) {
             starts.add(start);
-            int idx = limit > 0 ? start / limit : 0;
+            if (start == 0) {
+                served = 0; // a new read starts over
+            }
+            int idx = served++; // each call returns the next canned page, as an offset-honouring plugin would
             return idx < pages.size() ? pages.get(idx) : "{\"rows\":[]}";
         }
     }
@@ -78,7 +82,7 @@ class NativeTaskScheduleImportServiceTest {
         assertEquals(3, r.getExtracted());
         assertEquals(3, r.getPersisted());
         assertEquals(0, r.getFailed());
-        assertEquals(List.of(0, 2), src.starts);
+        assertEquals(List.of(0, 2, 3), src.starts, "advance by the rows received; an empty page confirms the end");
         assertTrue(r.isSweepRan());
         assertFalse(r.isSweepSkipped());
         assertEquals(3, sink.sweptKeep.size());

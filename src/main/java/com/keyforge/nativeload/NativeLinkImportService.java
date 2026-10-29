@@ -103,10 +103,9 @@ public final class NativeLinkImportService {
                     }
                 }
             }
-            if (page.size() < pageSize) {
-                break; // scan complete
-            }
-            start += pageSize;
+            // Only an empty page ends the read. A short page is not the end: an object deleted while IIQ
+            // loaded it shifts the later rows up, so advance by what was received and read on.
+            start += page.size();
         }
 
         int marked = 0;

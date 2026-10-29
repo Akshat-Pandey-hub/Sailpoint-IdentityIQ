@@ -124,10 +124,9 @@ public final class NativeAccessHistoryCertificationRestService {
             for (JsonNode row : rows) {
                 all.add(row);
             }
-            if (rows.size() < INTERNAL_PAGE_SIZE) {
-                break;
-            }
-            start += INTERNAL_PAGE_SIZE;
+            // Only an empty page ends the read. A short page is not the end: an object deleted while IIQ
+            // loaded it shifts the later rows up, so advance by what was received and read on.
+            start += rows.size();
         }
         return all;
     }

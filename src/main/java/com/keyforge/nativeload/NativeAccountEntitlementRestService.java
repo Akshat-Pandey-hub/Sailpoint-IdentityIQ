@@ -70,7 +70,7 @@ public final class NativeAccountEntitlementRestService {
                             int returned = parser.returnedLinks(json);
                             List<NativeAccountEntitlementRecord> page = parser.parse(json);
                             return new KfAgentExpandedPagedReader.Page<>(page,
-                                    offset + (returned < 0 ? requested : returned),
+                                    returned >= 0 ? offset + returned : (page.isEmpty() ? offset : offset + requested),
                                     returned < 0 ? page.isEmpty() : returned < requested,
                                     parser.sourceCount(json));
                         }, INTERNAL_PAGE_SIZE)

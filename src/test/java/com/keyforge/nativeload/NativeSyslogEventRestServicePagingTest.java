@@ -122,7 +122,7 @@ class NativeSyslogEventRestServicePagingTest {
             start += 500;
         }
         assertEquals(3, requests, "500 + 500 + 234");
-        assertEquals(3, plugin.calls.size(), "one plugin call per page — never a full scan per page");
+        assertEquals(4, plugin.calls.size(), "one plugin call per page (plus one empty call after the short last page) — never a full scan per page");
         assertEquals(ids(expected), ids(collected), "deterministic: identical rows in identical order");
 
         NativeSyslogEventRestService.Page past = svc.fetchPage(plugin, null, 5000, 500);
@@ -219,7 +219,7 @@ class NativeSyslogEventRestServicePagingTest {
         assertEquals(500, page.rows().size());
         assertEquals(String.format("%032x", 2001), page.rows().get(0).get("source_id"));
         assertEquals(2000, plugin.calls.get(0)[0], "first plugin call starts at the offset, not at 0");
-        assertEquals(1, plugin.calls.size());
+        assertEquals(2, plugin.calls.size(), "the 500-row page, then one empty call confirming the end");
     }
 
     @Test

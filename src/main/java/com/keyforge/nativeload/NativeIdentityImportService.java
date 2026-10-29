@@ -79,7 +79,7 @@ public final class NativeIdentityImportService {
 
     /**
      * Full extraction: pull every page, upsert every record, then (if enabled) sweep deletions.
-     * A page shorter than {@code pageSize} (or empty) ends paging. Row-level failures are isolated and
+     * Only an empty page ends paging (a shorter one can follow a deletion mid-read). Row-level failures are isolated and
      * counted so one bad record never aborts the run.
      */
     public Result importAll() throws SQLException {
@@ -119,10 +119,9 @@ public final class NativeIdentityImportService {
                     }
                 }
             }
-            if (page.size() < pageSize) {
-                break; // last (partial) page — scan complete
-            }
-            start += pageSize;
+            // Only an empty page ends the read. A short page is not the end: an object deleted while IIQ
+            // loaded it shifts the later rows up, so advance by what was received and read on.
+            start += page.size();
         }
 
         // The scan completed without a fetch error (any fetch failure would have propagated above).
