@@ -44,6 +44,15 @@ final class NativeSqlReportResources {
         return dialect == NativeSqlReportDialect.POSTGRESQL ? variants.postgresql : variants.oracle;
     }
 
+    /** The bundled SQL file name for a resource path, e.g. {@code entitlementAssignment.oracle.sql}. */
+    static String fileName(String resourcePath) {
+        if (resourcePath == null) {
+            return null;
+        }
+        int slash = resourcePath.lastIndexOf('/');
+        return slash < 0 ? resourcePath : resourcePath.substring(slash + 1);
+    }
+
     static String loadSql(String resourcePath) throws Exception {
         InputStream in = NativeSqlReportResources.class.getResourceAsStream(resourcePath);
         if (in == null) {

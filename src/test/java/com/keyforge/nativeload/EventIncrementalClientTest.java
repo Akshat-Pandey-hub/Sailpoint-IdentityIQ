@@ -72,6 +72,25 @@ class EventIncrementalClientTest {
     }
 
     @Test
+    void syslogAndCertificationArchiveClientsAskForTheCountOnlyWhenTold() {
+        for (Function<RecordingSession, Runnable[]> calls : List.<Function<RecordingSession, Runnable[]>>of(
+                s -> new Runnable[]{() -> new NativeSyslogEventClient(s).fetchPage(0, 50),
+                        () -> new NativeSyslogEventClient(s).fetchPage(0, 50, false),
+                        () -> new NativeSyslogEventClient(s).fetchPage(0, 50, true)},
+                s -> new Runnable[]{() -> new NativeCertificationArchiveClient(s).fetchPage(0, 50),
+                        () -> new NativeCertificationArchiveClient(s).fetchPage(0, 50, false),
+                        () -> new NativeCertificationArchiveClient(s).fetchPage(0, 50, true)})) {
+            RecordingSession s = new RecordingSession();
+            for (Runnable call : calls.apply(s)) {
+                call.run();
+            }
+            assertEquals(Map.of("start", "0", "limit", "50"), s.params.get(0), "a page call never asks for the count");
+            assertEquals(Map.of("start", "0", "limit", "50"), s.params.get(1));
+            assertEquals(Map.of("start", "0", "limit", "50", "includeCount", "true"), s.params.get(2));
+        }
+    }
+
+    @Test
     void workItemArchiveClient() {
         assertForwardsBound(
                 s -> () -> new NativeWorkItemArchiveClient(s).withModifiedAfter(BOUND).fetchPage(0, 50),

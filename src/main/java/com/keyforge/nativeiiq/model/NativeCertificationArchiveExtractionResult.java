@@ -14,7 +14,7 @@ public final class NativeCertificationArchiveExtractionResult {
     private final String extractionRunId;
     private final String entityType;
     private final Instant startedAt;
-    private int sourceCount;
+    private int sourceCount = -1;
     private Instant finishedAt;
     private final List<NativeCertificationArchiveRow> certificationArchives = new ArrayList<NativeCertificationArchiveRow>();
 

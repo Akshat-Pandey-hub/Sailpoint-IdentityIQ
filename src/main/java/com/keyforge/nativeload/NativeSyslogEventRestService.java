@@ -42,11 +42,9 @@ public final class NativeSyslogEventRestService {
             Collections.unmodifiableSet(new LinkedHashSet<>(SCALARS.keySet()));
 
     /**
-     * HTTP response header carrying the source population size (IIQ {@code countObjects(SyslogEvent)}) that the
-     * plugin reported for the rows in this response. The body stays a plain JSON array; clients that ignore the
-     * header are unaffected. A paging client uses it as the completeness baseline: the first page's value is the
-     * population the scan must cover, and a later page reporting FEWER events means events were removed mid-scan
-     * (the offset window may have shifted, so rows could have been skipped).
+     * HTTP response header carrying the source population size (IIQ {@code countObjects(SyslogEvent)}). Sent only on a
+     * full read (no {@code start}/{@code limit}/filters), the one read that asks the plugin to count; a page read never
+     * counts (counting reads every source row), so it carries no header. The body stays a plain JSON array.
      */
     public static final String SOURCE_COUNT_HEADER = "X-KF-Source-Count";
 

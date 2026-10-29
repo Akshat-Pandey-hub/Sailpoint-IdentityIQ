@@ -61,7 +61,8 @@ public final class NativeSyslogEventImportService {
         int maxSourceCount = -1; // high-water source count observed across pages
         int start = 0;
         while (true) {
-            String json = source.fetchPage(start, pageSize);
+            // Count once, on the first page: the completeness baseline. Later pages are not counted.
+            String json = source.fetchPage(start, pageSize, start == 0);
             int pageSourceCount = parser.sourceCount(json);
             if (pageSourceCount >= 0) {
                 if (sourceCount < 0) {

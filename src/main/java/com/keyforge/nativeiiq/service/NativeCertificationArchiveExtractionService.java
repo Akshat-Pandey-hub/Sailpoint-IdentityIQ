@@ -33,8 +33,15 @@ public final class NativeCertificationArchiveExtractionService {
     /** One page, bounded to objects created after {@code createdAfter} ({@code null} = full population). */
     public NativeCertificationArchiveExtractionResult extract(SailPointContext context, int start, int limit,
                       java.util.Date createdAfter) throws GeneralException {
+        return extract(context, start, limit, createdAfter, true);
+    }
+
+    /** One page; counts the population only when {@code includeCount} is true ({@code -1} otherwise). */
+    public NativeCertificationArchiveExtractionResult extract(SailPointContext context, int start, int limit,
+                      java.util.Date createdAfter, boolean includeCount) throws GeneralException {
         NativeExtractionConfig config = NativeExtractionConfig.of(sourceSystem, null, Integer.valueOf(0), "native", null);
-        return new NativeCertificationArchiveExtractor(context, config).extract(Math.max(0, start), limit, createdAfter);
+        return new NativeCertificationArchiveExtractor(context, config).extract(Math.max(0, start), limit, createdAfter,
+                includeCount);
     }
 
     public NativeCertificationArchiveExtractionResult extractAll(SailPointContext context) throws GeneralException {

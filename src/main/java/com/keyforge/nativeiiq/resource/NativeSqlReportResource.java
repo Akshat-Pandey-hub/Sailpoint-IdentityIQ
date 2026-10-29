@@ -64,7 +64,9 @@ public class NativeSqlReportResource extends BasePluginResource {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "sqlReport/" + report, uriInfo.getQueryParameters().getFirst("start"), uriInfo.getQueryParameters().getFirst("limit"), modifiedAfter);
         String stage = "start";
-try {
+        NativeSqlReportDialect dialect = null;
+        String sqlFile = null;
+        try {
             if (!NativeSqlReportResources.isRegistered(report)) {
                 Map<String, Object> err = new LinkedHashMap<String, Object>();
                 err.put("report", report);
@@ -103,11 +105,13 @@ try {
             Connection conn = context.getJdbcConnection(); // IIQ application DB; owned by context, not closed here
 
             stage = "getDatabaseProductName";
-            NativeSqlReportDialect dialect = NativeSqlReportDialect.fromConnection(conn);
+            dialect = NativeSqlReportDialect.fromConnection(conn);
 
             stage = "loadSql";
-            String sql = NativeSqlReportResources.loadSql(
-                    NativeSqlReportResources.resourcePathFor(report, dialect));
+            String sqlPath = NativeSqlReportResources.resourcePathFor(report, dialect);
+            sqlFile = NativeSqlReportResources.fileName(sqlPath);
+            PluginLog.sqlSource(LOG, "sqlReport/" + report, dialect.displayName(), databaseVersion(conn), sqlFile);
+            String sql = NativeSqlReportResources.loadSql(sqlPath);
             if (!NativeSqlReportResources.isSingleSelect(sql)) {
                 throw new IllegalStateException("registered report SQL is not a single read-only SELECT");
             }
@@ -115,6 +119,8 @@ try {
             stage = "execute";
             Map<String, Object> envelope = NativeSqlReportExecutor.execute(
                     conn, report, sql, filters, start, limit, modifiedAfterMillis, LOG);
+            envelope.put("database", dialect.displayName());
+            envelope.put("sqlFile", sqlFile);
 
             PluginLog.result(LOG, "sqlReport/" + report, envelope.get("returned"), requestStartedAt);
             return Response.ok(envelope).build();
@@ -126,8 +132,42 @@ try {
         } catch (Throwable t) {
             // Broader than Exception on purpose: contain Errors so IIQ returns a JSON 500, never exception.jsf.
             PluginLog.failed(LOG, "sqlReport/" + report, stage, t);
-            return error(Response.Status.INTERNAL_SERVER_ERROR, report,
-                    "SQL report could not be completed. Check the IdentityIQ server log.");
+            try {
+                NativeSqlReportFailure failure = NativeSqlReportFailure.of(stage, t, dialect);
+                Map<String, Object> error = new LinkedHashMap<String, Object>();
+                error.put("message", failure.message());
+                error.putAll(failure.fields());
+                Map<String, Object> env = envelope(Response.Status.INTERNAL_SERVER_ERROR, report, error);
+                if (dialect != null) {
+                    env.put("database", dialect.displayName());
+                }
+                if (sqlFile != null) {
+                    env.put("sqlFile", sqlFile);
+                }
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(env).build();
+            } catch (Throwable summaryFailure) {
+                // The summary must never hide the original failure, which is already in the log above.
+                return error(Response.Status.INTERNAL_SERVER_ERROR, report,
+                        "SQL report could not be completed. Check the IdentityIQ server log.");
+            }
+        }
+    }
+
+    /** First line of the database version, for the SQL log line only; never fails the report. */
+    private static String databaseVersion(Connection conn) {
+        try {
+            String version = conn.getMetaData().getDatabaseProductVersion();
+            if (version == null || version.trim().isEmpty()) {
+                return null;
+            }
+            String line = version.trim();
+            int nl = line.indexOf('\n');
+            if (nl >= 0) {
+                line = line.substring(0, nl).trim();
+            }
+            return line.length() > 120 ? line.substring(0, 120) + "..." : line;
+        } catch (Throwable ignored) {
+            return null;
         }
     }
 
@@ -137,10 +177,14 @@ try {
         }
         Map<String, Object> error = new LinkedHashMap<String, Object>();
         error.put("message", message);
+        return Response.status(status).entity(envelope(status, report, error)).build();
+    }
+
+    private static Map<String, Object> envelope(Response.Status status, String report, Map<String, Object> error) {
         Map<String, Object> env = new LinkedHashMap<String, Object>();
         env.put("report", report);
         env.put("status", Integer.valueOf(status.getStatusCode()));
         env.put("error", error);
-        return Response.status(status).entity(env).build();
+        return env;
     }
 }

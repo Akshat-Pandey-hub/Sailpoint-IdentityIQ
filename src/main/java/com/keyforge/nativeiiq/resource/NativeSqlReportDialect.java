@@ -6,8 +6,19 @@ import java.sql.SQLException;
 
 /** Database products explicitly supported by the bundled SQL report variants. */
 enum NativeSqlReportDialect {
-    POSTGRESQL,
-    ORACLE;
+    POSTGRESQL("PostgreSQL"),
+    ORACLE("Oracle");
+
+    private final String displayName;
+
+    NativeSqlReportDialect(String displayName) {
+        this.displayName = displayName;
+    }
+
+    /** The database name as written in logs and in the report response ("Oracle", "PostgreSQL"). */
+    String displayName() {
+        return displayName;
+    }
 
     static NativeSqlReportDialect fromProductName(String productName) {
         if (productName == null || productName.trim().isEmpty()) {

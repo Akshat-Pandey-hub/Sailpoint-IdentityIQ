@@ -26,6 +26,16 @@ final class PluginLog {
                 + returned + " rows | ms=" + (System.currentTimeMillis() - startedAtMillis));
     }
 
+    /**
+     * INFO: which database IdentityIQ runs on and which bundled SQL file a report uses. Written before the
+     * query runs, so it is in the log even when the query then fails.
+     */
+    static void sqlSource(Log log, String endpoint, String database, String databaseVersion, String sqlFile) {
+        log.info("KeyForgeNativeIIQ SQL      | endpoint=" + LogText.safe(endpoint) + " | database=" + LogText.safe(database)
+                + (databaseVersion == null ? "" : " (" + LogText.safe(databaseVersion) + ")")
+                + " | sql=" + LogText.safe(sqlFile));
+    }
+
     /** WARN: the request was rejected as invalid (HTTP 400), with the reason sent to the caller. */
     static void rejected(Log log, String endpoint, String reason) {
         log.warn("KeyForgeNativeIIQ REJECTED | endpoint=" + LogText.safe(endpoint) + " | status=400 | reason="

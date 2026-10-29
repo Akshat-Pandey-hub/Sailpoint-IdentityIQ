@@ -43,7 +43,8 @@ public class NativeSyslogEventResource extends BasePluginResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSyslogEvents(@QueryParam("start") @DefaultValue("0") int start,
                                     @QueryParam("limit") @DefaultValue("200") int limit,
-                                    @QueryParam("modifiedAfter") String modifiedAfter) {
+                                    @QueryParam("modifiedAfter") String modifiedAfter,
+                                    @QueryParam("includeCount") @DefaultValue("false") boolean includeCount) {
         long requestStartedAt = System.currentTimeMillis();
         PluginLog.request(LOG, "syslog-events", start, limit, modifiedAfter);
         int safeStart = Math.max(0, start);
@@ -65,7 +66,7 @@ public class NativeSyslogEventResource extends BasePluginResource {
             SailPointContext context = getContext();
             stage = "extract";
             NativeSyslogEventExtractionResult result =
-                    new NativeSyslogEventExtractionService().extract(context, safeStart, safeLimit, createdAfter);
+                    new NativeSyslogEventExtractionService().extract(context, safeStart, safeLimit, createdAfter, includeCount);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("KeyForgeNativeIIQ source endpoint=syslog-events count=" + result.getSourceCount());
             }

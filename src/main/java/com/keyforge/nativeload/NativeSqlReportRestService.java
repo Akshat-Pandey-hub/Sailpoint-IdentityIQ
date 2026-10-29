@@ -96,6 +96,9 @@ public final class NativeSqlReportRestService {
 
         NativeSqlReportParser.Result result = parser.parse(
                 source.fetchReport(reportId, filters, start, limit));
+        com.keyforge.iiq.debug.DebugLog.log("SQL-REPORT", "report", reportId,
+                "database", result.database == null ? "<not reported by plugin>" : result.database,
+                "sql", result.sqlFile == null ? "<not reported by plugin>" : result.sqlFile);
         if (result.truncated) {
             throw new NativeImportException("IIQ returned an incomplete SQL report; request a smaller page.");
         }

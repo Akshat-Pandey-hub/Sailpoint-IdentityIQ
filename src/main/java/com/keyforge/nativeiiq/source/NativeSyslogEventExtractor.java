@@ -38,6 +38,16 @@ public final class NativeSyslogEventExtractor {
      * uses the same bound, so the caller's complete-scan guard compares like with like.
      */
     public NativeSyslogEventExtractionResult extract(int start, int limit, java.util.Date createdAfter) throws GeneralException {
+        return extract(start, limit, createdAfter, true);
+    }
+
+    /**
+     * One page; the population is counted only when {@code includeCount} is true. Counting reads the whole
+     * (bounded) population, so a caller that only needs the page must not ask for it; the result then reports
+     * {@code -1} (not counted).
+     */
+    public NativeSyslogEventExtractionResult extract(int start, int limit, java.util.Date createdAfter,
+            boolean includeCount) throws GeneralException {
         QueryOptions qo = new QueryOptions();
         NativeIncrementalQuery.applyCreatedAfter(qo, createdAfter);
         qo.addOrdering("created", true);
@@ -48,15 +58,18 @@ public final class NativeSyslogEventExtractor {
         if (limit > 0) {
             qo.setResultLimit(limit);
         }
-        return extract(qo, createdAfter);
+        return extract(qo, createdAfter, includeCount);
     }
 
-    private NativeSyslogEventExtractionResult extract(QueryOptions qo, java.util.Date createdAfter) throws GeneralException {
+    private NativeSyslogEventExtractionResult extract(QueryOptions qo, java.util.Date createdAfter,
+            boolean includeCount) throws GeneralException {
         NativeSyslogEventExtractionResult result = new NativeSyslogEventExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "SyslogEvent", Instant.now());
 
-        result.setSourceCount(context.countObjects(SyslogEvent.class,
-                NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter)));
+        if (includeCount) {
+            result.setSourceCount(context.countObjects(SyslogEvent.class,
+                    NativeIncrementalQuery.applyCreatedAfter(new QueryOptions(), createdAfter)));
+        }
 
         Iterator<Object[]> ids = context.search(SyslogEvent.class, qo, "id");
         try {

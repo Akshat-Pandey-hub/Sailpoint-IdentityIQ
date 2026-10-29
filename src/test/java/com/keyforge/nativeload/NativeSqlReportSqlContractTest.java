@@ -92,27 +92,51 @@ class NativeSqlReportSqlContractTest {
             int requestJoin = text.indexOf("LEFT JOIN spt_identity_request ir", itemJoin);
             assertTrue(itemJoin >= 0 && requestJoin > itemJoin, resource + " has the request-item join");
             String join = text.substring(itemJoin, requestJoin);
-            assertTrue(join.contains("FROM spt_identity_request ir_match")
+            assertTrue(join.contains("ON iri.native_identity = ie.native_identity")
+                            && join.contains("AND EXISTS (")
+                            && join.contains("FROM spt_identity_request ir_match")
                             && join.contains("ir_match.id = iri.identity_request_id")
                             && join.contains("ir_match.target_id = i.id"),
                     resource + " only attaches items whose parent request targets the entitlement identity");
 
-            int reason = text.indexOf("END AS " + (resource.endsWith("oracle.sql")
-                    ? "\"assignment_reason\"" : "assignment_reason"));
-            int reasonStart = text.lastIndexOf("    CASE", reason);
-            String reasonCase = text.substring(reasonStart, reason);
-            List<String> branches = whenConditions(reasonCase);
-            assertTrue(branches.size() >= 2, resource + " has both role reason branches");
-            assertTrue(branches.get(0).contains("iri.name = b.name")
-                            && branches.get(0).contains("iri.value = b.name")
-                            && branches.get(0).contains("iri.value = b.id"),
-                    resource + " role-request reason branch has the same role match");
-            assertTrue(branches.get(1).contains("NOT EXISTS")
-                            && branches.get(1).contains("ir2.target_id = i.id")
-                            && branches.get(1).contains("iri2.operation = 'Add'")
-                            && branches.get(1).contains("iri2.operation = 'RoleAdd'")
-                            && branches.get(1).contains("iri2.operation = 'Assign'"),
-                    resource + " no-role-request reason branch matches the birthright classification condition");
+            boolean oracle = resource.endsWith("oracle.sql");
+            List<String> typeBranches = caseConditions(text,
+                    oracle ? "\"assignment_type\"" : "assignment_type");
+            List<String> reasonBranches = caseConditions(text,
+                    oracle ? "\"assignment_reason\"" : "assignment_reason");
+            assertEquals(5, typeBranches.size(), resource + " assignment classification branches");
+            assertEquals(4, reasonBranches.size(), resource + " assignment explanation branches");
+            assertEquals(typeBranches.get(0), reasonBranches.get(0),
+                    resource + " requested-role reason has the exact classification predicate");
+            assertEquals(typeBranches.get(1), reasonBranches.get(1),
+                    resource + " no-role-request reason has the exact birthright predicate");
+
+            String direct = typeBranches.get(2);
+            assertTrue(direct.contains(oracle ? "nvl(ie.granted_by_role, 0) = 0"
+                            : "ie.granted_by_role = false or ie.granted_by_role is null")
+                            && direct.contains(oracle ? "ie.assigned = 1" : "ie.assigned = true")
+                            && direct.contains(oracle ? "upper(ie.source) = 'lcm'"
+                            : "upper(coalesce(ie.source,'')) = 'lcm'")
+                            && direct.contains("ir3.target_id = i.id")
+                            && direct.contains("iri3.native_identity = ie.native_identity")
+                            && direct.contains("iri3.name = ie.name")
+                            && direct.contains("iri3.name = ie.value")
+                            && direct.contains("iri3.value = ie.value")
+                            && direct.contains("iri3.operation = 'add'")
+                            && direct.contains("iri3.operation = 'entitlementadd'")
+                            && direct.contains("iri3.operation = 'assign'"),
+                    resource + " preserves the direct-entitlement request predicates");
+            String directReason = reasonBranches.get(2);
+            assertTrue(directReason.contains(oracle ? "ie.assigned = 1" : "ie.assigned = true")
+                            && directReason.contains(oracle ? "upper(ie.source) = 'lcm'"
+                            : "upper(coalesce(ie.source,'')) = 'lcm'"),
+                    resource + " retains the source-based direct LCM explanation");
+            assertTrue(reasonBranches.get(3).contains(oracle
+                            ? "nvl(ie.assigned, 0) = 0" : "ie.assigned = false or ie.assigned is null")
+                            && reasonBranches.get(3).contains(oracle
+                            ? "nvl(ie.granted_by_role, 0) = 0"
+                            : "ie.granted_by_role = false or ie.granted_by_role is null"),
+                    resource + " aggregated-assignment reason retains both null-safe flag checks");
 
             assertTrue(text.contains("SELECT DISTINCT") && text.contains("ir.id AS")
                             && text.contains("iri.operation AS"),
@@ -131,6 +155,19 @@ class NativeSqlReportSqlContractTest {
             conditions.add(caseExpression.substring(when + 4, then).replaceAll("\\s+", " ").trim());
             cursor = then + 4;
         }
+    }
+
+    private static List<String> caseConditions(String sql, String alias) {
+        int end = sql.indexOf("END AS " + alias);
+        if (end < 0) throw new AssertionError("Missing CASE output alias " + alias);
+        int start = sql.lastIndexOf("CASE", end);
+        if (start < 0) throw new AssertionError("Missing CASE for output alias " + alias);
+        List<String> conditions = whenConditions(sql.substring(start, end));
+        List<String> normalized = new ArrayList<>(conditions.size());
+        for (String condition : conditions) {
+            normalized.add(condition.toLowerCase(java.util.Locale.ROOT).replaceAll("\\s+", " ").trim());
+        }
+        return normalized;
     }
 
 

@@ -52,8 +52,31 @@ class NativeSqlReportParserTest {
         String json = "{\"report\":\"entitlementAssignment\",\"status\":500,"
                 + "\"error\":{\"type\":\"java.sql.SQLException\",\"message\":\"bad column\"}}";
         NativeImportException error = assertThrows(NativeImportException.class, () -> parser.parse(json));
-        assertFalse(error.getMessage().contains("bad column"), "database details are not exposed to the caller");
+        // The reason reaches the KF Agent log; the agent's HTTP caller still gets only "Internal Server Error".
+        assertTrue(error.getMessage().contains("bad column"), error.getMessage());
         assertTrue(error.getMessage().contains("HTTP 500"));
+    }
+
+    @Test
+    void errorEnvelopeWithoutMessageStillNamesTheStatus() {
+        NativeImportException error = assertThrows(NativeImportException.class,
+                () -> parser.parse("{\"status\":500,\"error\":{}}"));
+        assertEquals("IIQ SQL report failed (HTTP 500).", error.getMessage());
+    }
+
+    @Test
+    void carriesTheDatabaseAndSqlFileThePluginReports() {
+        NativeSqlReportParser.Result r = parser.parse("{\"columns\":[\"a\"],\"rows\":[],"
+                + "\"database\":\"Oracle\",\"sqlFile\":\"workgroupMembers.oracle.sql\"}");
+        assertEquals("Oracle", r.database);
+        assertEquals("workgroupMembers.oracle.sql", r.sqlFile);
+    }
+
+    @Test
+    void olderPluginWithoutDatabaseFieldsParsesWithNulls() {
+        NativeSqlReportParser.Result r = parser.parse("{\"columns\":[\"a\"],\"rows\":[]}");
+        assertNull(r.database);
+        assertNull(r.sqlFile);
     }
 
     @Test
