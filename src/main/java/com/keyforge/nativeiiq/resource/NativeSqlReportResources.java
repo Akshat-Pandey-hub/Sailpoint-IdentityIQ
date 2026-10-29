@@ -75,6 +75,51 @@ final class NativeSqlReportResources {
         return sql;
     }
 
+    /**
+     * The number of JDBC {@code ?} placeholders in a bundled report SQL, counted the way PostgreSQL and Oracle parse
+     * it: a {@code ?} inside a {@code --} line comment, a block comment, a {@code '...'} string
+     * (with {@code ''} escapes) or a {@code "..."} quoted name is not a placeholder. Every placeholder in these
+     * reports takes the same modifiedAfter value, so the count is all the binder needs.
+     */
+    static int placeholderCount(String sql) {
+        if (sql == null) {
+            return 0;
+        }
+        int count = 0;
+        int n = sql.length();
+        int i = 0;
+        while (i < n) {
+            char c = sql.charAt(i);
+            char next = i + 1 < n ? sql.charAt(i + 1) : '\0';
+            if (c == '-' && next == '-') {
+                int end = sql.indexOf('\n', i);
+                i = end < 0 ? n : end + 1;
+            } else if (c == '/' && next == '*') {
+                int end = sql.indexOf("*/", i + 2);
+                i = end < 0 ? n : end + 2;
+            } else if (c == '\'' || c == '"') {
+                i++;
+                while (i < n) {
+                    if (sql.charAt(i) == c) {
+                        if (i + 1 < n && sql.charAt(i + 1) == c) {
+                            i += 2; // doubled quote: an escaped quote inside the literal or name
+                            continue;
+                        }
+                        break;
+                    }
+                    i++;
+                }
+                i++;
+            } else {
+                if (c == '?') {
+                    count++;
+                }
+                i++;
+            }
+        }
+        return count;
+    }
+
     static boolean isSingleSelect(String sql) {
         if (sql == null) {
             return false;

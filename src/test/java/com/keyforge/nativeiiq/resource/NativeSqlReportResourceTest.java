@@ -141,6 +141,40 @@ class NativeSqlReportResourceTest {
     }
 
     @Test
+    void placeholderCountComesFromOurSqlNotFromTheDriver() throws Exception {
+        JdbcFixture fixture = fixture("a");
+        fixture.parameterCount = 0; // a driver that cannot report its parameters
+        NativeSqlReportExecutor.execute(fixture.connection(), "test", "SELECT ?, ?, ?, ?", null, 0, 1, Long.valueOf(7L));
+        assertEquals(4, fixture.parameters.size());
+    }
+
+    @Test
+    void placeholderCountMatchesEveryBundledSqlFileInBothDialects() throws Exception {
+        String[] reports = {"entitlementAssignment", "workgroupMembers",
+                "entitlementCertification", "entitlementCertificationStatus"};
+        int[] expected = {4, 2, 6, 10};
+        for (NativeSqlReportDialect dialect : NativeSqlReportDialect.values()) {
+            for (int r = 0; r < reports.length; r++) {
+                String sql = NativeSqlReportResources.loadSql(NativeSqlReportResources.resourcePathFor(reports[r], dialect));
+                assertEquals(expected[r], NativeSqlReportResources.placeholderCount(sql), reports[r] + " / " + dialect);
+            }
+        }
+    }
+
+    @Test
+    void placeholderCountSkipsCommentsStringsAndQuotedNames() {
+        assertEquals(0, NativeSqlReportResources.placeholderCount(null));
+        assertEquals(1, NativeSqlReportResources.placeholderCount("SELECT ? -- why? \n FROM t"));
+        assertEquals(2, NativeSqlReportResources.placeholderCount("SELECT ? /* a ? b \n ? */ , ?"));
+        assertEquals(1, NativeSqlReportResources.placeholderCount("SELECT 'what?', 'it''s ?', ? FROM t"));
+        assertEquals(1, NativeSqlReportResources.placeholderCount("SELECT \"col?\", \"a\"\"?\" FROM t WHERE x = ?"));
+        assertEquals(1, NativeSqlReportResources.placeholderCount(
+                "SELECT TO_CHAR(d, 'YYYY-MM-DD\"T\"HH24:MI:SS') FROM t WHERE m > CAST(? AS NUMBER(19))"));
+        assertEquals(0, NativeSqlReportResources.placeholderCount("SELECT 1 -- unterminated comment ?"));
+        assertEquals(0, NativeSqlReportResources.placeholderCount("SELECT '?"));
+    }
+
+    @Test
     void bindsNullAsBigintForEverySqlParameterWhenBoundIsAbsent() throws Exception {
         JdbcFixture fixture = fixture("a");
         fixture.parameterCount = 3;

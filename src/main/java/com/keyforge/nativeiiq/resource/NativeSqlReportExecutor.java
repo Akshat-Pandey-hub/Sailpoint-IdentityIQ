@@ -1,7 +1,6 @@
 package com.keyforge.nativeiiq.resource;
 
 import java.sql.Connection;
-import java.sql.ParameterMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -49,8 +48,8 @@ final class NativeSqlReportExecutor {
             st = conn.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             st.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
             st.setFetchSize(FETCH_SIZE);
-            ParameterMetaData parameters = st.getParameterMetaData();
-            int parameterCount = parameters.getParameterCount();
+            // Counted from our own bundled SQL, not asked of the JDBC driver (getParameterMetaData support varies).
+            int parameterCount = NativeSqlReportResources.placeholderCount(sql);
             for (int parameter = 1; parameter <= parameterCount; parameter++) {
                 if (modifiedAfter == null) {
                     st.setNull(parameter, Types.BIGINT);
