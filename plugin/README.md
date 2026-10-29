@@ -8,7 +8,7 @@ these endpoints and serves the data as `/kfagent/*`.
 - **Secured:** every endpoint requires an IdentityIQ **System Administrator**.
 - **Requires** IdentityIQ 8.4 or later.
 
-## Contents of the ZIP (`KeyForgeNativeIIQ-1.0.zip`)
+## Contents of the ZIP (`KeyForgeNativeIIQ-1.1.zip`)
 
 ```
 manifest.xml                 plugin descriptor (registers the REST resources)
@@ -22,7 +22,7 @@ README.md                    this file
 
 1. Log in to IdentityIQ as a System Administrator.
 2. Open the gear menu → **Plugins**.
-3. Click **Install** (or **Import**) and upload `KeyForgeNativeIIQ-1.0.zip`.
+3. Click **Install** (or **Import**) and upload `KeyForgeNativeIIQ-1.1.zip`.
 4. Confirm **KeyForge Native IIQ Extractor** appears in the plugin list and is enabled.
 
 No IdentityIQ restart and no server file access is required. Installing a newer ZIP the same way replaces the
@@ -42,5 +42,5 @@ Requires `lib/identityiq.jar` (from the IdentityIQ installation) in the reposito
 mvn -Pnative clean package
 ```
 
-Output: `target/dist/KeyForgeNativeIIQ-1.0.zip`. The normal build (`mvn clean package`) produces the KF Agent jar and
+Output: `target/dist/KeyForgeNativeIIQ-1.1.zip`. The normal build (`mvn clean package`) produces the KF Agent jar and
 does not need `identityiq.jar`.
