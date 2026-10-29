@@ -11,14 +11,18 @@ import sailpoint.object.TaskSchedule;
 import sailpoint.tools.GeneralException;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * Native source adapter for {@code sailpoint.object.TaskSchedule} (task cron schedules). Same flow as
  * the validated native extractors (project ids, load one at a time, map, decache). STRICTLY READ-ONLY:
- * only {@code search}/{@code getObjectById}/{@code decache}. Ordered by {@code name} for deterministic
- * pagination.
+ * only {@code search}/{@code getObjectById}/{@code decache}. IIQ ignores ordering for TaskSchedule, so the
+ * rows are ordered here by name, then id, before the page is taken.
  */
 public final class NativeTaskScheduleExtractor {
 
@@ -50,13 +54,13 @@ public final class NativeTaskScheduleExtractor {
         NativeTaskScheduleExtractionResult result = new NativeTaskScheduleExtractionResult(
                 config.getSourceSystem(), config.getExtractionRunId(), "TaskSchedule", Instant.now());
 
-        int matched = 0;
+        // IIQ ignores the requested ordering (and paging) for TaskSchedule, so the order it returns is not
+        // guaranteed between calls. Read every schedule (there are only a handful), keep the changed ones, and
+        // fix the order here before the start/limit window is taken, so pages never repeat or skip a schedule.
+        List<NativeTaskScheduleRow> matched = new ArrayList<NativeTaskScheduleRow>();
         Iterator<Object[]> ids = context.search(TaskSchedule.class, qo, "id");
         try {
             while (ids != null && ids.hasNext()) {
-                if (limit > 0 && result.getTaskSchedules().size() >= limit) {
-                    break;
-                }
                 String id = (String) ids.next()[0];
                 TaskSchedule ts = context.getObjectById(TaskSchedule.class, id);
                 if (ts == null) {
@@ -69,12 +73,7 @@ public final class NativeTaskScheduleExtractor {
                     if (!undated && !NativeIncrementalQuery.changedAfter(ts.getModified(), ts.getCreated(), modifiedAfter)) {
                         continue;
                     }
-                    if (matched++ < start) {
-                        continue;
-                    }
-                    NativeTaskScheduleRow row = NativeTaskScheduleMapper.map(
-                            ts, config.getSourceSystem(), config.getExtractionRunId());
-                    result.getTaskSchedules().add(row);
+                    matched.add(NativeTaskScheduleMapper.map(ts, config.getSourceSystem(), config.getExtractionRunId()));
                 } finally {
                     context.decache(ts);
                 }
@@ -83,7 +82,33 @@ public final class NativeTaskScheduleExtractor {
             sailpoint.tools.Util.flushIterator(ids);
         }
 
+        result.getTaskSchedules().addAll(window(matched, start, limit));
         result.setFinishedAt(Instant.now());
         return result;
+    }
+
+    /** By name, then id (missing values last), compared as plain text so the order is the same on every IIQ. */
+    static final Comparator<NativeTaskScheduleRow> ORDER = new Comparator<NativeTaskScheduleRow>() {
+        @Override
+        public int compare(NativeTaskScheduleRow a, NativeTaskScheduleRow b) {
+            int byName = compareText(a.getName(), b.getName());
+            return byName != 0 ? byName : compareText(a.getSourceId(), b.getSourceId());
+        }
+    };
+
+    /** Sorts {@code rows} into {@link #ORDER} and returns the {@code [start, start + limit)} window ({@code limit <= 0}: all). */
+    static List<NativeTaskScheduleRow> window(List<NativeTaskScheduleRow> rows, int start, int limit) {
+        List<NativeTaskScheduleRow> sorted = new ArrayList<NativeTaskScheduleRow>(rows);
+        Collections.sort(sorted, ORDER);
+        int from = Math.min(Math.max(0, start), sorted.size());
+        int to = limit > 0 ? (int) Math.min((long) sorted.size(), (long) from + limit) : sorted.size();
+        return new ArrayList<NativeTaskScheduleRow>(sorted.subList(from, to));
+    }
+
+    private static int compareText(String a, String b) {
+        if (a == null) {
+            return b == null ? 0 : 1;
+        }
+        return b == null ? -1 : a.compareTo(b);
     }
 }
